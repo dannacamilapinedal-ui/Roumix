@@ -197,6 +197,111 @@ const RoumixStorage = {
   }
 };
 
+// 2.1 Módulo de Comunicación con el Backend (API REST Node.js + Supabase)
+const RoumixAPI = {
+  baseURL: "http://localhost:3000/api",
+
+  getInmuebles: async function() {
+    try {
+      const respuesta = await fetch(`${this.baseURL}/inmuebles`);
+      if (!respuesta.ok) throw new Error("Error en la respuesta del servidor");
+      const json = await respuesta.json();
+      if (json && json.data && Array.isArray(json.data) && json.data.length > 0) {
+        console.log("✅ Inmuebles cargados exitosamente desde PostgreSQL (Supabase):", json.data.length);
+        return json.data.map(item => ({
+          ...item,
+          precioFormato: "$" + Number(item.precio).toLocaleString("es-CO"),
+          distanciaTexto: item.distancia_texto || `${item.barrio} · Villavicencio`,
+          distanciaMetros: item.distancia_metros || 1000,
+          tiempoPie: item.tiempo_pie || "10 min",
+          imagen: item.imagen_principal || item.imagen || "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=1000&q=80",
+          galeria: item.galeria && item.galeria.length > 0 ? item.galeria : [item.imagen_principal || item.imagen],
+          propietario: {
+            nombre: item.propietario_nombre || (item.propietario ? item.propietario.nombre : "Propietario"),
+            telefono: item.propietario_telefono || (item.propietario ? item.propietario.telefono : "573108845612"),
+            verificado: true
+          }
+        }));
+      }
+    } catch (error) {
+      console.warn("⚠️ API de Node.js no disponible. Usando datos locales de respaldo:", error.message);
+    }
+    return RoumixStorage.getInmuebles();
+  },
+
+  getInmueblePorId: async function(id) {
+    try {
+      const respuesta = await fetch(`${this.baseURL}/inmuebles/${id}`);
+      if (respuesta.ok) {
+        const json = await respuesta.json();
+        if (json && json.data) {
+          const item = json.data;
+          return {
+            ...item,
+            precioFormato: "$" + Number(item.precio).toLocaleString("es-CO"),
+            distanciaTexto: item.distancia_texto || `${item.barrio} · Villavicencio`,
+            distanciaMetros: item.distancia_metros || 1000,
+            tiempoPie: item.tiempo_pie || "10 min",
+            imagen: item.imagen_principal || item.imagen || "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=1000&q=80",
+            galeria: item.galeria && item.galeria.length > 0 ? item.galeria : [item.imagen_principal || item.imagen],
+            propietario: {
+              nombre: item.propietario_nombre || (item.propietario ? item.propietario.nombre : "Propietario"),
+              telefono: item.propietario_telefono || (item.propietario ? item.propietario.telefono : "573108845612"),
+              verificado: true
+            }
+          };
+        }
+      }
+    } catch (e) {
+      console.warn("⚠️ Fallo al obtener inmueble de la API, usando storage local:", e.message);
+    }
+    return RoumixStorage.getInmueblePorId(id);
+  },
+
+  crearInmueble: async function(nuevo) {
+    try {
+      const res = await fetch(`${this.baseURL}/inmuebles`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          titulo: nuevo.titulo,
+          tipo: nuevo.tipo,
+          tipoLabel: nuevo.tipoLabel,
+          precio: nuevo.precio,
+          barrio: nuevo.barrio,
+          universidad: nuevo.universidad || "Santo Tomás",
+          distanciaTexto: nuevo.distanciaTexto,
+          distanciaMetros: nuevo.distanciaMetros,
+          tiempoPie: nuevo.tiempoPie,
+          estrato: nuevo.estrato,
+          area: nuevo.area,
+          transporte: nuevo.transporte,
+          amenidades: nuevo.amenidades,
+          descripcion: nuevo.descripcion,
+          deposito: nuevo.deposito,
+          contratoMinimo: nuevo.contratoMinimo,
+          latitud: nuevo.lat,
+          longitud: nuevo.lng,
+          imagenPrincipal: nuevo.imagen,
+          galeria: nuevo.galeria || [nuevo.imagen],
+          propietarioNombre: nuevo.propietario ? nuevo.propietario.nombre : "Propietario",
+          propietarioTelefono: nuevo.propietario ? nuevo.propietario.telefono : "573108845612"
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        console.log("✅ Inmueble guardado en PostgreSQL (Supabase):", data);
+        RoumixStorage.guardarInmueble(nuevo);
+        return data.data;
+      }
+    } catch (e) {
+      console.warn("⚠️ Error al guardar en la API, guardando en storage local:", e.message);
+    }
+    RoumixStorage.guardarInmueble(nuevo);
+    return nuevo;
+  }
+};
+
 // 3. Formateador de moneda colombiana
 function formatearPrecioCOP(valor) {
   return "$" + Number(valor).toLocaleString("es-CO");

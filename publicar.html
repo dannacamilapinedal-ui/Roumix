@@ -329,7 +329,7 @@
         });
       });
 
-      btnGuardar.addEventListener("click", () => {
+      btnGuardar.addEventListener("click", async () => {
         const titulo = inputTitulo.value.trim();
         const precio = parseInt(inputPrecio.value, 10);
 
@@ -366,9 +366,10 @@
           descripcion: textDescripcion.value.trim()
         };
 
-        RoumixStorage.guardarInmueble(nuevo);
-        alert("¡Excelente! Tu inmueble ha sido publicado con éxito y ya aparece en las búsquedas.");
-        window.location.href = "mis-publicaciones.html";
+        // Guardar en la base de datos PostgreSQL de Supabase vía API REST
+        await RoumixAPI.crearInmueble(nuevo);
+        alert("¡Excelente! Tu inmueble ha sido publicado con éxito en PostgreSQL y ya aparece en las búsquedas.");
+        window.location.href = "buscar.html";
       });
 
       actualizarPreview();

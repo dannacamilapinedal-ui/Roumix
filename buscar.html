@@ -247,8 +247,8 @@
   <script src="app.js"></script>
 
   <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      let inmuebles = RoumixStorage.getInmuebles();
+    document.addEventListener("DOMContentLoaded", async () => {
+      let inmuebles = await RoumixAPI.getInmuebles();
       let filtroTexto = "";
       let filtroUni = "Santo Tomás";
       let filtroPrecio = 700000;

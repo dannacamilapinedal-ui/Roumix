@@ -109,8 +109,8 @@
 
   <script src="app.js"></script>
   <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const lista = RoumixStorage.getInmuebles();
+    document.addEventListener("DOMContentLoaded", async () => {
+      const lista = await RoumixAPI.getInmuebles();
       const contenedor = document.getElementById("lista-mis-publicaciones");
       const usuario = RoumixStorage.getUsuario();
 
