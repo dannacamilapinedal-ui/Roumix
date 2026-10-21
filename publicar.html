@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Publica tu habitación, apartaestudio o apartamento para estudiantes en Roumix Villavicencio.">
+  <title>Publica tu inmueble — Roumix</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <!-- ======================================================== -->
+  <!-- BARRA DE NAVEGACIÓN ROL: PROPIETARIO                     -->
+  <!-- ======================================================== -->
+  <header class="main-header">
+    <div class="header-inner">
+      <div class="header-left">
+        <a href="buscar.html" class="logo">
+          <span class="logo-text">roumix</span><span class="logo-dot">.</span>
+        </a>
+      </div>
+
+      <nav class="main-nav" aria-label="Navegación de propietario">
+        <ul class="nav-links">
+          <li><a href="buscar.html" class="nav-link">Inicio</a></li>
+          <li><a href="buscar.html" class="nav-link">Buscar</a></li>
+          <li><a href="publicar.html" class="nav-link active">Publicar</a></li>
+          <li><a href="mis-publicaciones.html" class="nav-link">Mis publicaciones</a></li>
+          <li><a href="como-funciona.html" class="nav-link">Cómo funciona</a></li>
+          <li><a href="comparar.html" class="nav-link">Comparar</a></li>
+        </ul>
+      </nav>
+
+      <div class="header-right">
+        <span class="user-role-badge">Propietario</span>
+        <a href="index.html" class="btn-logout-pill" id="btn-logout">Cerrar sesión</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ======================================================== -->
+  <!-- CONTENIDO: FORMULARIO DE PUBLICACIÓN Y LIVE PREVIEW      -->
+  <!-- ======================================================== -->
+  <main>
+    <div class="publish-section-container">
+      <header class="publish-header">
+        <h1 class="publish-main-title">Publica tu inmueble</h1>
+        <p class="publish-main-subtitle">
+          Cuatro pasos. Completa la información una vez y la publicación queda visible para los estudiantes que buscan cerca de su universidad.
+        </p>
+
+        <!-- Stepper de 4 pasos (Boceto 3) -->
+        <nav class="stepper-nav" aria-label="Pasos de publicación">
+          <div class="step-item active" data-step="1">
+            <span class="step-circle">1</span>
+            <span class="step-text">Datos</span>
+          </div>
+          <div class="step-connector"></div>
+          <div class="step-item" data-step="2">
+            <span class="step-circle">2</span>
+            <span class="step-text">Ubicación</span>
+          </div>
+          <div class="step-connector"></div>
+          <div class="step-item" data-step="3">
+            <span class="step-circle">3</span>
+            <span class="step-text">Precio</span>
+          </div>
+          <div class="step-connector"></div>
+          <div class="step-item" data-step="4">
+            <span class="step-circle">4</span>
+            <span class="step-text">Fotos</span>
+          </div>
+        </nav>
+      </header>
+
+      <div class="publish-split-grid">
+        <!-- Columna Izquierda: Formulario -->
+        <div class="publish-form-card">
+          <form id="form-publicar" novalidate>
+            <h2 class="form-block-title">Datos del inmueble</h2>
+
+            <!-- Título de la publicación -->
+            <div class="form-group">
+              <label for="pub-titulo" class="form-label">TÍTULO DE LA PUBLICACIÓN</label>
+              <input 
+                type="text" 
+                id="pub-titulo" 
+                class="form-control" 
+                value="Habitación amoblada en apartaestudio" 
+                placeholder="Ej: Habitación amoblada cerca a la Santo Tomás"
+                required
+              >
+            </div>
+
+            <!-- Fila: Tipo y Estrato -->
+            <div class="form-row-two">
+              <div class="form-group">
+                <label for="pub-tipo" class="form-label">TIPO DE INMUEBLE</label>
+                <select id="pub-tipo" class="form-control">
+                  <option value="Habitación" selected>Habitación</option>
+                  <option value="Apartaestudio">Apartaestudio</option>
+                  <option value="Apartamento">Apartamento</option>
+                  <option value="Casa">Casa</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="pub-estrato" class="form-label">ESTRATO</label>
+                <select id="pub-estrato" class="form-control">
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3" selected>3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Descripción -->
+            <div class="form-group">
+              <label for="pub-descripcion" class="form-label">DESCRIPCIÓN</label>
+              <textarea 
+                id="pub-descripcion" 
+                class="form-control form-textarea" 
+                rows="4" 
+                placeholder="Describe el alojamiento, ambiente, reglas, etc."
+              >Excelente habitación privada dentro de un apartaestudio compartido enfocado exclusivamente en estudiantes. Cuenta con todos los servicios incluidos en el canon mensual (agua, luz, gas, internet de alta velocidad de 200 megas).</textarea>
+            </div>
+
+            <!-- Comodidades / Amenidades (Chips clicables) -->
+            <div class="form-group">
+              <label class="form-label">COMODIDADES INCLUIDAS</label>
+              <div class="amenities-chips-group" id="amenities-container">
+                <button type="button" class="amenity-chip selected" data-value="Wifi">✓ Wifi</button>
+                <button type="button" class="amenity-chip selected" data-value="Amoblada">✓ Amoblada</button>
+                <button type="button" class="amenity-chip selected" data-value="Baño privado">✓ Baño privado</button>
+                <button type="button" class="amenity-chip" data-value="Cocina">Cocina</button>
+                <button type="button" class="amenity-chip" data-value="Lavandería">Lavandería</button>
+                <button type="button" class="amenity-chip" data-value="Parqueadero">Parqueadero</button>
+                <button type="button" class="amenity-chip" data-value="Bicicletero">Bicicletero</button>
+              </div>
+            </div>
+
+            <!-- Ubicación y Precio -->
+            <div style="border-top: 1px solid var(--borde-suave); padding-top: 22px; margin-top: 22px;">
+              <h2 class="form-block-title" style="font-size: 1.15rem; margin-bottom: 16px;">Ubicación y Precio</h2>
+              
+              <div class="form-row-two">
+                <div class="form-group">
+                  <label for="pub-barrio" class="form-label">BARRIO / SECTOR</label>
+                  <input type="text" id="pub-barrio" class="form-control" value="La Grama" placeholder="Ej: La Grama, Barzal, San Benito">
+                </div>
+                <div class="form-group">
+                  <label for="pub-distancia" class="form-label">DISTANCIA A LA UNIVERSIDAD</label>
+                  <input type="text" id="pub-distancia" class="form-control" value="750m de Santo Tomás · 9 min a pie" placeholder="Ej: 500m de Santo Tomás">
+                </div>
+              </div>
+
+              <div class="form-row-two">
+                <div class="form-group">
+                  <label for="pub-precio" class="form-label">CANON MENSUAL ($ COP)</label>
+                  <input type="number" id="pub-precio" class="form-control" value="420000" step="10000" placeholder="420000">
+                </div>
+                <div class="form-group">
+                  <label for="pub-transporte" class="form-label">RUTA DE TRANSPORTE</label>
+                  <input type="text" id="pub-transporte" class="form-control" value="Ruta bus a 1 cuadra" placeholder="Ej: Ruta bus a 1 cuadra">
+                </div>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="button" id="btn-publicar-guardar" class="btn-submit-publish">Continuar</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Columna Derecha: Vista Previa en Tiempo Real (Live Preview) -->
+        <aside class="publish-preview-column">
+          <div class="preview-header-label">VISTA PREVIA EN TIEMPO REAL</div>
+
+          <!-- Card viva idéntica al boceto 3 -->
+          <article class="property-card preview-live-card" id="card-live-preview">
+            <div class="card-image-wrap">
+              <img 
+                id="preview-img" 
+                src="https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=800&q=80" 
+                alt="Vista previa del inmueble"
+                class="card-img"
+              >
+              <span class="status-badge badge-draft">BORRADOR</span>
+            </div>
+
+            <div class="card-body">
+              <div class="card-price-row">
+                <span class="property-price" id="preview-precio-display">$420.000 <small>/mes</small></span>
+              </div>
+
+              <h3 class="property-title" id="preview-title-display">Habitación amoblada en apartaestudio</h3>
+              <p class="property-location" id="preview-location-display">La Grama · 750m de Santo Tomás</p>
+
+              <div class="property-tags" id="preview-tags-display">
+                <span class="tag-pill">Estrato 3</span>
+                <span class="tag-pill">Ruta bus a 1 cuadra</span>
+              </div>
+
+              <div class="property-amenities" id="preview-amenities-display">
+                Wifi · Amoblada · Baño privado
+              </div>
+            </div>
+          </article>
+
+          <!-- Card de Consejo / Ayuda -->
+          <div class="advice-card">
+            <div class="advice-icon">ℹ</div>
+            <div class="advice-content">
+              <h4 class="advice-title">Antes de publicar</h4>
+              <p class="advice-text">
+                Verifica que el precio sea justo para el sector. Los alojamientos con descripción detallada y fotos reales reciben hasta 4 veces más contactos de estudiantes.
+              </p>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </main>
+
+  <!-- Pie de página -->
+  <footer class="app-footer">
+    <div class="footer-container">
+      <div class="footer-col">
+        <div class="footer-logo">
+          <span>roumix</span><span class="dot-orange">.</span>
+        </div>
+        <p class="footer-desc">
+          Plataforma de vivienda universitaria para la comunidad estudiantil de Villavicencio.
+        </p>
+      </div>
+
+      <div class="footer-col">
+        <h4>Panel Propietario</h4>
+        <ul>
+          <li><a href="publicar.html" class="footer-link">Publicar inmueble</a></li>
+          <li><a href="mis-publicaciones.html" class="footer-link">Mis publicaciones</a></li>
+          <li><a href="como-funciona.html" class="footer-link">Cómo funciona</a></li>
+          <li><a href="index.html" class="footer-link">Cerrar sesión</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Contacto Académico</h4>
+        <address>
+          Universidad Santo Tomás, Villavicencio<br>
+          Facultad de Ingeniería de Sistemas<br>
+          <a href="mailto:contacto@roumix.com">contacto@roumix.com</a>
+        </address>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <small>© 2026 Roumix · Construcción de Software · Villavicencio, Colombia</small>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const inputTitulo = document.getElementById("pub-titulo");
+      const selectTipo = document.getElementById("pub-tipo");
+      const selectEstrato = document.getElementById("pub-estrato");
+      const inputBarrio = document.getElementById("pub-barrio");
+      const inputDistancia = document.getElementById("pub-distancia");
+      const inputPrecio = document.getElementById("pub-precio");
+      const inputTransporte = document.getElementById("pub-transporte");
+      const textDescripcion = document.getElementById("pub-descripcion");
+      const btnGuardar = document.getElementById("btn-publicar-guardar");
+
+      const prevTitulo = document.getElementById("preview-title-display");
+      const prevPrecio = document.getElementById("preview-precio-display");
+      const prevUbicacion = document.getElementById("preview-location-display");
+      const prevTags = document.getElementById("preview-tags-display");
+      const prevAmenidades = document.getElementById("preview-amenities-display");
+      const amenityChips = document.querySelectorAll(".amenity-chip");
+
+      function getAmenidades() {
+        const sel = [];
+        amenityChips.forEach(c => {
+          if (c.classList.contains("selected")) sel.push(c.dataset.value);
+        });
+        return sel;
+      }
+
+      function actualizarPreview() {
+        const titulo = inputTitulo.value.trim() || "Habitación en renta";
+        const estrato = selectEstrato.value;
+        const barrio = inputBarrio.value.trim() || "La Grama";
+        const distancia = inputDistancia.value.trim() || "Cerca a la U";
+        const transporte = inputTransporte.value.trim() || "Ruta a 1 cuadra";
+        const precio = parseInt(inputPrecio.value, 10) || 0;
+        const amenidades = getAmenidades();
+
+        prevTitulo.textContent = titulo;
+        prevPrecio.innerHTML = `${formatearPrecioCOP(precio)} <small>/mes</small>`;
+        prevUbicacion.textContent = `${barrio} · ${distancia}`;
+        prevTags.innerHTML = `
+          <span class="tag-pill">Estrato ${estrato}</span>
+          <span class="tag-pill">${transporte}</span>
+        `;
+        prevAmenidades.textContent = amenidades.length > 0 ? amenidades.join(" · ") : "Servicios estándar";
+      }
+
+      [inputTitulo, selectTipo, selectEstrato, inputBarrio, inputDistancia, inputPrecio, inputTransporte, textDescripcion]
+        .forEach(el => {
+          el.addEventListener("input", actualizarPreview);
+          el.addEventListener("change", actualizarPreview);
+        });
+
+      amenityChips.forEach(chip => {
+        chip.addEventListener("click", () => {
+          chip.classList.toggle("selected");
+          const val = chip.dataset.value;
+          chip.textContent = chip.classList.contains("selected") ? `✓ ${val}` : val;
+          actualizarPreview();
+        });
+      });
+
+      btnGuardar.addEventListener("click", () => {
+        const titulo = inputTitulo.value.trim();
+        const precio = parseInt(inputPrecio.value, 10);
+
+        if (!titulo || isNaN(precio) || precio <= 0) {
+          alert("Por favor completa el título y un precio válido.");
+          return;
+        }
+
+        const usuario = RoumixStorage.getUsuario() || { nombre: "Tú", telefono: "573100000000" };
+
+        const nuevo = {
+          id: Date.now(),
+          titulo: titulo,
+          tipo: selectTipo.value.toLowerCase(),
+          tipoLabel: selectTipo.value,
+          precio: precio,
+          precioFormato: formatearPrecioCOP(precio),
+          barrio: inputBarrio.value.trim() || "La Grama",
+          universidad: "Santo Tomás",
+          distanciaTexto: `${inputBarrio.value.trim()} · ${inputDistancia.value.trim()}`,
+          distanciaMetros: 700,
+          estrato: parseInt(selectEstrato.value, 10) || 3,
+          transporte: inputTransporte.value.trim() || "Ruta bus a 1 cuadra",
+          amenidades: getAmenidades(),
+          disponible: true,
+          lat: 4.1520 + (Math.random() - 0.5) * 0.008,
+          lng: -73.6345 + (Math.random() - 0.5) * 0.008,
+          imagen: "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=800&q=80",
+          propietario: {
+            nombre: usuario.nombre || "Propietario verificado",
+            telefono: "573100000000",
+            verificado: true
+          },
+          descripcion: textDescripcion.value.trim()
+        };
+
+        RoumixStorage.guardarInmueble(nuevo);
+        alert("¡Excelente! Tu inmueble ha sido publicado con éxito y ya aparece en las búsquedas.");
+        window.location.href = "mis-publicaciones.html";
+      });
+
+      actualizarPreview();
+    });
+  </script>
+</body>
+</html>

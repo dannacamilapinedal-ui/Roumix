@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Roumix - Encuentra habitaciones, apartaestudios y apartamentos para estudiantes en Villavicencio cerca de tu universidad.">
+  <title>Buscar Vivienda — Roumix</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Leaflet CSS para el mapa -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <!-- ======================================================== -->
+  <!-- BARRA DE NAVEGACIÓN SUPERIOR (SIN DETALLE EN LA BARRA)   -->
+  <!-- ======================================================== -->
+  <header class="main-header">
+    <div class="header-inner">
+      <div class="header-left">
+        <a href="buscar.html" class="logo">
+          <span class="logo-text">roumix</span><span class="logo-dot">.</span>
+        </a>
+      </div>
+
+      <nav class="main-nav" aria-label="Navegación principal">
+        <ul class="nav-links">
+          <li><a href="buscar.html" class="nav-link active">Inicio</a></li>
+          <li><a href="buscar.html" class="nav-link">Buscar</a></li>
+          <li><a href="como-funciona.html" class="nav-link">Cómo funciona</a></li>
+          <li><a href="comparar.html" class="nav-link">Comparar</a></li>
+        </ul>
+      </nav>
+
+      <div class="header-right">
+        <span class="user-role-badge">Estudiante</span>
+        <a href="index.html" class="btn-logout-pill" id="btn-logout">Cerrar sesión</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ======================================================== -->
+  <!-- CONTENIDO: BÚSQUEDA Y MAPA DE VILLAVICENCIO              -->
+  <!-- ======================================================== -->
+  <main>
+    <section class="hero-search-section">
+      <div class="hero-container">
+        <div class="hero-header-row">
+          <div class="hero-titles">
+            <h1 class="hero-title">Vivienda cerca de tu universidad, sin dar vueltas.</h1>
+            <p class="hero-subtitle">
+              Habitaciones, apartaestudios y casas en Villavicencio, con distancia real a tu campus y contacto directo con el propietario.
+            </p>
+          </div>
+          <div class="hero-stats">
+            <div class="stat-box">
+              <span class="stat-number" id="stats-total-inmuebles">62</span>
+              <span class="stat-label">INMUEBLES</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-number">5</span>
+              <span class="stat-label">UNIVERSIDADES</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Barra de Búsqueda con Icono SVG Limpio -->
+        <div class="search-bar-card">
+          <div class="search-input-group">
+            <svg class="search-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" id="filtro-texto" placeholder="Barrio, dirección o universidad" aria-label="Buscar por barrio, dirección o universidad">
+          </div>
+
+          <div class="search-divider"></div>
+
+          <div class="search-select-group">
+            <select id="filtro-universidad" aria-label="Filtrar por universidad">
+              <option value="Santo Tomás" selected>Universidad Santo Tomás</option>
+              <option value="Unillanos">Universidad de los Llanos (Unillanos)</option>
+              <option value="Cooperativa">Universidad Cooperativa de Colombia</option>
+              <option value="Uniminuto">Uniminuto Villavicencio</option>
+              <option value="Antonio Nariño">Universidad Antonio Nariño</option>
+              <option value="todas">Todas las universidades</option>
+            </select>
+          </div>
+
+          <div class="search-divider"></div>
+
+          <div class="search-select-group">
+            <select id="filtro-precio" aria-label="Filtrar por precio máximo">
+              <option value="450000">Hasta $450.000</option>
+              <option value="700000" selected>Hasta $700.000</option>
+              <option value="1000000">Hasta $1.000.000</option>
+              <option value="9999999">Cualquier precio</option>
+            </select>
+          </div>
+
+          <button type="button" id="btn-ejecutar-busqueda" class="btn-search-action">Buscar</button>
+        </div>
+
+        <!-- Filtros de Categoría / Pills -->
+        <div class="category-filters-row">
+          <div class="category-pills" role="radiogroup" aria-label="Tipo de vivienda">
+            <button type="button" class="pill-btn active" data-tipo="todos">Todas</button>
+            <button type="button" class="pill-btn" data-tipo="habitacion">Habitación</button>
+            <button type="button" class="pill-btn" data-tipo="apartaestudio">Apartaestudio</button>
+            <button type="button" class="pill-btn" data-tipo="apartamento">Apartamento</button>
+            <button type="button" class="pill-btn" data-tipo="casa">Casa</button>
+          </div>
+
+          <a href="comparar.html" class="btn-compare" id="btn-abrir-comparador">
+            Comparar opciones →
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Resultados y Mapa Split -->
+    <div class="results-map-container">
+      <!-- Columna Izquierda: Listado de Resultados -->
+      <div class="results-column">
+        <div class="results-meta-bar">
+          <span class="results-counter" id="contador-resultados">
+            <strong>4 resultados</strong> cerca de Santo Tomás
+          </span>
+          <div class="sort-control">
+            <label for="ordenar-por">Ordenar por:</label>
+            <select id="ordenar-por" class="sort-select">
+              <option value="precio-asc" selected>Menor precio ↑</option>
+              <option value="precio-desc">Mayor precio ↓</option>
+              <option value="distancia">Más cercano a U</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Lista dinámica de tarjetas de inmuebles -->
+        <div id="lista-inmuebles" class="cards-list">
+          <!-- Renderizado dinámico vía JavaScript -->
+        </div>
+      </div>
+
+      <!-- Columna Derecha: Mapa Interactivo -->
+      <div class="map-column">
+        <div class="map-card-wrapper">
+          <div class="map-card-header">
+            <h3 class="map-title">Ubicación en el mapa</h3>
+          </div>
+
+          <!-- Contenedor del Mapa -->
+          <div id="mapa-villavicencio" class="map-view-box">
+            <!-- Renderizado dinámico -->
+          </div>
+
+          <!-- Leyenda del mapa -->
+          <div class="map-legend">
+            <div class="legend-item">
+              <span class="legend-dot university-dot"></span>
+              <span>Campus Universitario</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot property-dot"></span>
+              <span>Inmuebles en renta</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal para Contactar al Propietario (WhatsApp) -->
+  <div id="modal-contacto" class="modal-backdrop" aria-hidden="true">
+    <div class="modal-window" role="dialog" aria-labelledby="modal-contact-title">
+      <button type="button" class="modal-close-btn" id="btn-cerrar-modal" aria-label="Cerrar modal">&times;</button>
+      <div class="modal-body">
+        <div class="modal-badge-whatsapp">💬 Contacto Directo</div>
+        <h3 id="modal-contact-title" class="modal-title">Contactar al arrendador</h3>
+        <p class="modal-property-subtitle" id="modal-prop-nombre">Habitación amoblada en apartaestudio</p>
+        
+        <div class="modal-owner-box">
+          <div class="owner-avatar">👤</div>
+          <div class="owner-info">
+            <strong id="modal-prop-dueno">Propietario verificado</strong>
+            <span>Villavicencio, Meta</span>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="modal-mensaje-wa" class="form-label">Mensaje para WhatsApp:</label>
+          <textarea id="modal-mensaje-wa" rows="3" class="form-control form-textarea"></textarea>
+        </div>
+
+        <a id="modal-btn-whatsapp" href="#" target="_blank" rel="noopener noreferrer" class="btn-whatsapp-action">
+          <svg class="svg-icon-wa" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.668-.699c.969.587 1.942.88 2.792.881 3.179 0 5.766-2.587 5.767-5.766.001-3.18-2.586-5.767-5.767-5.767zm3.391 8.232c-.147.414-.755.767-1.042.813-.287.047-.638.077-2.074-.518-1.748-.724-2.871-2.5-2.958-2.616-.087-.116-.708-.941-.708-1.794 0-.853.447-1.273.606-1.446.16-.174.348-.218.464-.218.116 0 .232.001.333.006.107.005.25.04.391.378.147.355.503 1.229.547 1.318.044.088.073.191.015.307-.058.116-.088.19-.175.292-.087.102-.183.228-.261.306-.088.088-.18.184-.078.36.102.175.454.749.974 1.212.67.597 1.235.782 1.41.869.175.088.277.073.38-.044.102-.116.436-.508.552-.682.116-.175.233-.146.392-.088.16.058 1.013.477 1.188.564.175.088.291.131.334.204.043.073.043.42-.104.834z"/></svg>
+          Abrir chat en WhatsApp
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pie de página unificado -->
+  <footer class="app-footer">
+    <div class="footer-container">
+      <div class="footer-col">
+        <div class="footer-logo">
+          <span>roumix</span><span class="dot-orange">.</span>
+        </div>
+        <p class="footer-desc">
+          Plataforma de vivienda universitaria para la comunidad estudiantil de Villavicencio.
+        </p>
+      </div>
+
+      <div class="footer-col">
+        <h4>Navegación</h4>
+        <ul>
+          <li><a href="buscar.html" class="footer-link">Buscar vivienda</a></li>
+          <li><a href="comparar.html" class="footer-link">Comparar opciones</a></li>
+          <li><a href="como-funciona.html" class="footer-link">Cómo funciona</a></li>
+          <li><a href="index.html" class="footer-link">Cerrar sesión</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Contacto Académico</h4>
+        <address>
+          Universidad Santo Tomás, Villavicencio<br>
+          Facultad de Ingeniería de Sistemas<br>
+          <a href="mailto:contacto@roumix.com">contacto@roumix.com</a>
+        </address>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <small>© 2026 Roumix · Construcción de Software · Villavicencio, Colombia</small>
+    </div>
+  </footer>
+
+  <!-- Leaflet JS para el mapa -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="app.js"></script>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      let inmuebles = RoumixStorage.getInmuebles();
+      let filtroTexto = "";
+      let filtroUni = "Santo Tomás";
+      let filtroPrecio = 700000;
+      let filtroTipo = "todos";
+      let orden = "precio-asc";
+
+      let mapaInstancia = null;
+      let mapaMarcadores = [];
+
+      const listaContenedor = document.getElementById("lista-inmuebles");
+      const contadorResultados = document.getElementById("contador-resultados");
+      const statTotal = document.getElementById("stats-total-inmuebles");
+
+      if (statTotal) statTotal.textContent = inmuebles.length;
+
+      function filtrarYOrdenar() {
+        return inmuebles.filter(item => {
+          if (filtroTipo !== "todos" && item.tipo !== filtroTipo) return false;
+          if (item.precio > filtroPrecio) return false;
+          if (filtroUni !== "todas" && !item.universidad.toLowerCase().includes(filtroUni.toLowerCase())) return false;
+          if (filtroTexto) {
+            const q = filtroTexto.toLowerCase();
+            const coincide = item.titulo.toLowerCase().includes(q) ||
+                             item.barrio.toLowerCase().includes(q) ||
+                             item.distanciaTexto.toLowerCase().includes(q) ||
+                             item.amenidades.some(a => a.toLowerCase().includes(q));
+            if (!coincide) return false;
+          }
+          return true;
+        }).sort((a, b) => {
+          if (orden === "precio-asc") return a.precio - b.precio;
+          if (orden === "precio-desc") return b.precio - a.precio;
+          if (orden === "distancia") return a.distanciaMetros - b.distanciaMetros;
+          return 0;
+        });
+      }
+
+      function render() {
+        const filtrados = filtrarYOrdenar();
+        const uniLabel = filtroUni === "todas" ? "Villavicencio" : filtroUni;
+        contadorResultados.innerHTML = `<strong>${filtrados.length} resultados</strong> cerca de ${uniLabel}`;
+
+        if (filtrados.length === 0) {
+          listaContenedor.innerHTML = `
+            <div style="background:#fff; border:1px solid #ded7c5; border-radius:18px; padding:44px 24px; text-align:center;">
+              <span style="font-size:2.6rem; display:block; margin-bottom:12px;">🔍</span>
+              <h3 style="color:#142219; font-size:1.25rem; margin-bottom:8px;">No se encontraron inmuebles con estos filtros</h3>
+              <p style="color:#546250; font-size:0.95rem; margin-bottom:18px;">Intenta ajustando el presupuesto o seleccionando otra universidad.</p>
+              <button type="button" class="btn-search-action" onclick="resetFiltros()">Restablecer filtros</button>
+            </div>
+          `;
+          actualizarPines([]);
+          return;
+        }
+
+        listaContenedor.innerHTML = filtrados.map(item => `
+          <article class="property-card" data-id="${item.id}">
+            <div class="card-image-wrap">
+              <img src="${item.imagen}" alt="${item.titulo}" class="card-img" loading="lazy">
+              <span class="status-badge badge-available">DISPONIBLE</span>
+            </div>
+
+            <div class="card-body">
+              <div>
+                <div class="card-price-row">
+                  <span class="property-price">${item.precioFormato} <small>/mes</small></span>
+                </div>
+
+                <h3 class="property-title">${item.titulo}</h3>
+                <p class="property-location">${item.distanciaTexto}</p>
+
+                <div class="property-tags">
+                  <span class="tag-pill">Estrato ${item.estrato}</span>
+                  <span class="tag-pill">${item.transporte}</span>
+                </div>
+
+                <div class="property-amenities">
+                  ${item.amenidades.join(" · ")}
+                </div>
+              </div>
+
+              <div class="card-footer-actions">
+                <button type="button" class="btn-report" onclick="alert('Publicación #' + ${item.id} + ' reportada para moderación.')">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+                  Reportar
+                </button>
+                <div style="display: flex; gap: 8px;">
+                  <a href="detalle.html?id=${item.id}" class="btn-learn-more">
+                    Saber más
+                  </a>
+                  <button type="button" class="btn-contact" onclick="abrirModalContacto(${item.id})">
+                    <svg class="svg-icon-wa" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.668-.699c.969.587 1.942.88 2.792.881 3.179 0 5.766-2.587 5.767-5.766.001-3.18-2.586-5.767-5.767-5.767zm3.391 8.232c-.147.414-.755.767-1.042.813-.287.047-.638.077-2.074-.518-1.748-.724-2.871-2.5-2.958-2.616-.087-.116-.708-.941-.708-1.794 0-.853.447-1.273.606-1.446.16-.174.348-.218.464-.218.116 0 .232.001.333.006.107.005.25.04.391.378.147.355.503 1.229.547 1.318.044.088.073.191.015.307-.058.116-.088.19-.175.292-.087.102-.183.228-.261.306-.088.088-.18.184-.078.36.102.175.454.749.974 1.212.67.597 1.235.782 1.41.869.175.088.277.073.38-.044.102-.116.436-.508.552-.682.116-.175.233-.146.392-.088.16.058 1.013.477 1.188.564.175.088.291.131.334.204.043.073.043.42-.104.834z"/></svg>
+                    Contactar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </article>
+        `).join("");
+
+        actualizarPines(filtrados);
+      }
+
+      window.resetFiltros = function() {
+        document.getElementById("filtro-texto").value = "";
+        document.getElementById("filtro-universidad").value = "Santo Tomás";
+        document.getElementById("filtro-precio").value = "700000";
+        filtroTexto = "";
+        filtroUni = "Santo Tomás";
+        filtroPrecio = 700000;
+        filtroTipo = "todos";
+        document.querySelectorAll(".pill-btn").forEach((p, i) => p.classList.toggle("active", i === 0));
+        render();
+      };
+
+      document.getElementById("filtro-texto").addEventListener("input", (e) => {
+        filtroTexto = e.target.value.trim();
+        render();
+      });
+
+      document.getElementById("filtro-universidad").addEventListener("change", (e) => {
+        filtroUni = e.target.value;
+        render();
+      });
+
+      document.getElementById("filtro-precio").addEventListener("change", (e) => {
+        filtroPrecio = parseInt(e.target.value, 10);
+        render();
+      });
+
+      document.getElementById("btn-ejecutar-busqueda").addEventListener("click", render);
+
+      document.getElementById("ordenar-por").addEventListener("change", (e) => {
+        orden = e.target.value;
+        render();
+      });
+
+      document.querySelectorAll(".pill-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll(".pill-btn").forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          filtroTipo = btn.dataset.tipo;
+          render();
+        });
+      });
+
+      function initMapa() {
+        const coordsUSTA = [4.1520, -73.6345];
+        try {
+          if (typeof L !== "undefined") {
+            mapaInstancia = L.map("mapa-villavicencio", {
+              center: coordsUSTA,
+              zoom: 15,
+              zoomControl: true
+            });
+
+            L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+              attribution: '&copy; CARTO &copy; OpenStreetMap',
+              maxZoom: 19
+            }).addTo(mapaInstancia);
+
+            const iconUSTA = L.divIcon({
+              className: "custom-div-icon",
+              html: `<div class="map-pin-university">@SANTO TOMÁS</div>`,
+              iconSize: [120, 32],
+              iconAnchor: [60, 16]
+            });
+
+            L.marker(coordsUSTA, { icon: iconUSTA })
+              .addTo(mapaInstancia)
+              .bindPopup("<strong>Universidad Santo Tomás</strong><br>Campus Villavicencio");
+
+            render();
+          } else {
+            renderFallbackSVG();
+          }
+        } catch (e) {
+          renderFallbackSVG();
+        }
+      }
+
+      function actualizarPines(lista) {
+        if (!mapaInstancia || typeof L === "undefined") return;
+        mapaMarcadores.forEach(m => mapaInstancia.removeLayer(m));
+        mapaMarcadores = [];
+
+        lista.forEach(item => {
+          if (!item.lat || !item.lng) return;
+          const precioK = Math.round(item.precio / 1000) + "k";
+          const iconPin = L.divIcon({
+            className: "custom-div-icon",
+            html: `<div class="map-pin-price" data-id="${item.id}">$${precioK}</div>`,
+            iconSize: [68, 28],
+            iconAnchor: [34, 14]
+          });
+
+          const marker = L.marker([item.lat, item.lng], { icon: iconPin }).addTo(mapaInstancia);
+          marker.on("click", () => {
+            const card = document.querySelector(`.property-card[data-id="${item.id}"]`);
+            if (card) {
+              document.querySelectorAll(".property-card").forEach(c => c.classList.remove("highlighted"));
+              card.classList.add("highlighted");
+              card.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+          });
+          mapaMarcadores.push(marker);
+        });
+      }
+
+      function renderFallbackSVG() {
+        const box = document.getElementById("mapa-villavicencio");
+        box.innerHTML = `
+          <svg width="100%" height="100%" viewBox="0 0 460 460" xmlns="http://www.w3.org/2000/svg" style="background:#e8e3d6; font-family:Plus Jakarta Sans, sans-serif;">
+            <line x1="0" y1="90" x2="460" y2="90" stroke="#dcd3c1" stroke-width="16" />
+            <line x1="0" y1="180" x2="460" y2="180" stroke="#dcd3c1" stroke-width="20" />
+            <line x1="0" y1="270" x2="460" y2="270" stroke="#dcd3c1" stroke-width="16" />
+            <line x1="0" y1="360" x2="460" y2="360" stroke="#dcd3c1" stroke-width="16" />
+            <line x1="90" y1="0" x2="90" y2="460" stroke="#dcd3c1" stroke-width="16" />
+            <line x1="180" y1="0" x2="180" y2="460" stroke="#dcd3c1" stroke-width="20" />
+            <line x1="280" y1="0" x2="280" y2="460" stroke="#dcd3c1" stroke-width="16" />
+            <line x1="370" y1="0" x2="370" y2="460" stroke="#dcd3c1" stroke-width="16" />
+            <path d="M 320,0 C 300,140 270,220 220,460" fill="none" stroke="#b4cddc" stroke-width="24" stroke-linecap="round" />
+            <g transform="translate(195, 220)">
+              <rect x="0" y="0" width="124" height="26" rx="13" fill="#142219" />
+              <text x="62" y="17" fill="#ffffff" font-size="11" font-weight="800" text-anchor="middle">@SANTO TOMÁS</text>
+            </g>
+            <g transform="translate(60, 140)">
+              <rect x="0" y="0" width="62" height="24" rx="12" fill="#ffffff" stroke="#ded7c5" />
+              <circle cx="10" cy="12" r="3.5" fill="#d32f2f" />
+              <text x="36" y="16" fill="#142219" font-size="11" font-weight="800" text-anchor="middle">$420k</text>
+            </g>
+            <g transform="translate(140, 310)">
+              <rect x="0" y="0" width="62" height="24" rx="12" fill="#ffffff" stroke="#ded7c5" />
+              <circle cx="10" cy="12" r="3.5" fill="#d32f2f" />
+              <text x="36" y="16" fill="#142219" font-size="11" font-weight="800" text-anchor="middle">$650k</text>
+            </g>
+          </svg>
+        `;
+      }
+
+      initMapa();
+    });
+  </script>
+</body>
+</html>

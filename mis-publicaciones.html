@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Gestiona tus alojamientos y habitaciones publicados en Roumix Villavicencio.">
+  <title>Mis Publicaciones — Roumix</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <!-- ======================================================== -->
+  <!-- BARRA DE NAVEGACIÓN ROL: PROPIETARIO                     -->
+  <!-- ======================================================== -->
+  <header class="main-header">
+    <div class="header-inner">
+      <div class="header-left">
+        <a href="buscar.html" class="logo">
+          <span class="logo-text">roumix</span><span class="logo-dot">.</span>
+        </a>
+      </div>
+
+      <nav class="main-nav" aria-label="Navegación de propietario">
+        <ul class="nav-links">
+          <li><a href="buscar.html" class="nav-link">Inicio</a></li>
+          <li><a href="buscar.html" class="nav-link">Buscar</a></li>
+          <li><a href="publicar.html" class="nav-link">Publicar</a></li>
+          <li><a href="mis-publicaciones.html" class="nav-link active">Mis publicaciones</a></li>
+          <li><a href="como-funciona.html" class="nav-link">Cómo funciona</a></li>
+          <li><a href="comparar.html" class="nav-link">Comparar</a></li>
+        </ul>
+      </nav>
+
+      <div class="header-right">
+        <span class="user-role-badge">Propietario</span>
+        <a href="index.html" class="btn-logout-pill" id="btn-logout">Cerrar sesión</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ======================================================== -->
+  <!-- CONTENIDO: PANEL DE GESTIÓN DE PUBLICACIONES             -->
+  <!-- ======================================================== -->
+  <main>
+    <div class="my-publications-container">
+      <div class="my-publications-header-row">
+        <div>
+          <h1 class="my-publications-title">Mis Publicaciones</h1>
+          <p class="my-publications-subtitle">Gestiona y supervisa los alojamientos que tienes registrados en Roumix.</p>
+        </div>
+        <a href="publicar.html" class="btn-publish-new-property">
+          <svg class="svg-plus-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Publicar nuevo inmueble
+        </a>
+      </div>
+
+      <div id="lista-mis-publicaciones" class="my-publications-list">
+        <!-- Renderizado dinámico vía JavaScript -->
+      </div>
+    </div>
+  </main>
+
+  <!-- Pie de página -->
+  <footer class="app-footer">
+    <div class="footer-container">
+      <div class="footer-col">
+        <div class="footer-logo">
+          <span>roumix</span><span class="dot-orange">.</span>
+        </div>
+        <p class="footer-desc">
+          Plataforma de vivienda universitaria para la comunidad estudiantil de Villavicencio.
+        </p>
+      </div>
+
+      <div class="footer-col">
+        <h4>Panel Propietario</h4>
+        <ul>
+          <li><a href="buscar.html" class="footer-link">Inicio / Buscar</a></li>
+          <li><a href="publicar.html" class="footer-link">Publicar inmueble</a></li>
+          <li><a href="mis-publicaciones.html" class="footer-link">Mis publicaciones</a></li>
+          <li><a href="como-funciona.html" class="footer-link">Cómo funciona</a></li>
+          <li><a href="comparar.html" class="footer-link">Comparar</a></li>
+          <li><a href="index.html" class="footer-link">Cerrar sesión</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Contacto Académico</h4>
+        <address>
+          Universidad Santo Tomás, Villavicencio<br>
+          Facultad de Ingeniería de Sistemas<br>
+          <a href="mailto:contacto@roumix.com">contacto@roumix.com</a>
+        </address>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <small>© 2026 Roumix · Construcción de Software · Villavicencio, Colombia</small>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const lista = RoumixStorage.getInmuebles();
+      const contenedor = document.getElementById("lista-mis-publicaciones");
+      const usuario = RoumixStorage.getUsuario();
+
+      // Inmuebles del usuario o de muestra
+      const misInmuebles = lista.filter(i => (usuario && i.propietario.nombre.includes(usuario.nombre)) || i.propietario.nombre.includes("Tú") || i.id === 1);
+
+      if (misInmuebles.length === 0) {
+        contenedor.innerHTML = `
+          <div style="background:#fff; border:1px solid var(--borde-arena); border-radius:18px; padding:48px 24px; text-align:center;">
+            <p style="color:var(--tinta-media); font-size:1.05rem; margin-bottom:18px;">Aún no tienes inmuebles publicados en tu cuenta.</p>
+            <a href="publicar.html" class="btn-publish-new-property">
+              <svg class="svg-plus-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              Crear mi primera publicación
+            </a>
+          </div>
+        `;
+        return;
+      }
+
+      contenedor.innerHTML = misInmuebles.map(item => `
+        <article class="my-property-card">
+          <div class="my-prop-image-wrap">
+            <img src="${item.imagen}" alt="${item.titulo}" class="my-prop-img">
+            <span class="badge-published">PUBLICADO</span>
+          </div>
+
+          <div class="my-prop-body">
+            <div>
+              <div class="my-prop-price">${item.precioFormato} <small>/mes</small></div>
+              <h3 class="my-prop-title">${item.titulo}</h3>
+              <p class="my-prop-location">${item.distanciaTexto}</p>
+
+              <div class="my-prop-tags">
+                <span class="tag-pill">Estrato ${item.estrato}</span>
+                <span class="tag-pill">${item.amenidades.length} comodidades</span>
+                <span class="tag-pill">${item.area || '14 m²'}</span>
+              </div>
+            </div>
+
+            <div class="my-prop-footer">
+              <span class="my-prop-status-label">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="#2e7d32">
+                  <circle cx="5" cy="5" r="5"/>
+                </svg>
+                Visible para estudiantes
+              </span>
+              <div class="my-prop-actions">
+                <a href="detalle.html?id=${item.id}" class="btn-card-action">Saber más</a>
+                <button type="button" class="btn-card-action btn-card-danger" onclick="alert('La publicación ha sido pausada temporalmente.')">Pausar</button>
+              </div>
+            </div>
+          </div>
+        </article>
+      `).join("");
+    });
+  </script>
+</body>
+</html>

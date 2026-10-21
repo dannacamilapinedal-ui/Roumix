@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Roumix - Inicia sesión o regístrate para acceder a opciones de vivienda universitaria en Villavicencio.">
+  <title>Roumix — Iniciar Sesión / Registro</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="page-login">
+  <!-- ======================================================== -->
+  <!-- BARRA DE ACCESO LIMPIA (SOLO LOGO, SIN DISTRACCIONES)    -->
+  <!-- ======================================================== -->
+  <header class="main-header login-header">
+    <div class="header-inner">
+      <div class="header-left">
+        <a href="index.html" class="logo">
+          <span class="logo-text">roumix</span><span class="logo-dot">.</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ======================================================== -->
+  <!-- CONTENIDO: SPLIT SCREEN LOGIN & REGISTRO (BOCETO 1)      -->
+  <!-- ======================================================== -->
+  <main>
+    <div class="auth-split-screen">
+      <!-- Lado Izquierdo: Verde Oscuro con Beneficios -->
+      <div class="auth-brand-side">
+        <div class="auth-brand-content">
+          <div class="auth-brand-logo">
+            <span>roumix</span><span class="dot-orange">.</span>
+          </div>
+
+          <h1 class="auth-brand-title">
+            Crea tu cuenta y guarda los inmuebles que te interesan.
+          </h1>
+
+          <ol class="auth-benefits-list">
+            <li class="benefit-item">
+              <span class="benefit-number">1</span>
+              <span class="benefit-text">Guarda favoritos y compara precios, distancia y seguridad.</span>
+            </li>
+            <li class="benefit-item">
+              <span class="benefit-number">2</span>
+              <span class="benefit-text">Contacta propietarios por WhatsApp desde la publicación.</span>
+            </li>
+            <li class="benefit-item">
+              <span class="benefit-number">3</span>
+              <span class="benefit-text">Si eres propietario, publica y administra tus inmuebles.</span>
+            </li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- Lado Derecho: Formulario en Fondo Crema -->
+      <div class="auth-form-side">
+        <div class="auth-form-wrapper">
+          <!-- Toggle Tabs: Iniciar sesión / Registrarme (Exacto al boceto 1) -->
+          <div class="auth-toggle-tabs" role="tablist">
+            <button type="button" class="auth-tab-btn active" id="tab-login">Iniciar sesión</button>
+            <button type="button" class="auth-tab-btn" id="tab-register">Registrarme</button>
+          </div>
+
+          <form id="form-auth" class="auth-form-card" novalidate>
+            <!-- Campo Nombre (solo en registro) -->
+            <div class="auth-field-group" id="field-nombre" style="display: none;">
+              <label for="auth-nombre" class="auth-label">Nombre completo</label>
+              <input 
+                type="text" 
+                id="auth-nombre" 
+                class="auth-input" 
+                placeholder="Tu nombre completo"
+              >
+            </div>
+
+            <!-- Correo -->
+            <div class="auth-field-group">
+              <label for="auth-email" class="auth-label">Correo</label>
+              <input 
+                type="email" 
+                id="auth-email" 
+                class="auth-input" 
+                placeholder="nombre@ustavillavicencio.edu.co" 
+                required
+              >
+            </div>
+
+            <!-- Contraseña -->
+            <div class="auth-field-group">
+              <label for="auth-password" class="auth-label">Contraseña</label>
+              <div class="password-input-wrap">
+                <input 
+                  type="password" 
+                  id="auth-password" 
+                  class="auth-input" 
+                  placeholder="••••••••••••" 
+                  required
+                >
+                <button type="button" class="btn-toggle-pwd" id="btn-show-pwd" aria-label="Mostrar u ocultar contraseña">
+                  <svg class="svg-eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Selector: Entro como (Exacto al boceto 1) -->
+            <div class="auth-role-group">
+              <label class="auth-label">Entro como</label>
+              <div class="role-selector-pill">
+                <button type="button" class="role-btn active" data-role="estudiante">Estudiante</button>
+                <button type="button" class="role-btn" data-role="propietario">Propietario</button>
+              </div>
+            </div>
+
+            <!-- Botón Entrar / Crear cuenta -->
+            <button type="submit" id="btn-submit-auth" class="btn-auth-primary">
+              Entrar
+            </button>
+
+            <!-- Enlaces al pie -->
+            <div class="auth-footer-links">
+              <a href="#" class="auth-footer-link" onclick="alert('Se enviará un enlace de recuperación a tu correo institucional.'); return false;">¿Olvidé mi contraseña?</a>
+              <span class="auth-privacy-notice">Tus datos se protegen y no se comparten.</span>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const btnTabLogin = document.getElementById("tab-login");
+      const btnTabRegister = document.getElementById("tab-register");
+      const fieldNombre = document.getElementById("field-nombre");
+      const btnSubmit = document.getElementById("btn-submit-auth");
+      const formAuth = document.getElementById("form-auth");
+      const roleBtns = document.querySelectorAll(".role-btn");
+      const btnShowPwd = document.getElementById("btn-show-pwd");
+      const inputPwd = document.getElementById("auth-password");
+
+      let modo = "login";
+      let rol = "estudiante";
+
+      btnTabLogin.addEventListener("click", () => {
+        btnTabLogin.classList.add("active");
+        btnTabRegister.classList.remove("active");
+        fieldNombre.style.display = "none";
+        btnSubmit.textContent = "Entrar";
+        modo = "login";
+      });
+
+      btnTabRegister.addEventListener("click", () => {
+        btnTabRegister.classList.add("active");
+        btnTabLogin.classList.remove("active");
+        fieldNombre.style.display = "flex";
+        btnSubmit.textContent = "Crear cuenta";
+        modo = "register";
+      });
+
+      roleBtns.forEach(btn => {
+        btn.addEventListener("click", () => {
+          roleBtns.forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          rol = btn.dataset.role;
+        });
+      });
+
+      btnShowPwd.addEventListener("click", () => {
+        if (inputPwd.type === "password") {
+          inputPwd.type = "text";
+        } else {
+          inputPwd.type = "password";
+        }
+      });
+
+      formAuth.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const email = document.getElementById("auth-email").value.trim();
+        const nombre = document.getElementById("auth-nombre").value.trim();
+
+        if (!email) {
+          alert("Por favor ingresa tu correo electrónico.");
+          return;
+        }
+
+        const usuario = {
+          email: email,
+          nombre: nombre || email.split("@")[0],
+          rol: rol
+        };
+
+        RoumixStorage.setUsuario(usuario);
+
+        if (rol === "estudiante") {
+          alert(`¡Bienvenido! Has ingresado como ESTUDIANTE (${usuario.nombre}).`);
+          window.location.href = "buscar.html";
+        } else {
+          alert(`¡Bienvenido! Has ingresado como PROPIETARIO (${usuario.nombre}).`);
+          window.location.href = "buscar.html";
+        }
+      });
+    });
+  </script>
+</body>
+</html>

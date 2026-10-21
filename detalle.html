@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Detalle de habitación amoblada en apartaestudio en La Grama, Villavicencio - Roumix.">
+  <title>Habitación amoblada en apartaestudio — Roumix</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <!-- ======================================================== -->
+  <!-- BARRA DE NAVEGACIÓN ROL: ESTUDIANTE                      -->
+  <!-- ======================================================== -->
+  <header class="main-header">
+    <div class="header-inner">
+      <div class="header-left">
+        <a href="buscar.html" class="logo">
+          <span class="logo-text">roumix</span><span class="logo-dot">.</span>
+        </a>
+      </div>
+
+      <nav class="main-nav" aria-label="Navegación principal">
+        <ul class="nav-links">
+          <li><a href="buscar.html" class="nav-link">Inicio</a></li>
+          <li><a href="buscar.html" class="nav-link">Buscar</a></li>
+          <li><a href="como-funciona.html" class="nav-link">Cómo funciona</a></li>
+          <li><a href="comparar.html" class="nav-link">Comparar</a></li>
+        </ul>
+      </nav>
+
+      <div class="header-right">
+        <span class="user-role-badge">Estudiante</span>
+        <a href="index.html" class="btn-logout-pill" id="btn-logout">Cerrar sesión</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ======================================================== -->
+  <!-- CONTENIDO: FICHA TÉCNICA (EXACTA A IMAGEN 1 DE REFERENCIA)-->
+  <!-- ======================================================== -->
+  <main>
+    <div class="detail-view-container">
+      
+      <!-- 1. Galería de Fotos (Mosaico exacto al boceto 1) -->
+      <section class="property-gallery-grid" aria-label="Galería de imágenes">
+        <div class="gallery-main-col">
+          <img 
+            id="img-main-view"
+            src="https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=1200&q=80" 
+            alt="Habitación principal amoblada" 
+            class="gallery-main-img"
+          >
+        </div>
+
+        <div class="gallery-sub-grid">
+          <div class="gallery-thumb-item">
+            <img src="https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=600&q=80" alt="Baño moderno privado" class="gallery-thumb-img">
+          </div>
+          <div class="gallery-thumb-item">
+            <img src="https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=600&q=80" alt="Cocina integral equipada" class="gallery-thumb-img">
+          </div>
+          <div class="gallery-thumb-item">
+            <img src="https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?auto=format&fit=crop&w=600&q=80" alt="Fachada colonial residencial en La Grama" class="gallery-thumb-img">
+          </div>
+          <div class="gallery-thumb-item">
+            <img src="https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=600&q=80" alt="Terraza y zonas comunes" class="gallery-thumb-img">
+            <div class="gallery-more-overlay" onclick="alert('Abriendo visor con 10 fotos completas en alta definición.')">
+              +6 fotos
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. Información en dos columnas -->
+      <div class="detail-content-layout">
+        
+        <!-- Columna Izquierda: Información Principal -->
+        <div class="detail-main-info">
+          
+          <div class="detail-badge-group">
+            <span class="detail-badge badge-green" id="det-disponible">DISPONIBLE</span>
+            <span class="detail-badge" id="det-tipo">Habitación</span>
+            <span class="detail-badge" id="det-estrato">Estrato 3</span>
+          </div>
+
+          <h1 class="detail-headline" id="det-titulo">Habitación amoblada en apartaestudio</h1>
+          <p class="detail-sublocation" id="det-ubicacion">Barrio La Grama, Villavicencio · 750 m de la Universidad Santo Tomás</p>
+
+          <div class="detail-divider"></div>
+
+          <!-- Descripción del Inmueble -->
+          <h2 class="section-subheading">Descripción del inmueble</h2>
+          <p class="detail-description-p" id="det-descripcion">
+            Excelente habitación privada dentro de un apartaestudio compartido enfocado exclusivamente en estudiantes. Cuenta con todos los servicios incluidos en el canon mensual (agua, luz, gas, internet de alta velocidad de 200 megas). Ubicada en un sector residencial muy seguro de La Grama, a pocos minutos caminando de la U. Santo Tomás y con acceso inmediato a transporte público hacia el centro de la ciudad.
+          </p>
+
+          <div class="detail-divider"></div>
+
+          <!-- Características Clave en Cards Blancas -->
+          <h2 class="section-subheading">Características clave</h2>
+          <div class="features-cards-grid">
+            <div class="feature-box">
+              <strong class="feature-box-title">Área privada</strong>
+              <span class="feature-box-desc" id="det-area">14 m² construidos</span>
+            </div>
+
+            <div class="feature-box">
+              <strong class="feature-box-title">Amoblada</strong>
+              <span class="feature-box-desc">Cama, escritorio, clóset</span>
+            </div>
+
+            <div class="feature-box">
+              <strong class="feature-box-title">Baño privado</strong>
+              <span class="feature-box-desc">Uso exclusivo</span>
+            </div>
+
+            <div class="feature-box">
+              <strong class="feature-box-title">Wifi incluido</strong>
+              <span class="feature-box-desc">Fibra óptica 200 Mbps</span>
+            </div>
+
+            <div class="feature-box">
+              <strong class="feature-box-title">Cocina</strong>
+              <span class="feature-box-desc">Con gas natural y nevera</span>
+            </div>
+
+            <div class="feature-box">
+              <strong class="feature-box-title">Zona de lavado</strong>
+              <span class="feature-box-desc">Lavadora y tendero</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Columna Derecha: Tarjeta Flotante (Precio y Contacto) -->
+        <aside class="detail-floating-card">
+          <div class="floating-price-amount" id="det-precio">
+            $420.000 <small>/mes</small>
+          </div>
+          <p class="floating-price-sub">Servicios incluidos en el canon</p>
+
+          <div class="contract-terms-list">
+            <div class="contract-term-row">
+              <span>Depósito</span>
+              <strong id="det-deposito">$420.000 (un mes)</strong>
+            </div>
+            <div class="contract-term-row">
+              <span>Contrato mínimo</span>
+              <strong id="det-contrato">6 meses</strong>
+            </div>
+            <div class="contract-term-row">
+              <span>Disponible desde</span>
+              <strong id="det-disponibilidad">Inmediato</strong>
+            </div>
+          </div>
+
+          <!-- Botón Contactar por WhatsApp -->
+          <button type="button" class="btn-contact-wa-large" id="btn-wa-directo" onclick="abrirModalContacto(1)">
+            <svg class="svg-icon-wa" viewBox="0 0 24 24" style="width: 18px; height: 18px;"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.668-.699c.969.587 1.942.88 2.792.881 3.179 0 5.766-2.587 5.767-5.766.001-3.18-2.586-5.767-5.767-5.767zm3.391 8.232c-.147.414-.755.767-1.042.813-.287.047-.638.077-2.074-.518-1.748-.724-2.871-2.5-2.958-2.616-.087-.116-.708-.941-.708-1.794 0-.853.447-1.273.606-1.446.16-.174.348-.218.464-.218.116 0 .232.001.333.006.107.005.25.04.391.378.147.355.503 1.229.547 1.318.044.088.073.191.015.307-.058.116-.088.19-.175.292-.087.102-.183.228-.261.306-.088.088-.18.184-.078.36.102.175.454.749.974 1.212.67.597 1.235.782 1.41.869.175.088.277.073.38-.044.102-.116.436-.508.552-.682.116-.175.233-.146.392-.088.16.058 1.013.477 1.188.564.175.088.291.131.334.204.043.073.043.42-.104.834z"/></svg>
+            Contactar por WhatsApp
+          </button>
+
+          <!-- Botón Guardar Inmueble -->
+          <button type="button" class="btn-save-property" id="btn-guardar-inmueble" onclick="alert('¡Inmueble guardado en tus favoritos!')">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+            </svg>
+            Guardar inmueble
+          </button>
+
+          <!-- Perfil del Propietario -->
+          <div class="owner-profile-compact">
+            <div class="owner-avatar-circle" id="det-owner-avatar">MR</div>
+            <div class="owner-details-text">
+              <strong id="det-owner-nombre">Marta Ruiz</strong>
+              <span id="det-owner-sub">Propietaria verificada · responde en 2 h</span>
+            </div>
+          </div>
+        </aside>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal WhatsApp -->
+  <div id="modal-contacto" class="modal-backdrop" aria-hidden="true">
+    <div class="modal-window" role="dialog" aria-labelledby="modal-contact-title">
+      <button type="button" class="modal-close-btn" id="btn-cerrar-modal" aria-label="Cerrar modal">&times;</button>
+      <div class="modal-body">
+        <div class="modal-badge-whatsapp">💬 Contacto Directo</div>
+        <h3 id="modal-contact-title" class="modal-title">Contactar al arrendador</h3>
+        <p class="modal-property-subtitle" id="modal-prop-nombre">Habitación amoblada en apartaestudio</p>
+        
+        <div class="modal-owner-box">
+          <div class="owner-avatar">👤</div>
+          <div class="owner-info">
+            <strong id="modal-prop-dueno">Marta Ruiz (Propietaria verificada)</strong>
+            <span>Villavicencio, Meta</span>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="modal-mensaje-wa" class="form-label">Mensaje para WhatsApp:</label>
+          <textarea id="modal-mensaje-wa" rows="3" class="form-control form-textarea"></textarea>
+        </div>
+
+        <a id="modal-btn-whatsapp" href="#" target="_blank" rel="noopener noreferrer" class="btn-whatsapp-action">
+          <svg class="svg-icon-wa" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.668-.699c.969.587 1.942.88 2.792.881 3.179 0 5.766-2.587 5.767-5.766.001-3.18-2.586-5.767-5.767-5.767zm3.391 8.232c-.147.414-.755.767-1.042.813-.287.047-.638.077-2.074-.518-1.748-.724-2.871-2.5-2.958-2.616-.087-.116-.708-.941-.708-1.794 0-.853.447-1.273.606-1.446.16-.174.348-.218.464-.218.116 0 .232.001.333.006.107.005.25.04.391.378.147.355.503 1.229.547 1.318.044.088.073.191.015.307-.058.116-.088.19-.175.292-.087.102-.183.228-.261.306-.088.088-.18.184-.078.36.102.175.454.749.974 1.212.67.597 1.235.782 1.41.869.175.088.277.073.38-.044.102-.116.436-.508.552-.682.116-.175.233-.146.392-.088.16.058 1.013.477 1.188.564.175.088.291.131.334.204.043.073.043.42-.104.834z"/></svg>
+          Abrir chat en WhatsApp
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pie de página -->
+  <footer class="app-footer">
+    <div class="footer-container">
+      <div class="footer-col">
+        <div class="footer-logo">
+          <span>roumix</span><span class="dot-orange">.</span>
+        </div>
+        <p class="footer-desc">
+          Plataforma de vivienda universitaria para la comunidad estudiantil de Villavicencio.
+        </p>
+      </div>
+
+      <div class="footer-col">
+        <h4>Navegación</h4>
+        <ul>
+          <li><a href="buscar.html" class="footer-link">Buscar vivienda</a></li>
+          <li><a href="comparar.html" class="footer-link">Comparar opciones</a></li>
+          <li><a href="como-funciona.html" class="footer-link">Cómo funciona</a></li>
+          <li><a href="index.html" class="footer-link">Cerrar sesión</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Contacto Académico</h4>
+        <address>
+          Universidad Santo Tomás, Villavicencio<br>
+          Facultad de Ingeniería de Sistemas<br>
+          <a href="mailto:contacto@roumix.com">contacto@roumix.com</a>
+        </address>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <small>© 2026 Roumix · Construcción de Software · Villavicencio, Colombia</small>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get("id") || 1;
+      const item = RoumixStorage.getInmueblePorId(id);
+
+      if (item) {
+        document.getElementById("det-titulo").textContent = item.titulo;
+        document.getElementById("det-ubicacion").textContent = `Barrio ${item.barrio}, Villavicencio · ${item.distanciaTexto}`;
+        document.getElementById("det-tipo").textContent = item.tipoLabel;
+        document.getElementById("det-estrato").textContent = `Estrato ${item.estrato}`;
+        document.getElementById("det-precio").innerHTML = `${item.precioFormato} <small>/mes</small>`;
+        document.getElementById("det-descripcion").textContent = item.descripcion;
+        document.getElementById("det-area").textContent = `${item.area || "14 m²"} construidos`;
+        document.getElementById("det-deposito").textContent = item.deposito || `${item.precioFormato} (un mes)`;
+        document.getElementById("det-contrato").textContent = item.contratoMinimo || "6 meses";
+        document.getElementById("det-disponibilidad").textContent = item.disponibleDesde || "Inmediato";
+
+        if (item.propietario) {
+          document.getElementById("det-owner-nombre").textContent = item.propietario.nombre;
+          document.getElementById("det-owner-avatar").textContent = item.propietario.iniciales || item.propietario.nombre.slice(0, 2).toUpperCase();
+          document.getElementById("det-owner-sub").textContent = `Propietario verificado · ${item.propietario.tiempoRespuesta || "responde pronto"}`;
+        }
+
+        if (item.imagen) {
+          document.getElementById("img-main-view").src = item.imagen;
+        }
+
+        const btnWA = document.getElementById("btn-wa-directo");
+        if (btnWA) {
+          btnWA.setAttribute("onclick", `abrirModalContacto(${item.id})`);
+        }
+      }
+    });
+  </script>
+</body>
+</html>

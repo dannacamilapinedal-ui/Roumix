@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Compara opciones de alojamiento estudiantil en Villavicencio - Roumix.">
+  <title>Compara tus opciones de alojamiento — Roumix</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <!-- ======================================================== -->
+  <!-- BARRA DE NAVEGACIÓN ROL: ESTUDIANTE                      -->
+  <!-- ======================================================== -->
+  <header class="main-header">
+    <div class="header-inner">
+      <div class="header-left">
+        <a href="buscar.html" class="logo">
+          <span class="logo-text">roumix</span><span class="logo-dot">.</span>
+        </a>
+      </div>
+
+      <nav class="main-nav" aria-label="Navegación principal">
+        <ul class="nav-links">
+          <li><a href="buscar.html" class="nav-link">Inicio</a></li>
+          <li><a href="buscar.html" class="nav-link">Buscar</a></li>
+          <li><a href="como-funciona.html" class="nav-link">Cómo funciona</a></li>
+          <li><a href="comparar.html" class="nav-link active">Comparar</a></li>
+        </ul>
+      </nav>
+
+      <div class="header-right">
+        <span class="user-role-badge">Estudiante</span>
+        <a href="index.html" class="btn-logout-pill" id="btn-logout">Cerrar sesión</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ======================================================== -->
+  <!-- CONTENIDO: COMPARADOR (EXACTO A IMAGEN 2 DE REFERENCIA)  -->
+  <!-- ======================================================== -->
+  <main>
+    <div class="compare-view-container">
+      
+      <!-- Enlace para volver a resultados -->
+      <div class="back-link-row">
+        <a href="buscar.html" class="btn-back-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+          Volver a resultados
+        </a>
+      </div>
+
+      <h1 class="compare-title">Compara tus opciones de alojamiento</h1>
+      <p class="compare-subtitle">Analiza detalladamente las características para tomar la mejor decisión de hospedaje</p>
+
+      <!-- Tabla Comparativa idéntica al boceto 2 -->
+      <div class="comparison-card-table">
+        <div style="overflow-x: auto;">
+          <table class="compare-table">
+            <thead>
+              <tr>
+                <th>Características generales</th>
+                <th>
+                  <div class="compare-thumb-card">
+                    <img src="https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=150&q=80" alt="Habitación en La Grama" class="compare-thumb-img">
+                    <div class="compare-thumb-info">
+                      <strong>Habitación amoblada en apartaestudio</strong>
+                      <span>La Grama · $420.000 /mes</span>
+                    </div>
+                  </div>
+                </th>
+                <th>
+                  <div class="compare-thumb-card">
+                    <img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=150&q=80" alt="Apartaestudio en El Barzal" class="compare-thumb-img">
+                    <div class="compare-thumb-info">
+                      <strong>Apartaestudio moderno tipo loft</strong>
+                      <span>El Barzal · $650.000 /mes</span>
+                    </div>
+                  </div>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Precio de arriendo</td>
+                <td style="color:var(--verde-950); font-weight:800;">$420.000</td>
+                <td style="color:var(--verde-950); font-weight:800;">$650.000</td>
+              </tr>
+              <tr>
+                <td>Tipo de inmueble</td>
+                <td>Habitación</td>
+                <td>Apartaestudio</td>
+              </tr>
+              <tr>
+                <td>Área de habitación</td>
+                <td>14 m²</td>
+                <td>28 m²</td>
+              </tr>
+              <tr>
+                <td>Estrato social</td>
+                <td>Estrato 3</td>
+                <td>Estrato 4</td>
+              </tr>
+              <tr>
+                <td>Distancia a Universidad</td>
+                <td>750 m</td>
+                <td>1.2 km</td>
+              </tr>
+              <tr>
+                <td>Tiempo caminando</td>
+                <td>9 min</td>
+                <td>15 min</td>
+              </tr>
+              <tr>
+                <td>Amoblado completo</td>
+                <td>
+                  <span class="badge-check">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#276e2c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="16 9 10 15 8 13"></polyline></svg>
+                    Sí incluye
+                  </span>
+                </td>
+                <td>
+                  <span class="badge-cross">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c53030" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+                    No incluye
+                  </span>
+                </td>
+              </tr>
+              <tr>
+                <td>Baño privado</td>
+                <td>
+                  <span class="badge-check">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#276e2c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="16 9 10 15 8 13"></polyline></svg>
+                    Sí incluye
+                  </span>
+                </td>
+                <td>
+                  <span class="badge-check">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#276e2c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="16 9 10 15 8 13"></polyline></svg>
+                    Sí incluye
+                  </span>
+                </td>
+              </tr>
+              <tr>
+                <td>Internet Wifi</td>
+                <td>
+                  <span class="badge-check">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#276e2c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="16 9 10 15 8 13"></polyline></svg>
+                    Sí incluye
+                  </span>
+                </td>
+                <td>
+                  <span class="badge-check">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#276e2c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="16 9 10 15 8 13"></polyline></svg>
+                    Sí incluye
+                  </span>
+                </td>
+              </tr>
+              <tr>
+                <td>Servicios incluidos</td>
+                <td>
+                  <span class="badge-check">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#276e2c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="16 9 10 15 8 13"></polyline></svg>
+                    Sí incluye
+                  </span>
+                </td>
+                <td>
+                  <span class="badge-cross">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c53030" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+                    No incluye
+                  </span>
+                </td>
+              </tr>
+              <tr>
+                <td>Transporte cercano</td>
+                <td>A 1 cuadra</td>
+                <td>A 3 cuadras</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Botones de Acción al pie de la comparación -->
+      <div class="compare-actions-row">
+        <button type="button" class="btn-compare-wa" onclick="abrirModalContacto(1)">
+          <svg class="svg-icon-wa" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.668-.699c.969.587 1.942.88 2.792.881 3.179 0 5.766-2.587 5.767-5.766.001-3.18-2.586-5.767-5.767-5.767zm3.391 8.232c-.147.414-.755.767-1.042.813-.287.047-.638.077-2.074-.518-1.748-.724-2.871-2.5-2.958-2.616-.087-.116-.708-.941-.708-1.794 0-.853.447-1.273.606-1.446.16-.174.348-.218.464-.218.116 0 .232.001.333.006.107.005.25.04.391.378.147.355.503 1.229.547 1.318.044.088.073.191.015.307-.058.116-.088.19-.175.292-.087.102-.183.228-.261.306-.088.088-.18.184-.078.36.102.175.454.749.974 1.212.67.597 1.235.782 1.41.869.175.088.277.073.38-.044.102-.116.436-.508.552-.682.116-.175.233-.146.392-.088.16.058 1.013.477 1.188.564.175.088.291.131.334.204.043.073.043.42-.104.834z"/></svg>
+          Contactar · La Grama
+        </button>
+
+        <button type="button" class="btn-compare-wa" onclick="abrirModalContacto(2)">
+          <svg class="svg-icon-wa" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.668-.699c.969.587 1.942.88 2.792.881 3.179 0 5.766-2.587 5.767-5.766.001-3.18-2.586-5.767-5.767-5.767zm3.391 8.232c-.147.414-.755.767-1.042.813-.287.047-.638.077-2.074-.518-1.748-.724-2.871-2.5-2.958-2.616-.087-.116-.708-.941-.708-1.794 0-.853.447-1.273.606-1.446.16-.174.348-.218.464-.218.116 0 .232.001.333.006.107.005.25.04.391.378.147.355.503 1.229.547 1.318.044.088.073.191.015.307-.058.116-.088.19-.175.292-.087.102-.183.228-.261.306-.088.088-.18.184-.078.36.102.175.454.749.974 1.212.67.597 1.235.782 1.41.869.175.088.277.073.38-.044.102-.116.436-.508.552-.682.116-.175.233-.146.392-.088.16.058 1.013.477 1.188.564.175.088.291.131.334.204.043.073.043.42-.104.834z"/></svg>
+          Contactar · El Barzal
+        </button>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Modal WhatsApp -->
+  <div id="modal-contacto" class="modal-backdrop" aria-hidden="true">
+    <div class="modal-window" role="dialog" aria-labelledby="modal-contact-title">
+      <button type="button" class="modal-close-btn" id="btn-cerrar-modal" aria-label="Cerrar modal">&times;</button>
+      <div class="modal-body">
+        <div class="modal-badge-whatsapp">💬 Contacto Directo</div>
+        <h3 id="modal-contact-title" class="modal-title">Contactar al arrendador</h3>
+        <p class="modal-property-subtitle" id="modal-prop-nombre">Habitación amoblada en apartaestudio</p>
+        
+        <div class="modal-owner-box">
+          <div class="owner-avatar">👤</div>
+          <div class="owner-info">
+            <strong id="modal-prop-dueno">Propietario verificado</strong>
+            <span>Villavicencio, Meta</span>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="modal-mensaje-wa" class="form-label">Mensaje para WhatsApp:</label>
+          <textarea id="modal-mensaje-wa" rows="3" class="form-control form-textarea"></textarea>
+        </div>
+
+        <a id="modal-btn-whatsapp" href="#" target="_blank" rel="noopener noreferrer" class="btn-whatsapp-action">
+          <svg class="svg-icon-wa" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.668-.699c.969.587 1.942.88 2.792.881 3.179 0 5.766-2.587 5.767-5.766.001-3.18-2.586-5.767-5.767-5.767zm3.391 8.232c-.147.414-.755.767-1.042.813-.287.047-.638.077-2.074-.518-1.748-.724-2.871-2.5-2.958-2.616-.087-.116-.708-.941-.708-1.794 0-.853.447-1.273.606-1.446.16-.174.348-.218.464-.218.116 0 .232.001.333.006.107.005.25.04.391.378.147.355.503 1.229.547 1.318.044.088.073.191.015.307-.058.116-.088.19-.175.292-.087.102-.183.228-.261.306-.088.088-.18.184-.078.36.102.175.454.749.974 1.212.67.597 1.235.782 1.41.869.175.088.277.073.38-.044.102-.116.436-.508.552-.682.116-.175.233-.146.392-.088.16.058 1.013.477 1.188.564.175.088.291.131.334.204.043.073.043.42-.104.834z"/></svg>
+          Abrir chat en WhatsApp
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pie de página -->
+  <footer class="app-footer">
+    <div class="footer-container">
+      <div class="footer-col">
+        <div class="footer-logo">
+          <span>roumix</span><span class="dot-orange">.</span>
+        </div>
+        <p class="footer-desc">
+          Plataforma de vivienda universitaria para la comunidad estudiantil de Villavicencio.
+        </p>
+      </div>
+
+      <div class="footer-col">
+        <h4>Navegación</h4>
+        <ul>
+          <li><a href="buscar.html" class="footer-link">Buscar vivienda</a></li>
+          <li><a href="comparar.html" class="footer-link">Comparar opciones</a></li>
+          <li><a href="como-funciona.html" class="footer-link">Cómo funciona</a></li>
+          <li><a href="index.html" class="footer-link">Cerrar sesión</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Contacto Académico</h4>
+        <address>
+          Universidad Santo Tomás, Villavicencio<br>
+          Facultad de Ingeniería de Sistemas<br>
+          <a href="mailto:contacto@roumix.com">contacto@roumix.com</a>
+        </address>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <small>© 2026 Roumix · Construcción de Software · Villavicencio, Colombia</small>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
