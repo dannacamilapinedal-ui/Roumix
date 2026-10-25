@@ -43,6 +43,7 @@ async function requireAuth(req, res, next) {
     }
 
     req.usuario = result.rows[0];
+    req.token = token; // para operar en Storage en nombre del usuario
     next();
   } catch (error) {
     next(error);

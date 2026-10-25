@@ -91,7 +91,7 @@
                 type="text" 
                 id="pub-titulo" 
                 class="form-control" 
-                value="Habitación amoblada en apartaestudio" 
+                maxlength="200"
                 placeholder="Ej: Habitación amoblada cerca a la Santo Tomás"
                 required
               >
@@ -111,9 +111,10 @@
               <div class="form-group">
                 <label for="pub-estrato" class="form-label">ESTRATO</label>
                 <select id="pub-estrato" class="form-control">
+                  <option value="" selected>Sin informar</option>
                   <option value="1">1</option>
                   <option value="2">2</option>
-                  <option value="3" selected>3</option>
+                  <option value="3">3</option>
                   <option value="4">4</option>
                   <option value="5">5</option>
                   <option value="6">6</option>
@@ -129,16 +130,16 @@
                 class="form-control form-textarea" 
                 rows="4" 
                 placeholder="Describe el alojamiento, ambiente, reglas, etc."
-              >Excelente habitación privada dentro de un apartaestudio compartido enfocado exclusivamente en estudiantes. Cuenta con todos los servicios incluidos en el canon mensual (agua, luz, gas, internet de alta velocidad de 200 megas).</textarea>
+              maxlength="3000"></textarea>
             </div>
 
             <!-- Comodidades / Amenidades (Chips clicables) -->
             <div class="form-group">
               <label class="form-label">COMODIDADES INCLUIDAS</label>
               <div class="amenities-chips-group" id="amenities-container">
-                <button type="button" class="amenity-chip selected" data-value="Wifi">✓ Wifi</button>
-                <button type="button" class="amenity-chip selected" data-value="Amoblada">✓ Amoblada</button>
-                <button type="button" class="amenity-chip selected" data-value="Baño privado">✓ Baño privado</button>
+                <button type="button" class="amenity-chip" data-value="Wifi">Wifi</button>
+                <button type="button" class="amenity-chip" data-value="Amoblada">Amoblada</button>
+                <button type="button" class="amenity-chip" data-value="Baño privado">Baño privado</button>
                 <button type="button" class="amenity-chip" data-value="Cocina">Cocina</button>
                 <button type="button" class="amenity-chip" data-value="Lavandería">Lavandería</button>
                 <button type="button" class="amenity-chip" data-value="Parqueadero">Parqueadero</button>
@@ -153,28 +154,60 @@
               <div class="form-row-two">
                 <div class="form-group">
                   <label for="pub-barrio" class="form-label">BARRIO / SECTOR</label>
-                  <input type="text" id="pub-barrio" class="form-control" value="La Grama" placeholder="Ej: La Grama, Barzal, San Benito">
+                  <input type="text" id="pub-barrio" class="form-control" maxlength="100" placeholder="Ej: La Grama, Barzal, San Benito">
                 </div>
                 <div class="form-group">
                   <label for="pub-distancia" class="form-label">DISTANCIA A LA UNIVERSIDAD</label>
-                  <input type="text" id="pub-distancia" class="form-control" value="750m de Santo Tomás · 9 min a pie" placeholder="Ej: 500m de Santo Tomás">
+                  <input type="text" id="pub-distancia" class="form-control" maxlength="120" placeholder="Ej: 500m de Santo Tomás">
                 </div>
               </div>
 
               <div class="form-row-two">
                 <div class="form-group">
                   <label for="pub-precio" class="form-label">CANON MENSUAL ($ COP)</label>
-                  <input type="number" id="pub-precio" class="form-control" value="420000" step="10000" placeholder="420000">
+                  <input type="number" id="pub-precio" class="form-control" min="1" step="10000" placeholder="420000">
                 </div>
                 <div class="form-group">
                   <label for="pub-transporte" class="form-label">RUTA DE TRANSPORTE</label>
-                  <input type="text" id="pub-transporte" class="form-control" value="Ruta bus a 1 cuadra" placeholder="Ej: Ruta bus a 1 cuadra">
+                  <input type="text" id="pub-transporte" class="form-control" maxlength="150" placeholder="Ej: Ruta bus a 1 cuadra">
                 </div>
               </div>
             </div>
 
+            <!-- Condiciones del arriendo -->
+            <div style="border-top: 1px solid var(--borde-suave); padding-top: 22px; margin-top: 22px;">
+              <h2 class="form-block-title" style="font-size: 1.15rem; margin-bottom: 16px;">Condiciones</h2>
+              <div class="form-row-two">
+                <div class="form-group">
+                  <label for="pub-area" class="form-label">ÁREA</label>
+                  <input type="text" id="pub-area" class="form-control" maxlength="30" placeholder="Ej: 14 m²">
+                </div>
+                <div class="form-group">
+                  <label for="pub-deposito" class="form-label">DEPÓSITO</label>
+                  <input type="text" id="pub-deposito" class="form-control" maxlength="100" placeholder="Ej: Un mes de arriendo">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="pub-contrato" class="form-label">CONTRATO MÍNIMO</label>
+                <input type="text" id="pub-contrato" class="form-control" maxlength="50" placeholder="Ej: 6 meses">
+              </div>
+            </div>
+
+            <!-- Fotos -->
+            <div style="border-top: 1px solid var(--borde-suave); padding-top: 22px; margin-top: 22px;">
+              <h2 class="form-block-title" style="font-size: 1.15rem; margin-bottom: 6px;">Fotos</h2>
+              <p class="fotos-ayuda" id="fotos-ayuda">JPG, PNG o WebP · máximo 5 MB cada una · hasta 10 fotos. La primera será la portada.</p>
+              <label for="pub-fotos" class="fotos-selector">
+                <span aria-hidden="true">📷</span> Agregar fotos
+                <input type="file" id="pub-fotos" accept="image/jpeg,image/png,image/webp" multiple>
+              </label>
+              <div class="fotos-grid" id="fotos-grid" aria-live="polite"></div>
+            </div>
+
+            <p id="pub-mensaje" class="pub-mensaje" role="alert" aria-live="polite" hidden></p>
+
             <div class="form-actions">
-              <button type="button" id="btn-publicar-guardar" class="btn-submit-publish">Continuar</button>
+              <button type="button" id="btn-publicar-guardar" class="btn-submit-publish">Publicar inmueble</button>
             </div>
           </form>
         </div>
@@ -189,7 +222,7 @@
               <img 
                 id="preview-img" 
                 src="https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=800&q=80" 
-                alt="Vista previa del inmueble"
+                alt="Vista previa de la portada del inmueble"
                 class="card-img"
               >
               <span class="status-badge badge-draft">BORRADOR</span>
@@ -273,6 +306,11 @@
       // Solo propietarios con sesión válida (el servidor también lo valida al publicar)
       if (!(await protegerPagina(["propietario"]))) return;
 
+      const MAX_FOTOS = 10;
+      const MAX_FOTOS_POR_ENVIO = 8;
+      const MAX_BYTES = 5 * 1024 * 1024;
+      const TIPOS_FOTO = ["image/jpeg", "image/png", "image/webp"];
+
       const inputTitulo = document.getElementById("pub-titulo");
       const selectTipo = document.getElementById("pub-tipo");
       const selectEstrato = document.getElementById("pub-estrato");
@@ -281,14 +319,34 @@
       const inputPrecio = document.getElementById("pub-precio");
       const inputTransporte = document.getElementById("pub-transporte");
       const textDescripcion = document.getElementById("pub-descripcion");
+      const inputArea = document.getElementById("pub-area");
+      const inputDeposito = document.getElementById("pub-deposito");
+      const inputContrato = document.getElementById("pub-contrato");
+      const inputFotos = document.getElementById("pub-fotos");
+      const gridFotos = document.getElementById("fotos-grid");
+      const mensaje = document.getElementById("pub-mensaje");
       const btnGuardar = document.getElementById("btn-publicar-guardar");
 
+      const prevImagen = document.getElementById("preview-img");
       const prevTitulo = document.getElementById("preview-title-display");
       const prevPrecio = document.getElementById("preview-precio-display");
       const prevUbicacion = document.getElementById("preview-location-display");
       const prevTags = document.getElementById("preview-tags-display");
       const prevAmenidades = document.getElementById("preview-amenities-display");
       const amenityChips = document.querySelectorAll(".amenity-chip");
+      const imagenSinFoto = prevImagen.src;
+
+      // Fotos del formulario, en orden: { tipo: "existente", url } o { tipo: "nueva", archivo, url }
+      let fotos = [];
+
+      // Modo edición: publicar.html?editar=<id>
+      const idEditar = new URLSearchParams(window.location.search).get("editar");
+
+      function mostrarMensaje(texto, tipo) {
+        mensaje.textContent = texto || "";
+        mensaje.hidden = !texto;
+        mensaje.className = `pub-mensaje ${tipo === "exito" ? "pub-mensaje-exito" : "pub-mensaje-error"}`;
+      }
 
       function getAmenidades() {
         const sel = [];
@@ -298,24 +356,94 @@
         return sel;
       }
 
+      function marcarChip(chip, seleccionado) {
+        chip.classList.toggle("selected", seleccionado);
+        chip.setAttribute("aria-pressed", String(seleccionado));
+        chip.textContent = seleccionado ? `✓ ${chip.dataset.value}` : chip.dataset.value;
+      }
+
+      function crearPill(texto) {
+        const span = document.createElement("span");
+        span.className = "tag-pill";
+        span.textContent = texto;
+        return span;
+      }
+
       function actualizarPreview() {
-        const titulo = inputTitulo.value.trim() || "Habitación en renta";
-        const estrato = selectEstrato.value;
-        const barrio = inputBarrio.value.trim() || "La Grama";
-        const distancia = inputDistancia.value.trim() || "Cerca a la U";
-        const transporte = inputTransporte.value.trim() || "Ruta a 1 cuadra";
+        const titulo = inputTitulo.value.trim() || "Título de tu inmueble";
+        const barrio = inputBarrio.value.trim() || "Barrio";
+        const distancia = inputDistancia.value.trim();
         const precio = parseInt(inputPrecio.value, 10) || 0;
         const amenidades = getAmenidades();
 
         prevTitulo.textContent = titulo;
         prevPrecio.innerHTML = `${formatearPrecioCOP(precio)} <small>/mes</small>`;
-        prevUbicacion.textContent = `${barrio} · ${distancia}`;
-        prevTags.innerHTML = `
-          <span class="tag-pill">Estrato ${estrato}</span>
-          <span class="tag-pill">${transporte}</span>
-        `;
-        prevAmenidades.textContent = amenidades.length > 0 ? amenidades.join(" · ") : "Servicios estándar";
+        prevUbicacion.textContent = distancia ? `${barrio} · ${distancia}` : barrio;
+        prevTags.replaceChildren();
+        if (selectEstrato.value) prevTags.appendChild(crearPill(`Estrato ${selectEstrato.value}`));
+        if (inputTransporte.value.trim()) prevTags.appendChild(crearPill(inputTransporte.value.trim()));
+        prevAmenidades.textContent = amenidades.length > 0 ? amenidades.join(" · ") : "Sin comodidades seleccionadas";
+        prevImagen.src = fotos.length ? fotos[0].url : imagenSinFoto;
       }
+
+      function renderFotos() {
+        gridFotos.replaceChildren();
+        fotos.forEach((foto, indice) => {
+          const item = document.createElement("div");
+          item.className = "foto-item";
+
+          const img = document.createElement("img");
+          img.src = foto.url;
+          img.alt = `Foto ${indice + 1}${indice === 0 ? " (portada)" : ""}`;
+          item.appendChild(img);
+
+          if (indice === 0) {
+            const portada = document.createElement("span");
+            portada.className = "foto-portada";
+            portada.textContent = "Portada";
+            item.appendChild(portada);
+          }
+
+          const quitar = document.createElement("button");
+          quitar.type = "button";
+          quitar.className = "foto-quitar";
+          quitar.setAttribute("aria-label", `Quitar foto ${indice + 1}`);
+          quitar.textContent = "×";
+          quitar.addEventListener("click", () => {
+            if (foto.tipo === "nueva") URL.revokeObjectURL(foto.url);
+            fotos.splice(indice, 1);
+            renderFotos();
+          });
+          item.appendChild(quitar);
+
+          gridFotos.appendChild(item);
+        });
+        document.getElementById("fotos-ayuda").textContent =
+          `JPG, PNG o WebP · máximo 5 MB cada una · ${fotos.length}/${MAX_FOTOS} fotos. La primera será la portada.`;
+        actualizarPreview();
+      }
+
+      inputFotos.addEventListener("change", () => {
+        const errores = [];
+        for (const archivo of inputFotos.files) {
+          if (!TIPOS_FOTO.includes(archivo.type)) {
+            errores.push(`"${archivo.name}" no es JPG, PNG o WebP.`);
+          } else if (archivo.size > MAX_BYTES) {
+            errores.push(`"${archivo.name}" pesa más de 5 MB.`);
+          } else if (fotos.length >= MAX_FOTOS) {
+            errores.push(`Solo se permiten ${MAX_FOTOS} fotos por inmueble.`);
+            break;
+          } else if (fotos.filter(f => f.tipo === "nueva").length >= MAX_FOTOS_POR_ENVIO) {
+            errores.push(`Puedes agregar máximo ${MAX_FOTOS_POR_ENVIO} fotos nuevas por vez.`);
+            break;
+          } else {
+            fotos.push({ tipo: "nueva", archivo, url: URL.createObjectURL(archivo) });
+          }
+        }
+        inputFotos.value = "";
+        mostrarMensaje(errores.join(" "), "error");
+        renderFotos();
+      });
 
       [inputTitulo, selectTipo, selectEstrato, inputBarrio, inputDistancia, inputPrecio, inputTransporte, textDescripcion]
         .forEach(el => {
@@ -324,58 +452,96 @@
         });
 
       amenityChips.forEach(chip => {
+        chip.setAttribute("aria-pressed", "false");
         chip.addEventListener("click", () => {
-          chip.classList.toggle("selected");
-          const val = chip.dataset.value;
-          chip.textContent = chip.classList.contains("selected") ? `✓ ${val}` : val;
+          marcarChip(chip, !chip.classList.contains("selected"));
           actualizarPreview();
         });
       });
 
+      // Cargar el inmueble a editar (solo si es del propietario con sesión)
+      if (idEditar) {
+        document.querySelector(".publish-main-title").textContent = "Editar inmueble";
+        document.title = "Editar inmueble — Roumix";
+        btnGuardar.textContent = "Guardar cambios";
+        try {
+          const item = await RoumixAPI.getMiInmueble(idEditar);
+          inputTitulo.value = item.titulo;
+          selectTipo.value = item.tipo;
+          selectEstrato.value = item.estrato ? String(item.estrato) : "";
+          textDescripcion.value = item.descripcion || "";
+          inputBarrio.value = item.barrio;
+          inputDistancia.value = item.distancia_texto && item.distancia_texto.startsWith(`${item.barrio} · `)
+            ? item.distancia_texto.slice(item.barrio.length + 3)
+            : (item.distancia_texto || "");
+          inputPrecio.value = item.precio;
+          inputTransporte.value = item.transporte || "";
+          inputArea.value = item.area || "";
+          inputDeposito.value = item.deposito || "";
+          inputContrato.value = item.contratoMinimo || "";
+          amenityChips.forEach(chip => marcarChip(chip, item.amenidades.includes(chip.dataset.value)));
+          fotos = (item.galeria || []).filter(Boolean).map(url => ({ tipo: "existente", url }));
+        } catch (error) {
+          mostrarMensaje(`No se pudo cargar el inmueble: ${error.message}`, "error");
+          btnGuardar.disabled = true;
+        }
+      }
+
       btnGuardar.addEventListener("click", async () => {
         const titulo = inputTitulo.value.trim();
         const precio = parseInt(inputPrecio.value, 10);
-
-        if (!titulo || isNaN(precio) || precio <= 0) {
-          alert("Por favor completa el título y un precio válido.");
-          return;
-        }
-
         const barrio = inputBarrio.value.trim();
-        if (!barrio) {
-          alert("Por favor indica el barrio del inmueble.");
-          return;
-        }
+        const distancia = inputDistancia.value.trim();
+
+        if (!titulo) return mostrarMensaje("Escribe el título de la publicación.", "error");
+        if (isNaN(precio) || precio <= 0) return mostrarMensaje("Escribe un canon mensual válido (mayor que cero).", "error");
+        if (!barrio) return mostrarMensaje("Indica el barrio o sector del inmueble.", "error");
+        if (fotos.length === 0) return mostrarMensaje("Agrega al menos una foto del inmueble.", "error");
 
         // El propietario NO se envía: el servidor lo toma de la sesión iniciada.
-        // Las fotos se agregarán cuando esté lista la carga a Supabase Storage.
-        const nuevo = {
-          titulo: titulo,
+        const datos = {
+          titulo,
           tipo: selectTipo.value,
-          precio: precio,
-          barrio: barrio,
+          precio,
+          barrio,
           universidad: "Santo Tomás",
-          distanciaTexto: inputDistancia.value.trim() ? `${barrio} · ${inputDistancia.value.trim()}` : null,
-          estrato: parseInt(selectEstrato.value, 10) || null,
+          distanciaTexto: distancia ? `${barrio} · ${distancia}` : null,
+          estrato: selectEstrato.value ? parseInt(selectEstrato.value, 10) : null,
           transporte: inputTransporte.value.trim() || null,
           amenidades: getAmenidades(),
-          descripcion: textDescripcion.value.trim()
+          descripcion: textDescripcion.value.trim() || null,
+          area: inputArea.value.trim() || null,
+          deposito: inputDeposito.value.trim() || null,
+          contratoMinimo: inputContrato.value.trim() || null
         };
 
+        const nuevas = fotos.filter(f => f.tipo === "nueva").map(f => f.archivo);
+        const textoBoton = btnGuardar.textContent;
         btnGuardar.disabled = true;
+        btnGuardar.textContent = nuevas.length ? "Subiendo fotos…" : "Guardando…";
+        mostrarMensaje("");
+
         try {
-          // Guardar en la base de datos PostgreSQL de Supabase vía API REST
-          await RoumixAPI.crearInmueble(nuevo);
+          if (idEditar) {
+            // Las fotos existentes se conservan en el orden actual; las nuevas van al final
+            datos.fotosConservar = fotos.filter(f => f.tipo === "existente").map(f => f.url);
+            await RoumixAPI.actualizarInmueble(idEditar, datos, nuevas);
+          } else {
+            await RoumixAPI.crearInmueble(datos, nuevas);
+          }
         } catch (error) {
-          alert(`No se pudo publicar el inmueble: ${error.message}`);
+          mostrarMensaje(`No se pudo guardar: ${error.message}`, "error");
           btnGuardar.disabled = false;
+          btnGuardar.textContent = textoBoton;
           return;
         }
-        alert("¡Tu inmueble quedó publicado y ya aparece en las búsquedas!");
+
+        // Solo se confirma cuando el servidor respondió con éxito
+        mostrarMensaje(idEditar ? "Cambios guardados." : "¡Tu inmueble quedó publicado!", "exito");
         window.location.href = "mis-publicaciones.html";
       });
 
-      actualizarPreview();
+      renderFotos();
     });
   </script>
 </body>

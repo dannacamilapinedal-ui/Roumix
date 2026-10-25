@@ -29,7 +29,8 @@ const RoumixAPI = {
     }
 
     const headers = { ...(opciones.headers || {}) };
-    if (opciones.body) headers['Content-Type'] = 'application/json';
+    // Con FormData (fotos) el navegador pone el Content-Type multipart por sí solo
+    if (opciones.body && !(opciones.body instanceof FormData)) headers['Content-Type'] = 'application/json';
 
     const token = RoumixStorage.getToken();
     if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -143,35 +144,56 @@ const RoumixAPI = {
   },
 
   /**
-   * Envía un nuevo inmueble para registrarlo en PostgreSQL.
-   * El propietario lo determina el servidor a partir de la sesión.
+   * Un inmueble propio en cualquier estado (para editarlo)
    */
-  crearInmueble: async function(nuevo) {
-    const json = await this._request('/inmuebles', {
-      method: 'POST',
-      body: JSON.stringify({
-        titulo: nuevo.titulo,
-        tipo: nuevo.tipo,
-        precio: nuevo.precio,
-        barrio: nuevo.barrio,
-        universidad: nuevo.universidad,
-        distanciaTexto: nuevo.distanciaTexto,
-        distanciaMetros: nuevo.distanciaMetros,
-        tiempoPie: nuevo.tiempoPie,
-        estrato: nuevo.estrato,
-        area: nuevo.area,
-        transporte: nuevo.transporte,
-        amenidades: nuevo.amenidades,
-        descripcion: nuevo.descripcion,
-        deposito: nuevo.deposito,
-        contratoMinimo: nuevo.contratoMinimo,
-        latitud: nuevo.lat,
-        longitud: nuevo.lng,
-        imagenPrincipal: nuevo.imagen,
-        galeria: nuevo.galeria
-      })
+  getMiInmueble: async function(id) {
+    const json = await this._request(`/inmuebles/mios/${encodeURIComponent(id)}`);
+    return this._normalizarInmueble(json.data);
+  },
+
+  /**
+   * Arma el multipart con los datos (JSON) y las fotos nuevas
+   */
+  _formularioInmueble: function(datos, fotos) {
+    const form = new FormData();
+    form.append('datos', JSON.stringify(datos));
+    (fotos || []).forEach((foto) => form.append('fotos', foto));
+    return form;
+  },
+
+  /**
+   * Publica un inmueble con sus fotos. El propietario lo determina el servidor
+   * a partir de la sesión; las fotos se suben a Supabase Storage.
+   */
+  crearInmueble: async function(datos, fotos) {
+    const json = await this._request('/inmuebles', { method: 'POST', body: this._formularioInmueble(datos, fotos) });
+    return this._normalizarInmueble(json.data);
+  },
+
+  /**
+   * Edita un inmueble propio. datos.fotosConservar = URLs actuales que se mantienen.
+   */
+  actualizarInmueble: async function(id, datos, fotosNuevas) {
+    const json = await this._request(`/inmuebles/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: this._formularioInmueble(datos, fotosNuevas)
     });
     return this._normalizarInmueble(json.data);
+  },
+
+  /**
+   * estado: 'disponible' | 'pausado' | 'arrendado'
+   */
+  cambiarEstado: async function(id, estado) {
+    const json = await this._request(`/inmuebles/${encodeURIComponent(id)}/estado`, {
+      method: 'PATCH',
+      body: JSON.stringify({ estado })
+    });
+    return json.data;
+  },
+
+  eliminarInmueble: async function(id) {
+    await this._request(`/inmuebles/${encodeURIComponent(id)}`, { method: 'DELETE' });
   },
 
   _guardarEnCache: function(item) {

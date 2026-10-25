@@ -82,14 +82,20 @@ a `usuarios`.
 
 ## 5. Imágenes (Supabase Storage)
 
-Bucket público `inmuebles`: JPEG, PNG o WebP, máximo 5 MB por archivo. En PostgreSQL solo se
-guardan las URL. Más adelante la galería puede normalizarse en una tabla `imagenes_inmueble`.
+Bucket público `inmuebles`: JPEG, PNG o WebP, máximo 5 MB por archivo. Las fotos se guardan en
+`inmuebles/<id del propietario>/<uuid>.<ext>` y en PostgreSQL solo se guardan sus URL públicas
+(`imagen_principal` = la primera de `galeria`).
+
+Políticas de `storage.objects` (migración 003): un usuario autenticado solo puede subir archivos a su
+propia carpeta si es propietario (`public.es_propietario()`), y solo puede consultar o borrar los de
+su carpeta. Más adelante la galería puede normalizarse en una tabla `imagenes_inmueble`.
 
 ## 6. Migraciones
 
 | Archivo | Cambios |
 |---------|---------|
 | `001_esquema_inicial.sql` | Tablas `usuarios` e `inmuebles` e índices iniciales |
+| `003_politicas_storage_fotos.sql` | Función `es_propietario()` y políticas de Storage por carpeta del propietario |
 | `002_perfiles_auth_y_restricciones.sql` | `usuarios.id → auth.users`, propietario real con `ON DELETE CASCADE`, se eliminan `propietario_nombre/telefono`, `updated_at`, trigger de perfil automático, RLS y bucket `inmuebles` |
 
 Las migraciones aplicadas quedan registradas en la tabla `schema_migrations`.

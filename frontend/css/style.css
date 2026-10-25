@@ -2331,3 +2331,131 @@ main {
     grid-template-columns: 1fr;
   }
 }
+
+/* ==========================================================================
+   FOTOS DEL INMUEBLE (publicar.html) Y GESTIÓN (mis-publicaciones.html)
+   ========================================================================== */
+.fotos-ayuda {
+  color: var(--tinta-media);
+  font-size: 0.85rem;
+  margin-bottom: 14px;
+}
+
+.fotos-selector {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--superficie);
+  border: 1px dashed var(--verde-500);
+  color: var(--verde-800);
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding: 10px 20px;
+  border-radius: var(--radio-pill);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.fotos-selector:hover,
+.fotos-selector:focus-within {
+  background: var(--verde-badge-bg);
+}
+
+.fotos-selector input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.fotos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.foto-item {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: var(--radio-md);
+  overflow: hidden;
+  border: 1px solid var(--borde-arena);
+  background: var(--fondo-crema-alt);
+}
+
+.foto-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.foto-portada {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  background: var(--verde-950);
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radio-pill);
+}
+
+.foto-quitar {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(20, 34, 25, 0.8);
+  color: #ffffff;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.foto-quitar:hover,
+.foto-quitar:focus-visible {
+  background: #8a1c1c;
+}
+
+.pub-mensaje {
+  margin-top: 18px;
+  padding: 10px 14px;
+  border-radius: var(--radio-md);
+  font-size: 0.9rem;
+}
+
+.pub-mensaje-error {
+  background: #fdecea;
+  color: #8a1c1c;
+}
+
+.pub-mensaje-exito {
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+
+/* Estados de una publicación */
+.badge-estado-pausado {
+  background: #fff3e0;
+  color: #8a4b08;
+}
+
+.badge-estado-arrendado {
+  background: #e8eaf6;
+  color: #283593;
+}
+
+.my-prop-actions {
+  flex-wrap: wrap;
+}
+
+.btn-card-action:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}

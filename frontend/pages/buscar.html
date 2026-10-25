@@ -322,7 +322,7 @@
         listaContenedor.innerHTML = filtrados.map(item => `
           <article class="property-card" data-id="${item.id}">
             <div class="card-image-wrap">
-              <img src="${item.imagen}" alt="${item.titulo}" class="card-img" loading="lazy">
+              <img src="${escaparHTML(item.imagen)}" alt="${escaparHTML(item.titulo)}" class="card-img" loading="lazy">
               <span class="status-badge badge-available">DISPONIBLE</span>
             </div>
 
@@ -332,16 +332,16 @@
                   <span class="property-price">${item.precioFormato} <small>/mes</small></span>
                 </div>
 
-                <h3 class="property-title">${item.titulo}</h3>
-                <p class="property-location">${item.distanciaTexto}</p>
+                <h3 class="property-title">${escaparHTML(item.titulo)}</h3>
+                <p class="property-location">${escaparHTML(item.distanciaTexto)}</p>
 
                 <div class="property-tags">
-                  <span class="tag-pill">Estrato ${item.estrato}</span>
-                  <span class="tag-pill">${item.transporte}</span>
+                  ${item.estrato ? `<span class="tag-pill">Estrato ${item.estrato}</span>` : ""}
+                  ${item.transporte ? `<span class="tag-pill">${escaparHTML(item.transporte)}</span>` : ""}
                 </div>
 
                 <div class="property-amenities">
-                  ${item.amenidades.join(" · ")}
+                  ${escaparHTML(item.amenidades.join(" · "))}
                 </div>
               </div>
 

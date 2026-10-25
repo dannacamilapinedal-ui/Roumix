@@ -130,7 +130,7 @@
         return;
       }
 
-      if (misInmuebles.length === 0) {
+      function mostrarVacio() {
         contenedor.innerHTML = `
           <div style="background:#fff; border:1px solid var(--borde-arena); border-radius:18px; padding:48px 24px; text-align:center;">
             <p style="color:var(--tinta-media); font-size:1.05rem; margin-bottom:18px;">Aún no tienes inmuebles publicados en tu cuenta.</p>
@@ -143,44 +143,107 @@
             </a>
           </div>
         `;
+      }
+
+      if (misInmuebles.length === 0) {
+        mostrarVacio();
         return;
       }
 
-      contenedor.innerHTML = misInmuebles.map(item => `
-        <article class="my-property-card">
-          <div class="my-prop-image-wrap">
-            <img src="${item.imagen}" alt="${item.titulo}" class="my-prop-img">
-            <span class="badge-published">PUBLICADO</span>
-          </div>
+      const ESTADOS = {
+        disponible: { badge: "PUBLICADO", clase: "", color: "#2e7d32", texto: "Visible para estudiantes" },
+        pausado: { badge: "PAUSADO", clase: "badge-estado-pausado", color: "#b26a00", texto: "Pausado: no aparece en búsquedas" },
+        arrendado: { badge: "ARRENDADO", clase: "badge-estado-arrendado", color: "#283593", texto: "Arrendado: no aparece en búsquedas" }
+      };
 
-          <div class="my-prop-body">
-            <div>
-              <div class="my-prop-price">${item.precioFormato} <small>/mes</small></div>
-              <h3 class="my-prop-title">${item.titulo}</h3>
-              <p class="my-prop-location">${item.distanciaTexto}</p>
+      function botonesAcciones(item) {
+        const botones = [`<a href="publicar.html?editar=${item.id}" class="btn-card-action">Editar</a>`];
+        if (item.estado === "disponible") {
+          botones.push(`<a href="detalle.html?id=${item.id}" class="btn-card-action">Ver</a>`);
+          botones.push(`<button type="button" class="btn-card-action" data-accion="pausado" data-id="${item.id}">Pausar</button>`);
+          botones.push(`<button type="button" class="btn-card-action" data-accion="arrendado" data-id="${item.id}">Marcar arrendado</button>`);
+        } else {
+          botones.push(`<button type="button" class="btn-card-action" data-accion="disponible" data-id="${item.id}">${item.estado === "pausado" ? "Reactivar" : "Volver a publicar"}</button>`);
+        }
+        botones.push(`<button type="button" class="btn-card-action btn-card-danger" data-accion="eliminar" data-id="${item.id}">Eliminar</button>`);
+        return botones.join("");
+      }
 
-              <div class="my-prop-tags">
-                <span class="tag-pill">Estrato ${item.estrato}</span>
-                <span class="tag-pill">${item.amenidades.length} comodidades</span>
-                <span class="tag-pill">${item.area || '14 m²'}</span>
+      function render() {
+        contenedor.innerHTML = misInmuebles.map(item => {
+          const estado = ESTADOS[item.estado] || ESTADOS.disponible;
+          const tags = [
+            item.estrato ? `<span class="tag-pill">Estrato ${item.estrato}</span>` : "",
+            `<span class="tag-pill">${item.amenidades.length} comodidades</span>`,
+            `<span class="tag-pill">${item.galeria.length} foto${item.galeria.length === 1 ? "" : "s"}</span>`,
+            item.area ? `<span class="tag-pill">${escaparHTML(item.area)}</span>` : ""
+          ].join("");
+
+          return `
+            <article class="my-property-card">
+              <div class="my-prop-image-wrap">
+                <img src="${escaparHTML(item.imagen)}" alt="${escaparHTML(item.titulo)}" class="my-prop-img">
+                <span class="badge-published ${estado.clase}">${estado.badge}</span>
               </div>
-            </div>
 
-            <div class="my-prop-footer">
-              <span class="my-prop-status-label">
-                <svg width="10" height="10" viewBox="0 0 10 10" fill="#2e7d32">
-                  <circle cx="5" cy="5" r="5"/>
-                </svg>
-                Visible para estudiantes
-              </span>
-              <div class="my-prop-actions">
-                <a href="detalle.html?id=${item.id}" class="btn-card-action">Saber más</a>
-                <button type="button" class="btn-card-action btn-card-danger" onclick="alert('La publicación ha sido pausada temporalmente.')">Pausar</button>
+              <div class="my-prop-body">
+                <div>
+                  <div class="my-prop-price">${item.precioFormato} <small>/mes</small></div>
+                  <h3 class="my-prop-title">${escaparHTML(item.titulo)}</h3>
+                  <p class="my-prop-location">${escaparHTML(item.distanciaTexto)}</p>
+                  <div class="my-prop-tags">${tags}</div>
+                </div>
+
+                <div class="my-prop-footer">
+                  <span class="my-prop-status-label">
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="${estado.color}" aria-hidden="true">
+                      <circle cx="5" cy="5" r="5"/>
+                    </svg>
+                    ${estado.texto}
+                  </span>
+                  <div class="my-prop-actions">${botonesAcciones(item)}</div>
+                </div>
               </div>
-            </div>
-          </div>
-        </article>
-      `).join("");
+            </article>
+          `;
+        }).join("");
+      }
+
+      // Acciones: cada una se confirma con el servidor antes de cambiar la pantalla
+      contenedor.addEventListener("click", async (e) => {
+        const boton = e.target.closest("button[data-accion]");
+        if (!boton) return;
+
+        const id = Number(boton.dataset.id);
+        const accion = boton.dataset.accion;
+        const item = misInmuebles.find(i => i.id === id);
+
+        if (accion === "eliminar" && !confirm(`¿Eliminar "${item.titulo}" y sus fotos? Esta acción no se puede deshacer.`)) return;
+        if (accion === "arrendado" && !confirm(`¿Marcar "${item.titulo}" como arrendado? Dejará de aparecer en las búsquedas.`)) return;
+
+        boton.disabled = true;
+        try {
+          if (accion === "eliminar") {
+            await RoumixAPI.eliminarInmueble(id);
+            misInmuebles = misInmuebles.filter(i => i.id !== id);
+          } else {
+            const actualizado = await RoumixAPI.cambiarEstado(id, accion);
+            item.estado = actualizado.estado;
+          }
+        } catch (error) {
+          alert(`No se pudo completar la acción: ${error.message}`);
+          boton.disabled = false;
+          return;
+        }
+
+        if (misInmuebles.length === 0) {
+          mostrarVacio();
+        } else {
+          render();
+        }
+      });
+
+      render();
     });
   </script>
 </body>

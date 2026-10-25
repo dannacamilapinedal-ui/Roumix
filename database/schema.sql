@@ -68,6 +68,8 @@ CREATE INDEX idx_inmuebles_propietario ON inmuebles(propietario_id);
 
 -- 6. STORAGE
 --   Bucket público 'inmuebles' (jpeg, png, webp; máx. 5 MB por archivo).
+--   Políticas en storage.objects: cada propietario sube/consulta/borra solo en inmuebles/<su id>/
+--   (función public.es_propietario(); ver migración 003).
 
 -- 7. CONTROL DE MIGRACIONES
 CREATE TABLE schema_migrations (

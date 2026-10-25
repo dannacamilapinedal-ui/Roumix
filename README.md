@@ -29,7 +29,8 @@ roumix/
 │   ├── src/config/        Conexión a PostgreSQL y cliente de Supabase
 │   ├── src/routes/        Rutas de la API
 │   ├── src/controllers/   Lógica de cada operación
-│   ├── src/middleware/    Autenticación, roles y manejo de errores
+│   ├── src/middleware/    Autenticación, roles, recepción de fotos y errores
+│   ├── src/services/      Subida y borrado de fotos en Supabase Storage
 │   └── scripts/migrate.js Aplica las migraciones de la base de datos
 ├── database/
 │   ├── migrations/        Cambios del esquema, en orden
@@ -89,11 +90,21 @@ Abra **http://localhost:3000** — el mismo servidor entrega la página y la API
 | POST | `/api/auth/logout` | Con sesión | Cerrar sesión en Supabase Auth |
 | GET | `/api/inmuebles?tipo=&precioMax=&universidad=&q=` | Público | Inmuebles disponibles |
 | GET | `/api/inmuebles/:id` | Público | Detalle de un inmueble disponible |
-| GET | `/api/inmuebles/mios` | Propietario | Inmuebles del propietario autenticado |
-| POST | `/api/inmuebles` | Propietario | Publicar un inmueble |
+| GET | `/api/inmuebles/mios` | Propietario | Inmuebles del propietario autenticado (todos los estados) |
+| GET | `/api/inmuebles/mios/:id` | Propietario | Un inmueble propio (para editarlo) |
+| POST | `/api/inmuebles` | Propietario | Publicar con fotos (multipart: `datos` JSON + `fotos`) |
+| PUT | `/api/inmuebles/:id` | Propietario | Editar datos y fotos (`datos.fotosConservar` + `fotos` nuevas) |
+| PATCH | `/api/inmuebles/:id/estado` | Propietario | `disponible`, `pausado` o `arrendado` |
+| DELETE | `/api/inmuebles/:id` | Propietario | Eliminar el inmueble y sus fotos |
 
 Las contraseñas las gestiona Supabase Auth; Roumix nunca las guarda. Las rutas protegidas exigen `Authorization: Bearer <token de Supabase Auth>`. El rol y el
-propietario se obtienen en el servidor, nunca de lo que envía el navegador.
+propietario se obtienen en el servidor, nunca de lo que envía el navegador. Un propietario solo puede
+ver, editar, pausar o eliminar sus propios inmuebles.
+
+**Fotos:** JPG, PNG o WebP (se verifica el contenido real del archivo), máximo 5 MB cada una, hasta
+8 por envío y 10 por inmueble. El backend las sube a Supabase Storage con la sesión del propietario,
+y las políticas del bucket solo le permiten escribir en su carpeta `inmuebles/<id del propietario>/`.
+No se necesita la clave secreta de Supabase.
 
 ## 👥 Roles
 
@@ -107,8 +118,8 @@ propietario se obtienen en el servidor, nunca de lo que envía el navegador.
 - [x] Perfiles ligados a Supabase Auth, claves foráneas, RLS y bucket de imágenes
 - [x] Búsqueda y detalle leen la base de datos real, sin respaldos locales silenciosos
 - [x] Registro, inicio y cierre de sesión con Supabase Auth; páginas de propietario protegidas
-- [ ] Publicación con carga de imágenes a Supabase Storage
-- [ ] Editar, pausar y marcar como arrendada una publicación
+- [x] Publicación con fotos en Supabase Storage asociada al propietario autenticado
+- [x] Editar, pausar, reactivar, marcar como arrendada y eliminar publicaciones propias
 - [ ] Comparador dinámico con los inmuebles seleccionados
 - [ ] Despliegue
 

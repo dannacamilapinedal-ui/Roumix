@@ -74,6 +74,17 @@ const RoumixStorage = {
   }
 };
 
+// 2.1 Escapa texto antes de insertarlo con innerHTML.
+// Los datos de los inmuebles los escriben los usuarios: nunca deben interpretarse como HTML.
+function escaparHTML(valor) {
+  return String(valor ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 // 3. Formateador de moneda colombiana
 function formatearPrecioCOP(valor) {
   return "$" + Number(valor).toLocaleString("es-CO");
