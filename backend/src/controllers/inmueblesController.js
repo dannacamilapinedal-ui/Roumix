@@ -92,15 +92,39 @@ function validarInmueble(body) {
   };
 }
 
+const ORDENES = {
+  'precio-asc': 'i.precio ASC, i.id DESC',
+  'precio-desc': 'i.precio DESC, i.id DESC',
+  distancia: 'i.distancia_metros ASC NULLS LAST, i.precio ASC',
+  recientes: 'i.created_at DESC, i.id DESC'
+};
+const MAX_COMPARAR = 3;
+
+// Texto de búsqueda para ILIKE: % y _ del usuario se buscan literalmente
+function patronBusqueda(valor) {
+  return `%${String(valor).slice(0, 100).replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+}
+
 /**
- * GET /api/inmuebles
- * Lista los inmuebles disponibles con filtros opcionales
+ * GET /api/inmuebles?tipo=&precioMax=&universidad=&q=&orden=&ids=
+ * Lista los inmuebles disponibles con filtros opcionales.
+ * ids=1,2,3 devuelve solo esos (máx. 3, para el comparador); los que no existan
+ * o no estén disponibles simplemente no aparecen.
  */
 async function getInmuebles(req, res) {
-  const { tipo, precioMax, universidad, q } = req.query;
+  const { tipo, precioMax, universidad, q, orden, ids } = req.query;
 
   let queryText = `${SELECT_INMUEBLE} WHERE i.estado = $1`;
   const queryParams = ['disponible'];
+
+  if (ids !== undefined) {
+    const lista = String(ids).split(',').filter(Boolean).map((v) => enteroOpcional(v, 'ids', 1, 2147483647));
+    if (lista.length === 0 || lista.length > MAX_COMPARAR) {
+      throw errorValidacion(`ids debe tener entre 1 y ${MAX_COMPARAR} inmuebles.`);
+    }
+    queryParams.push(lista);
+    queryText += ` AND i.id = ANY($${queryParams.length}::int[])`;
+  }
 
   if (tipo && tipo !== 'todos') {
     if (!TIPOS.includes(tipo)) throw errorValidacion('Filtro tipo no válido.');
@@ -115,16 +139,21 @@ async function getInmuebles(req, res) {
   }
 
   if (universidad && universidad !== 'todas') {
-    queryParams.push(`%${String(universidad).slice(0, 100)}%`);
+    queryParams.push(patronBusqueda(universidad));
     queryText += ` AND i.universidad ILIKE $${queryParams.length}`;
   }
 
-  if (q) {
-    queryParams.push(`%${String(q).slice(0, 100)}%`);
-    queryText += ` AND (i.titulo ILIKE $${queryParams.length} OR i.barrio ILIKE $${queryParams.length})`;
+  if (q && String(q).trim()) {
+    queryParams.push(patronBusqueda(String(q).trim()));
+    const n = queryParams.length;
+    queryText += ` AND (i.titulo ILIKE $${n} OR i.barrio ILIKE $${n} OR i.universidad ILIKE $${n}
+                   OR i.distancia_texto ILIKE $${n} OR array_to_string(i.amenidades, ' ') ILIKE $${n})`;
   }
 
-  queryText += ' ORDER BY i.created_at DESC, i.id DESC';
+  if (orden !== undefined && !ORDENES[orden]) {
+    throw errorValidacion(`orden debe ser uno de: ${Object.keys(ORDENES).join(', ')}.`);
+  }
+  queryText += ` ORDER BY ${ORDENES[orden] || ORDENES.recientes}`;
 
   const result = await db.query(queryText, queryParams);
 

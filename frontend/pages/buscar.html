@@ -54,12 +54,12 @@
           <div class="hero-titles">
             <h1 class="hero-title">Vivienda cerca de tu universidad, sin dar vueltas.</h1>
             <p class="hero-subtitle">
-              Habitaciones, apartaestudios y casas en Villavicencio, con distancia real a tu campus y contacto directo con el propietario.
+              Habitaciones, apartaestudios y apartamentos en Villavicencio, con distancia real a tu campus y contacto directo con el propietario.
             </p>
           </div>
           <div class="hero-stats">
             <div class="stat-box">
-              <span class="stat-number" id="stats-total-inmuebles">62</span>
+              <span class="stat-number" id="stats-total-inmuebles">…</span>
               <span class="stat-label">INMUEBLES</span>
             </div>
             <div class="stat-box">
@@ -113,7 +113,6 @@
             <button type="button" class="pill-btn" data-tipo="habitacion">Habitación</button>
             <button type="button" class="pill-btn" data-tipo="apartaestudio">Apartaestudio</button>
             <button type="button" class="pill-btn" data-tipo="apartamento">Apartamento</button>
-            <button type="button" class="pill-btn" data-tipo="casa">Casa</button>
           </div>
 
           <a href="comparar.html" class="btn-compare" id="btn-abrir-comparador">
@@ -129,7 +128,7 @@
       <div class="results-column">
         <div class="results-meta-bar">
           <span class="results-counter" id="contador-resultados">
-            <strong>4 resultados</strong> cerca de Santo Tomás
+            <strong>Buscando…</strong>
           </span>
           <div class="sort-control">
             <label for="ordenar-por">Ordenar por:</label>
@@ -252,74 +251,79 @@
       const listaContenedor = document.getElementById("lista-inmuebles");
       const contadorResultados = document.getElementById("contador-resultados");
       const statTotal = document.getElementById("stats-total-inmuebles");
+      const inputTexto = document.getElementById("filtro-texto");
+      const selectUni = document.getElementById("filtro-universidad");
+      const selectPrecio = document.getElementById("filtro-precio");
+      const selectOrden = document.getElementById("ordenar-por");
 
-      let inmuebles;
-      try {
-        inmuebles = await RoumixAPI.getInmuebles();
-      } catch (error) {
-        contadorResultados.innerHTML = `<strong>Sin conexión</strong>`;
-        listaContenedor.innerHTML = `
-          <div role="alert" style="background:#fff; border:1px solid #ded7c5; border-radius:18px; padding:44px 24px; text-align:center;">
-            <span style="font-size:2.6rem; display:block; margin-bottom:12px;">⚠️</span>
-            <h3 style="color:#142219; font-size:1.25rem; margin-bottom:8px;">No pudimos cargar los inmuebles</h3>
-            <p style="color:#546250; font-size:0.95rem;"></p>
-          </div>`;
-        listaContenedor.querySelector("p").textContent = error.message;
-        return;
-      }
-
-      let filtroTexto = "";
-      let filtroUni = "Santo Tomás";
-      let filtroPrecio = 700000;
-      let filtroTipo = "todos";
-      let orden = "precio-asc";
+      const FILTROS_INICIALES = { q: "", universidad: "Santo Tomás", precioMax: 700000, tipo: "todos", orden: "precio-asc" };
+      let filtros = { ...FILTROS_INICIALES };
+      let inmuebles = [];
+      let consultaActual = 0; // descarta respuestas viejas si el usuario cambia filtros rápido
+      let temporizadorTexto = null;
 
       let mapaInstancia = null;
       let mapaMarcadores = [];
 
-      if (statTotal) statTotal.textContent = inmuebles.length;
+      function mostrarAviso(icono, titulo, texto, boton) {
+        listaContenedor.innerHTML = `
+          <div role="status" style="background:#fff; border:1px solid #ded7c5; border-radius:18px; padding:44px 24px; text-align:center;">
+            <span style="font-size:2.6rem; display:block; margin-bottom:12px;" aria-hidden="true">${icono}</span>
+            <h3 style="color:#142219; font-size:1.25rem; margin-bottom:8px;"></h3>
+            <p style="color:#546250; font-size:0.95rem; margin-bottom:18px;"></p>
+            ${boton ? `<button type="button" class="btn-search-action" id="btn-aviso-accion">${boton.texto}</button>` : ""}
+          </div>`;
+        listaContenedor.querySelector("h3").textContent = titulo;
+        listaContenedor.querySelector("p").textContent = texto;
+        if (boton) document.getElementById("btn-aviso-accion").addEventListener("click", boton.accion);
+      }
 
-      function filtrarYOrdenar() {
-        return inmuebles.filter(item => {
-          if (filtroTipo !== "todos" && item.tipo !== filtroTipo) return false;
-          if (item.precio > filtroPrecio) return false;
-          if (filtroUni !== "todas" && !item.universidad.toLowerCase().includes(filtroUni.toLowerCase())) return false;
-          if (filtroTexto) {
-            const q = filtroTexto.toLowerCase();
-            const coincide = item.titulo.toLowerCase().includes(q) ||
-                             item.barrio.toLowerCase().includes(q) ||
-                             item.distanciaTexto.toLowerCase().includes(q) ||
-                             item.amenidades.some(a => a.toLowerCase().includes(q));
-            if (!coincide) return false;
-          }
-          return true;
-        }).sort((a, b) => {
-          if (orden === "precio-asc") return a.precio - b.precio;
-          if (orden === "precio-desc") return b.precio - a.precio;
-          if (orden === "distancia") return (a.distanciaMetros ?? Infinity) - (b.distanciaMetros ?? Infinity);
-          return 0;
-        });
+      // Consulta a la API con los filtros actuales (filtra y ordena el servidor)
+      async function cargar() {
+        const consulta = ++consultaActual;
+        contadorResultados.innerHTML = "<strong>Buscando…</strong>";
+        listaContenedor.setAttribute("aria-busy", "true");
+
+        let resultado;
+        try {
+          resultado = await RoumixAPI.getInmuebles(filtros);
+        } catch (error) {
+          if (consulta !== consultaActual) return;
+          listaContenedor.removeAttribute("aria-busy");
+          contadorResultados.innerHTML = "<strong>Sin conexión</strong>";
+          mostrarAviso("⚠️", "No pudimos cargar los inmuebles", error.message, { texto: "Reintentar", accion: cargar });
+          actualizarPines([]);
+          return;
+        }
+        if (consulta !== consultaActual) return;
+
+        listaContenedor.removeAttribute("aria-busy");
+        inmuebles = resultado;
+        render();
+      }
+
+      function botonComparar(item) {
+        const seleccionado = RoumixComparador.contiene(item.id);
+        return `
+          <button type="button" class="btn-report btn-comparar-toggle ${seleccionado ? "seleccionado" : ""}"
+                  data-comparar="${item.id}" aria-pressed="${seleccionado}">
+            ${seleccionado ? "✓ En comparación" : "+ Comparar"}
+          </button>`;
       }
 
       function render() {
-        const filtrados = filtrarYOrdenar();
-        const uniLabel = filtroUni === "todas" ? "Villavicencio" : filtroUni;
-        contadorResultados.innerHTML = `<strong>${filtrados.length} resultados</strong> cerca de ${uniLabel}`;
+        const uniLabel = filtros.universidad === "todas" ? "Villavicencio" : filtros.universidad;
+        contadorResultados.innerHTML = `<strong>${inmuebles.length} resultado${inmuebles.length === 1 ? "" : "s"}</strong> cerca de ${escaparHTML(uniLabel)}`;
 
-        if (filtrados.length === 0) {
-          listaContenedor.innerHTML = `
-            <div style="background:#fff; border:1px solid #ded7c5; border-radius:18px; padding:44px 24px; text-align:center;">
-              <span style="font-size:2.6rem; display:block; margin-bottom:12px;">🔍</span>
-              <h3 style="color:#142219; font-size:1.25rem; margin-bottom:8px;">No se encontraron inmuebles con estos filtros</h3>
-              <p style="color:#546250; font-size:0.95rem; margin-bottom:18px;">Intenta ajustando el presupuesto o seleccionando otra universidad.</p>
-              <button type="button" class="btn-search-action" onclick="resetFiltros()">Restablecer filtros</button>
-            </div>
-          `;
+        if (inmuebles.length === 0) {
+          mostrarAviso("🔍", "No se encontraron inmuebles con estos filtros",
+            "Intenta ajustando el presupuesto o seleccionando otra universidad.",
+            { texto: "Restablecer filtros", accion: resetFiltros });
           actualizarPines([]);
           return;
         }
 
-        listaContenedor.innerHTML = filtrados.map(item => `
+        listaContenedor.innerHTML = inmuebles.map(item => `
           <article class="property-card" data-id="${item.id}">
             <div class="card-image-wrap">
               <img src="${escaparHTML(item.imagen)}" alt="${escaparHTML(item.titulo)}" class="card-img" loading="lazy">
@@ -346,10 +350,7 @@
               </div>
 
               <div class="card-footer-actions">
-                <button type="button" class="btn-report" onclick="alert('Publicación #' + ${item.id} + ' reportada para moderación.')">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
-                  Reportar
-                </button>
+                ${botonComparar(item)}
                 <div style="display: flex; gap: 8px;">
                   <a href="detalle.html?id=${item.id}" class="btn-learn-more">
                     Saber más
@@ -364,51 +365,97 @@
           </article>
         `).join("");
 
-        actualizarPines(filtrados);
+        actualizarPines(inmuebles);
       }
 
-      window.resetFiltros = function() {
-        document.getElementById("filtro-texto").value = "";
-        document.getElementById("filtro-universidad").value = "Santo Tomás";
-        document.getElementById("filtro-precio").value = "700000";
-        filtroTexto = "";
-        filtroUni = "Santo Tomás";
-        filtroPrecio = 700000;
-        filtroTipo = "todos";
-        document.querySelectorAll(".pill-btn").forEach((p, i) => p.classList.toggle("active", i === 0));
-        render();
-      };
+      // Agregar o quitar de la comparación (delegado en la lista)
+      listaContenedor.addEventListener("click", (e) => {
+        const boton = e.target.closest("button[data-comparar]");
+        if (!boton) return;
+        const id = Number(boton.dataset.comparar);
 
-      document.getElementById("filtro-texto").addEventListener("input", (e) => {
-        filtroTexto = e.target.value.trim();
-        render();
+        if (RoumixComparador.contiene(id)) {
+          RoumixComparador.quitar(id);
+        } else {
+          const resultado = RoumixComparador.agregar(id);
+          if (!resultado.ok) {
+            alert(resultado.mensaje);
+            return;
+          }
+        }
+        boton.outerHTML = botonComparar({ id });
       });
 
-      document.getElementById("filtro-universidad").addEventListener("change", (e) => {
-        filtroUni = e.target.value;
-        render();
+      function resetFiltros() {
+        filtros = { ...FILTROS_INICIALES };
+        inputTexto.value = "";
+        selectUni.value = FILTROS_INICIALES.universidad;
+        selectPrecio.value = String(FILTROS_INICIALES.precioMax);
+        selectOrden.value = FILTROS_INICIALES.orden;
+        document.querySelectorAll(".pill-btn").forEach(p => {
+          const activo = p.dataset.tipo === "todos";
+          p.classList.toggle("active", activo);
+          p.setAttribute("aria-checked", String(activo));
+        });
+        cargar();
+      }
+
+      inputTexto.addEventListener("input", () => {
+        clearTimeout(temporizadorTexto);
+        temporizadorTexto = setTimeout(() => {
+          filtros.q = inputTexto.value.trim();
+          cargar();
+        }, 350);
       });
 
-      document.getElementById("filtro-precio").addEventListener("change", (e) => {
-        filtroPrecio = parseInt(e.target.value, 10);
-        render();
+      inputTexto.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          clearTimeout(temporizadorTexto);
+          filtros.q = inputTexto.value.trim();
+          cargar();
+        }
       });
 
-      document.getElementById("btn-ejecutar-busqueda").addEventListener("click", render);
+      selectUni.addEventListener("change", () => {
+        filtros.universidad = selectUni.value;
+        cargar();
+      });
 
-      document.getElementById("ordenar-por").addEventListener("change", (e) => {
-        orden = e.target.value;
-        render();
+      selectPrecio.addEventListener("change", () => {
+        filtros.precioMax = parseInt(selectPrecio.value, 10) || null;
+        cargar();
+      });
+
+      document.getElementById("btn-ejecutar-busqueda").addEventListener("click", () => {
+        clearTimeout(temporizadorTexto);
+        filtros.q = inputTexto.value.trim();
+        cargar();
+      });
+
+      selectOrden.addEventListener("change", () => {
+        filtros.orden = selectOrden.value;
+        cargar();
       });
 
       document.querySelectorAll(".pill-btn").forEach(btn => {
+        btn.setAttribute("role", "radio");
+        btn.setAttribute("aria-checked", String(btn.classList.contains("active")));
         btn.addEventListener("click", () => {
-          document.querySelectorAll(".pill-btn").forEach(b => b.classList.remove("active"));
+          document.querySelectorAll(".pill-btn").forEach(b => {
+            b.classList.remove("active");
+            b.setAttribute("aria-checked", "false");
+          });
           btn.classList.add("active");
-          filtroTipo = btn.dataset.tipo;
-          render();
+          btn.setAttribute("aria-checked", "true");
+          filtros.tipo = btn.dataset.tipo;
+          cargar();
         });
       });
+
+      // Total de inmuebles disponibles (sin filtros) para la cifra del encabezado
+      RoumixAPI.getInmuebles()
+        .then(lista => { if (statTotal) statTotal.textContent = lista.length; })
+        .catch(() => { if (statTotal) statTotal.textContent = "–"; });
 
       function initMapa() {
         const coordsUSTA = [4.1520, -73.6345];
@@ -436,7 +483,7 @@
               .addTo(mapaInstancia)
               .bindPopup("<strong>Universidad Santo Tomás</strong><br>Campus Villavicencio");
 
-            render();
+            actualizarPines(inmuebles);
           } else {
             renderFallbackSVG();
           }
@@ -490,21 +537,13 @@
               <rect x="0" y="0" width="124" height="26" rx="13" fill="#142219" />
               <text x="62" y="17" fill="#ffffff" font-size="11" font-weight="800" text-anchor="middle">@SANTO TOMÁS</text>
             </g>
-            <g transform="translate(60, 140)">
-              <rect x="0" y="0" width="62" height="24" rx="12" fill="#ffffff" stroke="#ded7c5" />
-              <circle cx="10" cy="12" r="3.5" fill="#d32f2f" />
-              <text x="36" y="16" fill="#142219" font-size="11" font-weight="800" text-anchor="middle">$420k</text>
-            </g>
-            <g transform="translate(140, 310)">
-              <rect x="0" y="0" width="62" height="24" rx="12" fill="#ffffff" stroke="#ded7c5" />
-              <circle cx="10" cy="12" r="3.5" fill="#d32f2f" />
-              <text x="36" y="16" fill="#142219" font-size="11" font-weight="800" text-anchor="middle">$650k</text>
-            </g>
+            <text x="230" y="300" fill="#546250" font-size="13" text-anchor="middle">El mapa interactivo no está disponible en este momento.</text>
           </svg>
         `;
       }
 
       initMapa();
+      cargar();
     });
   </script>
 </body>

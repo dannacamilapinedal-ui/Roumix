@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Detalle de habitación amoblada en apartaestudio en La Grama, Villavicencio - Roumix.">
-  <title>Habitación amoblada en apartaestudio — Roumix</title>
+  <title>Detalle del inmueble — Roumix</title>
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -48,34 +48,23 @@
     <div class="detail-view-container">
       
       <!-- 1. Galería de Fotos (Mosaico exacto al boceto 1) -->
-      <section class="property-gallery-grid" aria-label="Galería de imágenes">
+      <section class="property-gallery-grid" id="galeria" aria-label="Galería de imágenes">
         <div class="gallery-main-col">
-          <img 
-            id="img-main-view"
-            src="https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=1200&q=80" 
-            alt="Habitación principal amoblada" 
-            class="gallery-main-img"
-          >
+          <button type="button" class="gallery-boton-foto" id="btn-foto-principal" aria-label="Ver foto en grande">
+            <img id="img-main-view" src="" alt="" class="gallery-main-img">
+          </button>
         </div>
-
-        <div class="gallery-sub-grid">
-          <div class="gallery-thumb-item">
-            <img src="https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=600&q=80" alt="Baño moderno privado" class="gallery-thumb-img">
-          </div>
-          <div class="gallery-thumb-item">
-            <img src="https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=600&q=80" alt="Cocina integral equipada" class="gallery-thumb-img">
-          </div>
-          <div class="gallery-thumb-item">
-            <img src="https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?auto=format&fit=crop&w=600&q=80" alt="Fachada colonial residencial en La Grama" class="gallery-thumb-img">
-          </div>
-          <div class="gallery-thumb-item">
-            <img src="https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=600&q=80" alt="Terraza y zonas comunes" class="gallery-thumb-img">
-            <div class="gallery-more-overlay" onclick="alert('Abriendo visor con 10 fotos completas en alta definición.')">
-              +6 fotos
-            </div>
-          </div>
-        </div>
+        <div class="gallery-sub-grid" id="galeria-miniaturas"></div>
       </section>
+
+      <!-- Visor de fotos a pantalla completa -->
+      <dialog id="visor-fotos" class="visor-fotos" aria-label="Visor de fotos">
+        <button type="button" class="visor-cerrar" id="visor-cerrar" aria-label="Cerrar visor">×</button>
+        <button type="button" class="visor-nav visor-anterior" id="visor-anterior" aria-label="Foto anterior">‹</button>
+        <img id="visor-img" src="" alt="">
+        <button type="button" class="visor-nav visor-siguiente" id="visor-siguiente" aria-label="Foto siguiente">›</button>
+        <p class="visor-contador" id="visor-contador" aria-live="polite"></p>
+      </dialog>
 
       <!-- 2. Información en dos columnas -->
       <div class="detail-content-layout">
@@ -84,78 +73,47 @@
         <div class="detail-main-info">
           
           <div class="detail-badge-group">
-            <span class="detail-badge badge-green" id="det-disponible">DISPONIBLE</span>
-            <span class="detail-badge" id="det-tipo">Habitación</span>
-            <span class="detail-badge" id="det-estrato">Estrato 3</span>
+            <span class="detail-badge badge-green" id="det-disponible" hidden>DISPONIBLE</span>
+            <span class="detail-badge" id="det-tipo"></span>
+            <span class="detail-badge" id="det-estrato"></span>
           </div>
 
-          <h1 class="detail-headline" id="det-titulo">Habitación amoblada en apartaestudio</h1>
-          <p class="detail-sublocation" id="det-ubicacion">Barrio La Grama, Villavicencio · 750 m de la Universidad Santo Tomás</p>
+          <h1 class="detail-headline" id="det-titulo">Cargando inmueble…</h1>
+          <p class="detail-sublocation" id="det-ubicacion"></p>
 
           <div class="detail-divider"></div>
 
           <!-- Descripción del Inmueble -->
           <h2 class="section-subheading">Descripción del inmueble</h2>
-          <p class="detail-description-p" id="det-descripcion">
-            Excelente habitación privada dentro de un apartaestudio compartido enfocado exclusivamente en estudiantes. Cuenta con todos los servicios incluidos en el canon mensual (agua, luz, gas, internet de alta velocidad de 200 megas). Ubicada en un sector residencial muy seguro de La Grama, a pocos minutos caminando de la U. Santo Tomás y con acceso inmediato a transporte público hacia el centro de la ciudad.
-          </p>
+          <p class="detail-description-p" id="det-descripcion"></p>
 
           <div class="detail-divider"></div>
 
           <!-- Características Clave en Cards Blancas -->
           <h2 class="section-subheading">Características clave</h2>
-          <div class="features-cards-grid">
-            <div class="feature-box">
-              <strong class="feature-box-title">Área privada</strong>
-              <span class="feature-box-desc" id="det-area">14 m² construidos</span>
-            </div>
-
-            <div class="feature-box">
-              <strong class="feature-box-title">Amoblada</strong>
-              <span class="feature-box-desc">Cama, escritorio, clóset</span>
-            </div>
-
-            <div class="feature-box">
-              <strong class="feature-box-title">Baño privado</strong>
-              <span class="feature-box-desc">Uso exclusivo</span>
-            </div>
-
-            <div class="feature-box">
-              <strong class="feature-box-title">Wifi incluido</strong>
-              <span class="feature-box-desc">Fibra óptica 200 Mbps</span>
-            </div>
-
-            <div class="feature-box">
-              <strong class="feature-box-title">Cocina</strong>
-              <span class="feature-box-desc">Con gas natural y nevera</span>
-            </div>
-
-            <div class="feature-box">
-              <strong class="feature-box-title">Zona de lavado</strong>
-              <span class="feature-box-desc">Lavadora y tendero</span>
-            </div>
+          <div class="features-cards-grid" id="det-caracteristicas">
           </div>
         </div>
 
         <!-- Columna Derecha: Tarjeta Flotante (Precio y Contacto) -->
         <aside class="detail-floating-card">
           <div class="floating-price-amount" id="det-precio">
-            $420.000 <small>/mes</small>
+            <small>Cargando…</small>
           </div>
-          <p class="floating-price-sub">Servicios incluidos en el canon</p>
+          <p class="floating-price-sub" id="det-precio-sub">Canon mensual</p>
 
           <div class="contract-terms-list">
             <div class="contract-term-row">
               <span>Depósito</span>
-              <strong id="det-deposito">$420.000 (un mes)</strong>
+              <strong id="det-deposito">–</strong>
             </div>
             <div class="contract-term-row">
               <span>Contrato mínimo</span>
-              <strong id="det-contrato">6 meses</strong>
+              <strong id="det-contrato">–</strong>
             </div>
             <div class="contract-term-row">
               <span>Disponible desde</span>
-              <strong id="det-disponibilidad">Inmediato</strong>
+              <strong id="det-disponibilidad">–</strong>
             </div>
           </div>
 
@@ -166,11 +124,11 @@
           </button>
 
           <!-- Botón Guardar Inmueble -->
-          <button type="button" class="btn-save-property" id="btn-guardar-inmueble" onclick="alert('¡Inmueble guardado en tus favoritos!')">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+          <button type="button" class="btn-save-property" id="btn-comparar-inmueble" aria-pressed="false" disabled>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="4" width="7" height="16" rx="1"></rect><rect x="14" y="4" width="7" height="16" rx="1"></rect>
             </svg>
-            Guardar inmueble
+            <span>Agregar a comparar</span>
           </button>
 
           <!-- Perfil del Propietario -->
@@ -267,45 +225,164 @@
         try {
           item = await RoumixAPI.getInmueblePorId(id);
         } catch (error) {
-          mensajeError = error.message;
+          mensajeError = error.status === 404
+            ? "Este inmueble no existe, fue pausado o ya fue arrendado."
+            : error.message;
         }
       }
 
       if (!item) {
         document.getElementById("det-titulo").textContent = "Inmueble no disponible";
         document.getElementById("det-ubicacion").textContent = mensajeError;
-        document.getElementById("det-descripcion").textContent = "Vuelve a la búsqueda para ver los inmuebles disponibles.";
+        document.getElementById("det-descripcion").innerHTML = 'Vuelve a la <a href="buscar.html">búsqueda</a> para ver los inmuebles disponibles.';
+        document.getElementById("det-precio").innerHTML = "<small>No disponible</small>";
+        document.getElementById("galeria").hidden = true;
         document.getElementById("btn-wa-directo").disabled = true;
         return;
       }
 
-      if (item) {
-        document.getElementById("det-titulo").textContent = item.titulo;
-        document.getElementById("det-ubicacion").textContent = `Barrio ${item.barrio}, Villavicencio · ${item.distanciaTexto}`;
-        document.getElementById("det-tipo").textContent = item.tipoLabel;
-        document.getElementById("det-estrato").textContent = item.estrato ? `Estrato ${item.estrato}` : "Estrato sin informar";
-        document.getElementById("det-precio").innerHTML = `${item.precioFormato} <small>/mes</small>`;
-        document.getElementById("det-descripcion").textContent = item.descripcion || "El propietario no agregó una descripción.";
-        document.getElementById("det-area").textContent = item.area ? `${item.area} construidos` : "Sin informar";
-        document.getElementById("det-deposito").textContent = item.deposito || "Sin informar";
-        document.getElementById("det-contrato").textContent = item.contratoMinimo || "Sin informar";
-        document.getElementById("det-disponibilidad").textContent = item.disponibleDesde || "Inmediato";
+      document.title = `${item.titulo} — Roumix`;
+      document.getElementById("det-disponible").hidden = false;
+      document.getElementById("det-titulo").textContent = item.titulo;
+      document.getElementById("det-ubicacion").textContent = `Barrio ${item.barrio}, Villavicencio · ${item.distanciaTexto}`;
+      document.getElementById("det-tipo").textContent = item.tipoLabel;
+      document.getElementById("det-estrato").textContent = item.estrato ? `Estrato ${item.estrato}` : "Estrato sin informar";
+      document.getElementById("det-precio").innerHTML = `${item.precioFormato} <small>/mes</small>`;
+      document.getElementById("det-descripcion").textContent = item.descripcion || "El propietario no agregó una descripción.";
+      document.getElementById("det-deposito").textContent = item.deposito || "Sin informar";
+      document.getElementById("det-contrato").textContent = item.contratoMinimo || "Sin informar";
+      document.getElementById("det-disponibilidad").textContent = item.disponibleDesde || "Inmediato";
 
-        if (item.propietario) {
-          document.getElementById("det-owner-nombre").textContent = item.propietario.nombre;
-          document.getElementById("det-owner-avatar").textContent = item.propietario.iniciales;
-          document.getElementById("det-owner-sub").textContent = "Publicado por un usuario de Roumix";
-        }
-
-        if (item.imagen) {
-          document.getElementById("img-main-view").src = item.imagen;
-        }
-
-        const btnWA = document.getElementById("btn-wa-directo");
-        if (btnWA) {
-          btnWA.setAttribute("onclick", `abrirModalContacto(${item.id})`);
-        }
+      if (item.propietario) {
+        document.getElementById("det-owner-nombre").textContent = item.propietario.nombre;
+        document.getElementById("det-owner-avatar").textContent = item.propietario.iniciales;
+        document.getElementById("det-owner-sub").textContent = "Publicado por un usuario de Roumix";
       }
+
+      // Características: solo las que el propietario registró
+      const caracteristicas = [];
+      if (item.area) caracteristicas.push(["Área", item.area]);
+      if (item.tiempoPie) caracteristicas.push(["Tiempo a pie", item.tiempoPie]);
+      if (item.transporte) caracteristicas.push(["Transporte", item.transporte]);
+      item.amenidades.forEach(a => caracteristicas.push([a, "Incluido"]));
+      const contenedorCaract = document.getElementById("det-caracteristicas");
+      contenedorCaract.replaceChildren();
+      if (caracteristicas.length === 0) {
+        const p = document.createElement("p");
+        p.className = "detail-description-p";
+        p.textContent = "El propietario no registró características adicionales.";
+        contenedorCaract.appendChild(p);
+      }
+      caracteristicas.forEach(([titulo, desc]) => {
+        const caja = document.createElement("div");
+        caja.className = "feature-box";
+        const strong = document.createElement("strong");
+        strong.className = "feature-box-title";
+        strong.textContent = titulo;
+        const span = document.createElement("span");
+        span.className = "feature-box-desc";
+        span.textContent = desc;
+        caja.append(strong, span);
+        contenedorCaract.appendChild(caja);
+      });
+
+      // ---------- Galería completa ----------
+      const fotos = item.galeria.filter(Boolean);
+      const galeria = document.getElementById("galeria");
+      const miniaturas = document.getElementById("galeria-miniaturas");
+      const imgPrincipal = document.getElementById("img-main-view");
+      const MINIATURAS_VISIBLES = 4;
+      let fotoActual = 0;
+
+      function mostrarPrincipal(indice) {
+        fotoActual = indice;
+        imgPrincipal.src = fotos[indice];
+        imgPrincipal.alt = `${item.titulo} — foto ${indice + 1} de ${fotos.length}`;
+        miniaturas.querySelectorAll(".gallery-thumb-item").forEach(m => {
+          m.classList.toggle("activa", Number(m.dataset.indice) === indice);
+        });
+      }
+
+      galeria.classList.toggle("una-foto", fotos.length <= 1);
+      fotos.slice(1, 1 + MINIATURAS_VISIBLES).forEach((url, i) => {
+        const indice = i + 1;
+        const boton = document.createElement("button");
+        boton.type = "button";
+        boton.className = "gallery-thumb-item";
+        boton.dataset.indice = indice;
+        boton.setAttribute("aria-label", `Ver foto ${indice + 1} de ${fotos.length}`);
+
+        const img = document.createElement("img");
+        img.src = url;
+        img.alt = "";
+        img.className = "gallery-thumb-img";
+        img.loading = "lazy";
+        boton.appendChild(img);
+
+        const restantes = fotos.length - 1 - MINIATURAS_VISIBLES;
+        if (i === MINIATURAS_VISIBLES - 1 && restantes > 0) {
+          const overlay = document.createElement("span");
+          overlay.className = "gallery-more-overlay";
+          overlay.textContent = `+${restantes} foto${restantes === 1 ? "" : "s"}`;
+          boton.appendChild(overlay);
+          boton.addEventListener("click", () => abrirVisor(indice));
+        } else {
+          boton.addEventListener("click", () => mostrarPrincipal(indice));
+        }
+        miniaturas.appendChild(boton);
+      });
+      mostrarPrincipal(0);
+
+      // Visor a pantalla completa
+      const visor = document.getElementById("visor-fotos");
+      const visorImg = document.getElementById("visor-img");
+      const visorContador = document.getElementById("visor-contador");
+
+      function mostrarEnVisor(indice) {
+        fotoActual = (indice + fotos.length) % fotos.length;
+        visorImg.src = fotos[fotoActual];
+        visorImg.alt = `${item.titulo} — foto ${fotoActual + 1} de ${fotos.length}`;
+        visorContador.textContent = `${fotoActual + 1} / ${fotos.length}`;
+      }
+
+      function abrirVisor(indice) {
+        mostrarEnVisor(indice);
+        document.getElementById("visor-anterior").hidden = fotos.length < 2;
+        document.getElementById("visor-siguiente").hidden = fotos.length < 2;
+        visor.showModal();
+      }
+
+      document.getElementById("btn-foto-principal").addEventListener("click", () => abrirVisor(fotoActual));
+      document.getElementById("visor-cerrar").addEventListener("click", () => visor.close());
+      document.getElementById("visor-anterior").addEventListener("click", () => mostrarEnVisor(fotoActual - 1));
+      document.getElementById("visor-siguiente").addEventListener("click", () => mostrarEnVisor(fotoActual + 1));
+      visor.addEventListener("click", (e) => { if (e.target === visor) visor.close(); });
+      visor.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowLeft") mostrarEnVisor(fotoActual - 1);
+        if (e.key === "ArrowRight") mostrarEnVisor(fotoActual + 1);
+      });
+      visor.addEventListener("close", () => mostrarPrincipal(fotoActual));
+
+      // ---------- Contacto y comparación ----------
+      document.getElementById("btn-wa-directo").addEventListener("click", () => abrirModalContacto(item.id));
+
+      const btnComparar = document.getElementById("btn-comparar-inmueble");
+      function actualizarBotonDetalle() {
+        const enComparacion = RoumixComparador.contiene(item.id);
+        btnComparar.querySelector("span").textContent = enComparacion ? "✓ En comparación (quitar)" : "Agregar a comparar";
+        btnComparar.setAttribute("aria-pressed", String(enComparacion));
+      }
+      btnComparar.disabled = false;
+      btnComparar.addEventListener("click", () => {
+        if (RoumixComparador.contiene(item.id)) {
+          RoumixComparador.quitar(item.id);
+        } else {
+          const resultado = RoumixComparador.agregar(item.id);
+          if (!resultado.ok) alert(resultado.mensaje);
+        }
+        actualizarBotonDetalle();
+      });
+      actualizarBotonDetalle();
     });
   </script>
 </body>

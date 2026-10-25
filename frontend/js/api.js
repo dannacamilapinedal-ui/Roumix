@@ -122,9 +122,19 @@ const RoumixAPI = {
     if (filtros.precioMax) params.append('precioMax', filtros.precioMax);
     if (filtros.universidad && filtros.universidad !== 'todas') params.append('universidad', filtros.universidad);
     if (filtros.q) params.append('q', filtros.q);
+    if (filtros.orden) params.append('orden', filtros.orden);
+    if (filtros.ids && filtros.ids.length) params.append('ids', filtros.ids.join(','));
 
     const json = await this._request(`/inmuebles${params.toString() ? '?' + params.toString() : ''}`);
     return json.data.map((item) => this._guardarEnCache(this._normalizarInmueble(item)));
+  },
+
+  /**
+   * Datos actuales de los inmuebles seleccionados para comparar (solo los disponibles)
+   */
+  getInmueblesPorIds: async function(ids) {
+    if (!ids.length) return [];
+    return this.getInmuebles({ ids });
   },
 
   /**

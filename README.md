@@ -88,7 +88,8 @@ Abra **http://localhost:3000** — el mismo servidor entrega la página y la API
 | POST | `/api/auth/refresh` | Público | Renovar el token con el refresh token |
 | GET | `/api/auth/perfil` | Con sesión | Perfil del usuario (rol leído de la BD) |
 | POST | `/api/auth/logout` | Con sesión | Cerrar sesión en Supabase Auth |
-| GET | `/api/inmuebles?tipo=&precioMax=&universidad=&q=` | Público | Inmuebles disponibles |
+| GET | `/api/inmuebles?tipo=&precioMax=&universidad=&q=&orden=` | Público | Inmuebles disponibles. `q` busca en título, barrio, universidad, distancia y comodidades; `orden`: `precio-asc`, `precio-desc`, `distancia`, `recientes` |
+| GET | `/api/inmuebles?ids=1,2,3` | Público | Datos actuales de hasta 3 inmuebles disponibles (comparador) |
 | GET | `/api/inmuebles/:id` | Público | Detalle de un inmueble disponible |
 | GET | `/api/inmuebles/mios` | Propietario | Inmuebles del propietario autenticado (todos los estados) |
 | GET | `/api/inmuebles/mios/:id` | Propietario | Un inmueble propio (para editarlo) |
@@ -120,7 +121,8 @@ No se necesita la clave secreta de Supabase.
 - [x] Registro, inicio y cierre de sesión con Supabase Auth; páginas de propietario protegidas
 - [x] Publicación con fotos en Supabase Storage asociada al propietario autenticado
 - [x] Editar, pausar, reactivar, marcar como arrendada y eliminar publicaciones propias
-- [ ] Comparador dinámico con los inmuebles seleccionados
+- [x] Búsqueda con filtros y orden en la API, detalle con galería completa y visor de fotos
+- [x] Comparador dinámico: hasta 3 inmuebles elegidos por el estudiante, con datos actuales de la API
 - [ ] Despliegue
 
 ---

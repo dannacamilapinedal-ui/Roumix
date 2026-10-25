@@ -74,6 +74,69 @@ const RoumixStorage = {
   }
 };
 
+// 2.0 Selección del comparador.
+// Solo se guardan los IDs (no copias de los datos): comparar.html consulta la información
+// actual a la API. localStorage aquí solo recuerda la selección entre páginas.
+const RoumixComparador = {
+  MAX: 3,
+  CLAVE: "roumix_comparar",
+
+  getIds: function() {
+    try {
+      const ids = JSON.parse(localStorage.getItem(this.CLAVE) || "[]");
+      return Array.isArray(ids) ? ids.filter(id => Number.isInteger(id) && id > 0).slice(0, this.MAX) : [];
+    } catch (e) {
+      return [];
+    }
+  },
+
+  _guardar: function(ids) {
+    try {
+      localStorage.setItem(this.CLAVE, JSON.stringify(ids));
+    } catch (e) {
+      console.warn("No se pudo guardar la selección para comparar", e);
+    }
+    actualizarBotonComparar();
+  },
+
+  contiene: function(id) {
+    return this.getIds().includes(Number(id));
+  },
+
+  // Devuelve { ok, mensaje }
+  agregar: function(id) {
+    const ids = this.getIds();
+    id = Number(id);
+    if (ids.includes(id)) return { ok: true };
+    if (ids.length >= this.MAX) {
+      return { ok: false, mensaje: `Puedes comparar máximo ${this.MAX} inmuebles. Quita uno para agregar otro.` };
+    }
+    this._guardar([...ids, id]);
+    return { ok: true };
+  },
+
+  quitar: function(id) {
+    this._guardar(this.getIds().filter(i => i !== Number(id)));
+  },
+
+  // Conserva solo los IDs indicados (p. ej. los que siguen disponibles)
+  conservar: function(idsValidos) {
+    this._guardar(this.getIds().filter(i => idsValidos.includes(i)));
+  },
+
+  limpiar: function() {
+    this._guardar([]);
+  }
+};
+
+// Muestra en el botón "Comparar" cuántos inmuebles hay seleccionados
+function actualizarBotonComparar() {
+  const boton = document.getElementById("btn-abrir-comparador");
+  if (!boton) return;
+  const n = RoumixComparador.getIds().length;
+  boton.textContent = n ? `Comparar (${n}/${RoumixComparador.MAX}) →` : "Comparar opciones →";
+}
+
 // 2.1 Escapa texto antes de insertarlo con innerHTML.
 // Los datos de los inmuebles los escriben los usuarios: nunca deben interpretarse como HTML.
 function escaparHTML(valor) {
@@ -256,6 +319,7 @@ async function protegerPagina(rolesPermitidos) {
 
 document.addEventListener("DOMContentLoaded", () => {
   sincronizarBarraNavegacion();
+  actualizarBotonComparar();
 
   const btnCerrar = document.getElementById("btn-cerrar-modal");
   if (btnCerrar) {
