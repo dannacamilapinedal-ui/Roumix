@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../css/style.css">
 </head>
 
 <body>
@@ -38,7 +38,7 @@
 
       <div class="header-right">
         <span class="user-role-badge">Propietario</span>
-        <a href="index.html" class="btn-logout-pill" id="btn-logout">Cerrar sesión</a>
+        <a href="../index.html" class="btn-logout-pill" id="btn-logout">Cerrar sesión</a>
       </div>
     </div>
   </header>
@@ -102,10 +102,9 @@
               <div class="form-group">
                 <label for="pub-tipo" class="form-label">TIPO DE INMUEBLE</label>
                 <select id="pub-tipo" class="form-control">
-                  <option value="Habitación" selected>Habitación</option>
-                  <option value="Apartaestudio">Apartaestudio</option>
-                  <option value="Apartamento">Apartamento</option>
-                  <option value="Casa">Casa</option>
+                  <option value="habitacion" selected>Habitación</option>
+                  <option value="apartaestudio">Apartaestudio</option>
+                  <option value="apartamento">Apartamento</option>
                 </select>
               </div>
 
@@ -248,7 +247,7 @@
           <li><a href="publicar.html" class="footer-link">Publicar inmueble</a></li>
           <li><a href="mis-publicaciones.html" class="footer-link">Mis publicaciones</a></li>
           <li><a href="como-funciona.html" class="footer-link">Cómo funciona</a></li>
-          <li><a href="index.html" class="footer-link">Cerrar sesión</a></li>
+          <li><a href="../index.html" class="footer-link">Cerrar sesión</a></li>
         </ul>
       </div>
 
@@ -267,7 +266,8 @@
     </div>
   </footer>
 
-  <script src="app.js"></script>
+  <script src="../js/app.js"></script>
+  <script src="../js/api.js"></script>
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       const inputTitulo = document.getElementById("pub-titulo");
@@ -338,38 +338,38 @@
           return;
         }
 
-        const usuario = RoumixStorage.getUsuario() || { nombre: "Tú", telefono: "573100000000" };
+        const barrio = inputBarrio.value.trim();
+        if (!barrio) {
+          alert("Por favor indica el barrio del inmueble.");
+          return;
+        }
 
+        // El propietario NO se envía: el servidor lo toma de la sesión iniciada.
+        // Las fotos se agregarán cuando esté lista la carga a Supabase Storage.
         const nuevo = {
-          id: Date.now(),
           titulo: titulo,
-          tipo: selectTipo.value.toLowerCase(),
-          tipoLabel: selectTipo.value,
+          tipo: selectTipo.value,
           precio: precio,
-          precioFormato: formatearPrecioCOP(precio),
-          barrio: inputBarrio.value.trim() || "La Grama",
+          barrio: barrio,
           universidad: "Santo Tomás",
-          distanciaTexto: `${inputBarrio.value.trim()} · ${inputDistancia.value.trim()}`,
-          distanciaMetros: 700,
-          estrato: parseInt(selectEstrato.value, 10) || 3,
-          transporte: inputTransporte.value.trim() || "Ruta bus a 1 cuadra",
+          distanciaTexto: inputDistancia.value.trim() ? `${barrio} · ${inputDistancia.value.trim()}` : null,
+          estrato: parseInt(selectEstrato.value, 10) || null,
+          transporte: inputTransporte.value.trim() || null,
           amenidades: getAmenidades(),
-          disponible: true,
-          lat: 4.1520 + (Math.random() - 0.5) * 0.008,
-          lng: -73.6345 + (Math.random() - 0.5) * 0.008,
-          imagen: "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=800&q=80",
-          propietario: {
-            nombre: usuario.nombre || "Propietario verificado",
-            telefono: "573100000000",
-            verificado: true
-          },
           descripcion: textDescripcion.value.trim()
         };
 
-        // Guardar en la base de datos PostgreSQL de Supabase vía API REST
-        await RoumixAPI.crearInmueble(nuevo);
-        alert("¡Excelente! Tu inmueble ha sido publicado con éxito en PostgreSQL y ya aparece en las búsquedas.");
-        window.location.href = "buscar.html";
+        btnGuardar.disabled = true;
+        try {
+          // Guardar en la base de datos PostgreSQL de Supabase vía API REST
+          await RoumixAPI.crearInmueble(nuevo);
+        } catch (error) {
+          alert(`No se pudo publicar el inmueble: ${error.message}`);
+          btnGuardar.disabled = false;
+          return;
+        }
+        alert("¡Tu inmueble quedó publicado y ya aparece en las búsquedas!");
+        window.location.href = "mis-publicaciones.html";
       });
 
       actualizarPreview();

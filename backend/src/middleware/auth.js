@@ -1,0 +1,57 @@
+const db = require('../config/db');
+const { supabase } = require('../config/supabase');
+
+/**
+ * Exige un token de Supabase Auth válido en "Authorization: Bearer <token>".
+ * Carga el perfil desde la tabla usuarios en req.usuario.
+ * El rol SIEMPRE sale de la base de datos, nunca del navegador.
+ */
+async function requireAuth(req, res, next) {
+  if (!supabase) {
+    return res.status(503).json({
+      status: 'error',
+      message: 'La autenticación no está configurada en el servidor (SUPABASE_URL / SUPABASE_ANON_KEY).'
+    });
+  }
+
+  const header = req.headers.authorization || '';
+  const [tipo, token] = header.split(' ');
+  if (tipo !== 'Bearer' || !token) {
+    return res.status(401).json({ status: 'error', message: 'Debe iniciar sesión.' });
+  }
+
+  try {
+    const { data, error } = await supabase.auth.getUser(token);
+    if (error || !data || !data.user) {
+      return res.status(401).json({ status: 'error', message: 'Sesión inválida o expirada.' });
+    }
+
+    const result = await db.query(
+      'SELECT id, nombre, email, rol, telefono, universidad FROM usuarios WHERE id = $1',
+      [data.user.id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(403).json({ status: 'error', message: 'La cuenta no tiene un perfil en Roumix.' });
+    }
+
+    req.usuario = result.rows[0];
+    next();
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Exige que el usuario autenticado tenga uno de los roles indicados.
+ * Debe usarse después de requireAuth.
+ */
+function requireRol(...roles) {
+  return (req, res, next) => {
+    if (!req.usuario || !roles.includes(req.usuario.rol)) {
+      return res.status(403).json({ status: 'error', message: 'No tiene permiso para realizar esta operación.' });
+    }
+    next();
+  };
+}
+
+module.exports = { requireAuth, requireRol };

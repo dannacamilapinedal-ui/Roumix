@@ -13,7 +13,7 @@
   <!-- Leaflet CSS para el mapa -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
   
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../css/style.css">
 </head>
 
 <body>
@@ -39,7 +39,7 @@
 
       <div class="header-right">
         <span class="user-role-badge">Estudiante</span>
-        <a href="index.html" class="btn-logout-pill" id="btn-logout">Cerrar sesión</a>
+        <a href="../index.html" class="btn-logout-pill" id="btn-logout">Cerrar sesión</a>
       </div>
     </div>
   </header>
@@ -187,7 +187,7 @@
         <div class="modal-owner-box">
           <div class="owner-avatar">👤</div>
           <div class="owner-info">
-            <strong id="modal-prop-dueno">Propietario verificado</strong>
+            <strong id="modal-prop-dueno">Usuario de Roumix</strong>
             <span>Villavicencio, Meta</span>
           </div>
         </div>
@@ -223,7 +223,7 @@
           <li><a href="buscar.html" class="footer-link">Buscar vivienda</a></li>
           <li><a href="comparar.html" class="footer-link">Comparar opciones</a></li>
           <li><a href="como-funciona.html" class="footer-link">Cómo funciona</a></li>
-          <li><a href="index.html" class="footer-link">Cerrar sesión</a></li>
+          <li><a href="../index.html" class="footer-link">Cerrar sesión</a></li>
         </ul>
       </div>
 
@@ -244,11 +244,30 @@
 
   <!-- Leaflet JS para el mapa -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <script src="app.js"></script>
+  <script src="../js/app.js"></script>
+  <script src="../js/api.js"></script>
 
   <script>
     document.addEventListener("DOMContentLoaded", async () => {
-      let inmuebles = await RoumixAPI.getInmuebles();
+      const listaContenedor = document.getElementById("lista-inmuebles");
+      const contadorResultados = document.getElementById("contador-resultados");
+      const statTotal = document.getElementById("stats-total-inmuebles");
+
+      let inmuebles;
+      try {
+        inmuebles = await RoumixAPI.getInmuebles();
+      } catch (error) {
+        contadorResultados.innerHTML = `<strong>Sin conexión</strong>`;
+        listaContenedor.innerHTML = `
+          <div role="alert" style="background:#fff; border:1px solid #ded7c5; border-radius:18px; padding:44px 24px; text-align:center;">
+            <span style="font-size:2.6rem; display:block; margin-bottom:12px;">⚠️</span>
+            <h3 style="color:#142219; font-size:1.25rem; margin-bottom:8px;">No pudimos cargar los inmuebles</h3>
+            <p style="color:#546250; font-size:0.95rem;"></p>
+          </div>`;
+        listaContenedor.querySelector("p").textContent = error.message;
+        return;
+      }
+
       let filtroTexto = "";
       let filtroUni = "Santo Tomás";
       let filtroPrecio = 700000;
@@ -257,10 +276,6 @@
 
       let mapaInstancia = null;
       let mapaMarcadores = [];
-
-      const listaContenedor = document.getElementById("lista-inmuebles");
-      const contadorResultados = document.getElementById("contador-resultados");
-      const statTotal = document.getElementById("stats-total-inmuebles");
 
       if (statTotal) statTotal.textContent = inmuebles.length;
 
@@ -281,7 +296,7 @@
         }).sort((a, b) => {
           if (orden === "precio-asc") return a.precio - b.precio;
           if (orden === "precio-desc") return b.precio - a.precio;
-          if (orden === "distancia") return a.distanciaMetros - b.distanciaMetros;
+          if (orden === "distancia") return (a.distanciaMetros ?? Infinity) - (b.distanciaMetros ?? Infinity);
           return 0;
         });
       }

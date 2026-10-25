@@ -14,3 +14,7 @@ Thumbs.db
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Configuración local del editor / Claude
+.claude/
+.vscode/

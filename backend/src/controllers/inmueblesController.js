@@ -1,155 +1,228 @@
 const db = require('../config/db');
 
+const TIPOS = ['habitacion', 'apartaestudio', 'apartamento'];
+const TIPO_LABELS = { habitacion: 'Habitación', apartaestudio: 'Apartaestudio', apartamento: 'Apartamento' };
+
+// Columnas públicas de un inmueble + datos de contacto tomados del perfil del propietario
+const SELECT_INMUEBLE = `
+  SELECT i.id, i.propietario_id, i.titulo, i.tipo, i.tipo_label, i.precio, i.barrio,
+         i.universidad, i.distancia_texto, i.distancia_metros, i.tiempo_pie, i.estrato,
+         i.area, i.transporte, i.amenidades, i.descripcion, i.deposito, i.contrato_minimo,
+         i.disponible_desde, i.latitud, i.longitud, i.imagen_principal, i.galeria,
+         i.estado, i.created_at, i.updated_at,
+         u.nombre AS propietario_nombre, u.telefono AS propietario_telefono
+  FROM inmuebles i
+  LEFT JOIN usuarios u ON u.id = i.propietario_id
+`;
+
+function errorValidacion(message) {
+  const err = new Error(message);
+  err.status = 400;
+  return err;
+}
+
+function textoOpcional(valor, campo, max) {
+  if (valor === undefined || valor === null || valor === '') return null;
+  if (typeof valor !== 'string') throw errorValidacion(`${campo} debe ser texto.`);
+  const limpio = valor.trim();
+  if (limpio.length > max) throw errorValidacion(`${campo} admite máximo ${max} caracteres.`);
+  return limpio || null;
+}
+
+function textoObligatorio(valor, campo, max) {
+  const limpio = textoOpcional(valor, campo, max);
+  if (!limpio) throw errorValidacion(`${campo} es obligatorio.`);
+  return limpio;
+}
+
+function enteroOpcional(valor, campo, min, max) {
+  if (valor === undefined || valor === null || valor === '') return null;
+  const n = Number(valor);
+  if (!Number.isInteger(n) || n < min || n > max) throw errorValidacion(`${campo} debe ser un entero entre ${min} y ${max}.`);
+  return n;
+}
+
+function numeroOpcional(valor, campo, min, max) {
+  if (valor === undefined || valor === null || valor === '') return null;
+  const n = Number(valor);
+  if (!Number.isFinite(n) || n < min || n > max) throw errorValidacion(`${campo} no es válido.`);
+  return n;
+}
+
+function listaTextos(valor, campo, maxItems, maxLargo) {
+  if (valor === undefined || valor === null) return [];
+  if (!Array.isArray(valor) || valor.length > maxItems) throw errorValidacion(`${campo} debe ser una lista de máximo ${maxItems} elementos.`);
+  return valor.map((v) => textoObligatorio(v, campo, maxLargo));
+}
+
+function urlOpcional(valor, campo) {
+  const url = textoOpcional(valor, campo, 1000);
+  if (url && !/^https:\/\//i.test(url)) throw errorValidacion(`${campo} debe ser una URL https.`);
+  return url;
+}
+
+/**
+ * Valida y normaliza los datos de un inmueble recibidos del formulario.
+ * Los datos del propietario NO se leen del cuerpo: salen de la sesión.
+ */
+function validarInmueble(body) {
+  const tipo = textoObligatorio(body.tipo, 'tipo', 30);
+  if (!TIPOS.includes(tipo)) throw errorValidacion(`tipo debe ser uno de: ${TIPOS.join(', ')}.`);
+
+  const precio = enteroOpcional(body.precio, 'precio', 1, 100000000);
+  if (precio === null) throw errorValidacion('precio es obligatorio.');
+
+  const galeria = listaTextos(body.galeria, 'galeria', 10, 1000);
+  galeria.forEach((url) => urlOpcional(url, 'galeria'));
+  const imagenPrincipal = urlOpcional(body.imagenPrincipal, 'imagenPrincipal') || galeria[0] || null;
+
+  return {
+    titulo: textoObligatorio(body.titulo, 'titulo', 200),
+    tipo,
+    tipoLabel: TIPO_LABELS[tipo],
+    precio,
+    barrio: textoObligatorio(body.barrio, 'barrio', 100),
+    universidad: textoOpcional(body.universidad, 'universidad', 100) || 'Santo Tomás',
+    distanciaTexto: textoOpcional(body.distanciaTexto, 'distanciaTexto', 150),
+    distanciaMetros: enteroOpcional(body.distanciaMetros, 'distanciaMetros', 0, 100000),
+    tiempoPie: textoOpcional(body.tiempoPie, 'tiempoPie', 50),
+    estrato: enteroOpcional(body.estrato, 'estrato', 1, 6),
+    area: textoOpcional(body.area, 'area', 30),
+    transporte: textoOpcional(body.transporte, 'transporte', 150),
+    amenidades: listaTextos(body.amenidades, 'amenidades', 20, 50),
+    descripcion: textoOpcional(body.descripcion, 'descripcion', 3000),
+    deposito: textoOpcional(body.deposito, 'deposito', 100),
+    contratoMinimo: textoOpcional(body.contratoMinimo, 'contratoMinimo', 50),
+    disponibleDesde: textoOpcional(body.disponibleDesde, 'disponibleDesde', 50) || 'Inmediato',
+    latitud: numeroOpcional(body.latitud, 'latitud', -90, 90),
+    longitud: numeroOpcional(body.longitud, 'longitud', -180, 180),
+    imagenPrincipal,
+    galeria: galeria.length ? galeria : (imagenPrincipal ? [imagenPrincipal] : [])
+  };
+}
+
 /**
  * GET /api/inmuebles
- * Obtiene la lista de inmuebles con filtros opcionales
+ * Lista los inmuebles disponibles con filtros opcionales
  */
 async function getInmuebles(req, res) {
-  try {
-    const { tipo, precioMax, universidad, q } = req.query;
+  const { tipo, precioMax, universidad, q } = req.query;
 
-    let queryText = 'SELECT * FROM inmuebles WHERE estado = $1';
-    const queryParams = ['disponible'];
-    let paramIndex = 2;
+  let queryText = `${SELECT_INMUEBLE} WHERE i.estado = $1`;
+  const queryParams = ['disponible'];
 
-    if (tipo && tipo !== 'todos') {
-      queryText += ` AND tipo = $${paramIndex}`;
-      queryParams.push(tipo);
-      paramIndex++;
-    }
-
-    if (precioMax) {
-      queryText += ` AND precio <= $${paramIndex}`;
-      queryParams.push(Number(precioMax));
-      paramIndex++;
-    }
-
-    if (universidad && universidad !== 'todas') {
-      queryText += ` AND LOWER(universidad) LIKE LOWER($${paramIndex})`;
-      queryParams.push(`%${universidad}%`);
-      paramIndex++;
-    }
-
-    if (q) {
-      queryText += ` AND (LOWER(titulo) LIKE LOWER($${paramIndex}) OR LOWER(barrio) LIKE LOWER($${paramIndex}))`;
-      queryParams.push(`%${q}%`);
-      paramIndex++;
-    }
-
-    queryText += ' ORDER BY id ASC';
-
-    const result = await db.query(queryText, queryParams);
-
-    res.status(200).json({
-      status: 'success',
-      total: result.rowCount,
-      data: result.rows
-    });
-  } catch (error) {
-    console.error('Error al consultar inmuebles:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Error al consultar inmuebles en la base de datos',
-      error: error.message
-    });
+  if (tipo && tipo !== 'todos') {
+    if (!TIPOS.includes(tipo)) throw errorValidacion('Filtro tipo no válido.');
+    queryParams.push(tipo);
+    queryText += ` AND i.tipo = $${queryParams.length}`;
   }
+
+  if (precioMax) {
+    const max = enteroOpcional(precioMax, 'precioMax', 1, 100000000);
+    queryParams.push(max);
+    queryText += ` AND i.precio <= $${queryParams.length}`;
+  }
+
+  if (universidad && universidad !== 'todas') {
+    queryParams.push(`%${String(universidad).slice(0, 100)}%`);
+    queryText += ` AND i.universidad ILIKE $${queryParams.length}`;
+  }
+
+  if (q) {
+    queryParams.push(`%${String(q).slice(0, 100)}%`);
+    queryText += ` AND (i.titulo ILIKE $${queryParams.length} OR i.barrio ILIKE $${queryParams.length})`;
+  }
+
+  queryText += ' ORDER BY i.created_at DESC, i.id DESC';
+
+  const result = await db.query(queryText, queryParams);
+
+  res.status(200).json({
+    status: 'success',
+    total: result.rowCount,
+    data: result.rows
+  });
 }
 
 /**
  * GET /api/inmuebles/:id
- * Obtiene el detalle de un inmueble por su ID
+ * Detalle de un inmueble disponible
  */
 async function getInmueblePorId(req, res) {
-  try {
-    const { id } = req.params;
-    const result = await db.query('SELECT * FROM inmuebles WHERE id = $1', [id]);
+  const id = enteroOpcional(req.params.id, 'id', 1, 2147483647);
+  if (id === null) throw errorValidacion('id no válido.');
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        status: 'error',
-        message: `Inmueble con ID ${id} no encontrado`
-      });
-    }
+  const result = await db.query(`${SELECT_INMUEBLE} WHERE i.id = $1 AND i.estado = 'disponible'`, [id]);
 
-    res.status(200).json({
-      status: 'success',
-      data: result.rows[0]
-    });
-  } catch (error) {
-    console.error('Error al consultar inmueble por ID:', error);
-    res.status(500).json({
+  if (result.rows.length === 0) {
+    return res.status(404).json({
       status: 'error',
-      message: 'Error al consultar el inmueble',
-      error: error.message
+      message: `Inmueble con ID ${id} no encontrado o no disponible`
     });
   }
+
+  res.status(200).json({
+    status: 'success',
+    data: result.rows[0]
+  });
+}
+
+/**
+ * GET /api/inmuebles/mios
+ * Inmuebles del propietario autenticado, identificado por su ID de sesión
+ */
+async function getMisInmuebles(req, res) {
+  const result = await db.query(
+    `${SELECT_INMUEBLE} WHERE i.propietario_id = $1 ORDER BY i.created_at DESC, i.id DESC`,
+    [req.usuario.id]
+  );
+
+  res.status(200).json({
+    status: 'success',
+    total: result.rowCount,
+    data: result.rows
+  });
 }
 
 /**
  * POST /api/inmuebles
- * Crea un nuevo inmueble en la base de datos
+ * Crea un inmueble del propietario autenticado (requireAuth + requireRol('propietario'))
  */
 async function crearInmueble(req, res) {
-  try {
-    const {
-      titulo, tipo, tipoLabel, precio, barrio, universidad,
-      distanciaTexto, distanciaMetros, tiempoPie, estrato, area,
-      transporte, amenidades, descripcion, deposito, contratoMinimo,
-      latitud, longitud, imagenPrincipal, galeria, propietarioNombre, propietarioTelefono
-    } = req.body;
+  const d = validarInmueble(req.body || {});
 
-    if (!titulo || !tipo || !precio || !barrio) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Los campos titulo, tipo, precio y barrio son obligatorios'
-      });
-    }
+  const result = await db.query(
+    `INSERT INTO inmuebles (
+       propietario_id, titulo, tipo, tipo_label, precio, barrio, universidad,
+       distancia_texto, distancia_metros, tiempo_pie, estrato, area,
+       transporte, amenidades, descripcion, deposito, contrato_minimo, disponible_desde,
+       latitud, longitud, imagen_principal, galeria, estado
+     ) VALUES (
+       $1, $2, $3, $4, $5, $6, $7,
+       $8, $9, $10, $11, $12,
+       $13, $14, $15, $16, $17, $18,
+       $19, $20, $21, $22, 'disponible'
+     ) RETURNING id`,
+    [
+      req.usuario.id, d.titulo, d.tipo, d.tipoLabel, d.precio, d.barrio, d.universidad,
+      d.distanciaTexto, d.distanciaMetros, d.tiempoPie, d.estrato, d.area,
+      d.transporte, d.amenidades, d.descripcion, d.deposito, d.contratoMinimo, d.disponibleDesde,
+      d.latitud, d.longitud, d.imagenPrincipal, d.galeria
+    ]
+  );
 
-    const queryText = `
-      INSERT INTO inmuebles (
-        titulo, tipo, tipo_label, precio, barrio, universidad,
-        distancia_texto, distancia_metros, tiempo_pie, estrato, area,
-        transporte, amenidades, descripcion, deposito, contrato_minimo,
-        latitud, longitud, imagen_principal, galeria, estado,
-        propietario_nombre, propietario_telefono
-      ) VALUES (
-        $1, $2, $3, $4, $5, $6,
-        $7, $8, $9, $10, $11,
-        $12, $13, $14, $15, $16,
-        $17, $18, $19, $20, 'disponible',
-        $21, $22
-      ) RETURNING *;
-    `;
+  const creado = await db.query(`${SELECT_INMUEBLE} WHERE i.id = $1`, [result.rows[0].id]);
 
-    const values = [
-      titulo, tipo, tipoLabel || tipo, Number(precio), barrio, universidad || 'Santo Tomás',
-      distanciaTexto || `${barrio} · Villavicencio`, distanciaMetros || 1000, tiempoPie || '10 min',
-      estrato || 3, area || '15 m²', transporte || 'Ruta cercana', amenidades || [],
-      descripcion || '', deposito || `$${Number(precio).toLocaleString('es-CO')}`,
-      contratoMinimo || '6 meses', latitud || 4.1500, longitud || -73.6350,
-      imagenPrincipal || 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=1000&q=80',
-      galeria || [], propietarioNombre || 'Propietario Roumix', propietarioTelefono || '573100000000'
-    ];
-
-    const result = await db.query(queryText, values);
-
-    res.status(201).json({
-      status: 'success',
-      message: 'Inmueble publicado con éxito en la base de datos 🎉',
-      data: result.rows[0]
-    });
-  } catch (error) {
-    console.error('Error al crear inmueble:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Error al registrar el inmueble en PostgreSQL',
-      error: error.message
-    });
-  }
+  res.status(201).json({
+    status: 'success',
+    message: 'Inmueble publicado con éxito',
+    data: creado.rows[0]
+  });
 }
 
 module.exports = {
   getInmuebles,
   getInmueblePorId,
+  getMisInmuebles,
   crearInmueble
 };

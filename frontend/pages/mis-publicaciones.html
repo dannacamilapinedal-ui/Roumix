@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../css/style.css">
 </head>
 
 <body>
@@ -38,7 +38,7 @@
 
       <div class="header-right">
         <span class="user-role-badge">Propietario</span>
-        <a href="index.html" class="btn-logout-pill" id="btn-logout">Cerrar sesión</a>
+        <a href="../index.html" class="btn-logout-pill" id="btn-logout">Cerrar sesión</a>
       </div>
     </div>
   </header>
@@ -88,7 +88,7 @@
           <li><a href="mis-publicaciones.html" class="footer-link">Mis publicaciones</a></li>
           <li><a href="como-funciona.html" class="footer-link">Cómo funciona</a></li>
           <li><a href="comparar.html" class="footer-link">Comparar</a></li>
-          <li><a href="index.html" class="footer-link">Cerrar sesión</a></li>
+          <li><a href="../index.html" class="footer-link">Cerrar sesión</a></li>
         </ul>
       </div>
 
@@ -107,15 +107,25 @@
     </div>
   </footer>
 
-  <script src="app.js"></script>
+  <script src="../js/app.js"></script>
+  <script src="../js/api.js"></script>
   <script>
     document.addEventListener("DOMContentLoaded", async () => {
-      const lista = await RoumixAPI.getInmuebles();
       const contenedor = document.getElementById("lista-mis-publicaciones");
-      const usuario = RoumixStorage.getUsuario();
 
-      // Inmuebles del usuario o de muestra
-      const misInmuebles = lista.filter(i => (usuario && i.propietario.nombre.includes(usuario.nombre)) || i.propietario.nombre.includes("Tú") || i.id === 1);
+      // El servidor identifica al propietario por el ID de su sesión, no por su nombre
+      let misInmuebles;
+      try {
+        misInmuebles = await RoumixAPI.getMisInmuebles();
+      } catch (error) {
+        contenedor.innerHTML = `
+          <div role="alert" style="background:#fff; border:1px solid var(--borde-arena); border-radius:18px; padding:48px 24px; text-align:center;">
+            <p style="color:var(--tinta-media); font-size:1.05rem;"></p>
+          </div>
+        `;
+        contenedor.querySelector("p").textContent = `No pudimos cargar tus publicaciones: ${error.message}`;
+        return;
+      }
 
       if (misInmuebles.length === 0) {
         contenedor.innerHTML = `

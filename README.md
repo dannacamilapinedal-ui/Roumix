@@ -1,27 +1,111 @@
 # Roumix — Vivienda Universitaria en Villavicencio 🏠🎓
 
-Plataforma web diseñada para que estudiantes universitarios en Villavicencio (Meta) encuentren habitaciones, apartaestudios y apartamentos cercanos a sus campus, con información verificada de distancias, precios, estrato y contacto directo con propietarios.
+Plataforma web para que estudiantes universitarios en Villavicencio (Meta) encuentren habitaciones,
+apartaestudios y apartamentos cercanos a su campus, comparen opciones y contacten directamente al
+propietario.
 
-## 🛠️ Stack Tecnológico
-- **Frontend:** HTML5 semántico, CSS3 moderno (arquitectura de variables CSS) y JavaScript vainilla modular.
-- **Backend (en construcción):** Node.js con framework Express.
-- **Base de Datos:** PostgreSQL alojada en Supabase.
-- **Control de Versiones:** Git y GitHub.
+## 🛠️ Stack
 
-## 👥 Roles del Sistema
-1. **Estudiante:** Búsqueda con filtros (precio, tipo, distancia a pie), mapa interactivo de Villavicencio, comparador de opciones y contacto directo por WhatsApp.
-2. **Propietario:** Publicación de inmuebles mediante formulario guiado de 4 pasos, panel de gestión (*Mis Publicaciones*), edición y pausa de publicaciones.
+- **Frontend:** HTML5, CSS3 y JavaScript vanilla.
+- **Backend:** Node.js + Express (API REST que también sirve el frontend).
+- **Base de datos:** PostgreSQL en Supabase.
+- **Autenticación e imágenes:** Supabase Auth y Supabase Storage.
+- **Control de versiones:** Git y GitHub.
 
-## 📁 Estructura del Proyecto
-- `index.html` — Portal de acceso y autenticación (Estudiante / Propietario).
-- `buscar.html` — Buscador interactivo y mapa de sectores universitarios.
-- `detalle.html` — Ficha técnica detallada del inmueble con galería de fotos.
-- `publicar.html` — Formulario reactivo de publicación con vista previa en vivo.
-- `mis-publicaciones.html` — Panel de administración para propietarios.
-- `comparar.html` — Comparador lado a lado de características y precios.
-- `como-funciona.html` — Diagnóstico del problema y preguntas frecuentes.
-- `style.css` — Estilos globales y componentes visuales.
-- `app.js` — Lógica frontend, sincronización de roles y almacenamiento local.
+## 📁 Estructura
+
+```
+roumix/
+├── frontend/              Sitio web
+│   ├── index.html         Portal de acceso (inicio de sesión / registro)
+│   ├── pages/             buscar, detalle, comparar, publicar, mis-publicaciones, como-funciona
+│   ├── css/style.css      Estilos compartidos
+│   ├── js/app.js          Lógica compartida (sesión, navegación, modal de contacto)
+│   ├── js/api.js          Cliente de la API (sin datos de respaldo locales)
+│   └── assets/img/        Imágenes
+├── backend/               API Express
+│   ├── src/app.js         Configuración de Express, rutas y archivos estáticos
+│   ├── src/server.js      Arranque del servidor
+│   ├── src/config/        Conexión a PostgreSQL y cliente de Supabase
+│   ├── src/routes/        Rutas de la API
+│   ├── src/controllers/   Lógica de cada operación
+│   ├── src/middleware/    Autenticación, roles y manejo de errores
+│   └── scripts/migrate.js Aplica las migraciones de la base de datos
+├── database/
+│   ├── migrations/        Cambios del esquema, en orden
+│   ├── schema.sql         Foto del esquema actual (referencia)
+│   └── seeds.sql          Inmuebles de demostración
+└── docs/                  Requisitos, arquitectura, modelo de datos y pruebas
+```
+
+## 🚀 Instalación local
+
+Requisitos: Node.js 20 o superior y un proyecto en [Supabase](https://supabase.com).
+
+```bash
+cd backend
+npm install
+```
+
+Copie `backend/.env.example` como `backend/.env` y complete los valores
+(Supabase Dashboard → **Connect** y **Project Settings → API Keys**):
+
+| Variable | Descripción |
+|----------|-------------|
+| `DATABASE_URL` | Cadena de conexión de PostgreSQL (Transaction pooler) |
+| `SUPABASE_URL` | `https://<ref-del-proyecto>.supabase.co` |
+| `SUPABASE_ANON_KEY` | Clave pública *anon* / *publishable* |
+| `PORT` | Puerto del servidor (por defecto 3000) |
+| `CORS_ORIGIN` | Solo en producción: orígenes permitidos |
+
+> `backend/.env` contiene credenciales y **nunca** se sube a GitHub (está en `.gitignore`).
+
+Crear o actualizar las tablas y, opcionalmente, cargar los datos de demostración:
+
+```bash
+npm run migrate            # aplica database/migrations
+npm run migrate -- --seed  # además carga database/seeds.sql
+```
+
+Iniciar el servidor:
+
+```bash
+npm run dev    # con recarga automática
+npm start      # modo normal
+```
+
+Abra **http://localhost:3000** — el mismo servidor entrega la página y la API.
+
+## 🔌 API
+
+| Método | Ruta | Acceso | Descripción |
+|--------|------|--------|-------------|
+| GET | `/api/health` | Público | Estado del servidor |
+| GET | `/api/health/db` | Público | Prueba la conexión con PostgreSQL |
+| GET | `/api/inmuebles?tipo=&precioMax=&universidad=&q=` | Público | Inmuebles disponibles |
+| GET | `/api/inmuebles/:id` | Público | Detalle de un inmueble disponible |
+| GET | `/api/inmuebles/mios` | Propietario | Inmuebles del propietario autenticado |
+| POST | `/api/inmuebles` | Propietario | Publicar un inmueble |
+
+Las rutas protegidas exigen `Authorization: Bearer <token de Supabase Auth>`. El rol y el
+propietario se obtienen en el servidor, nunca de lo que envía el navegador.
+
+## 👥 Roles
+
+1. **Estudiante:** busca con filtros, ve el detalle, compara opciones y contacta por WhatsApp.
+2. **Propietario:** además publica inmuebles y gestiona solo sus propias publicaciones.
+
+## 📌 Estado del proyecto
+
+- [x] Estructura de carpetas organizada (frontend / backend / database / docs)
+- [x] Conexión del backend con PostgreSQL en Supabase y migraciones
+- [x] Perfiles ligados a Supabase Auth, claves foráneas, RLS y bucket de imágenes
+- [x] Búsqueda y detalle leen la base de datos real, sin respaldos locales silenciosos
+- [ ] Registro e inicio de sesión con Supabase Auth
+- [ ] Publicación con carga de imágenes a Supabase Storage
+- [ ] Editar, pausar y marcar como arrendada una publicación
+- [ ] Comparador dinámico con los inmuebles seleccionados
+- [ ] Despliegue
 
 ---
 *Construcción de Software · Semestre 4 · Universidad Santo Tomás Villavicencio*

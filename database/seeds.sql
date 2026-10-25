@@ -2,22 +2,21 @@
 -- ROUMIX - DATOS SEMILLA DE PRUEBA (VILLAVICENCIO)
 -- ============================================================================
 
--- Usuario Propietario de prueba
-INSERT INTO usuarios (id, nombre, email, rol, telefono, universidad)
-VALUES 
-  ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'Marta Ruiz', 'marta.ruiz@ejemplo.com', 'propietario', '573108845612', 'Santo Tomás')
-ON CONFLICT (email) DO NOTHING;
+-- Inmuebles de demostración. No tienen propietario (propietario_id = NULL) porque
+-- todo propietario real debe existir en Supabase Auth. Cuando un propietario se
+-- registre se le pueden asignar con:
+--   UPDATE inmuebles SET propietario_id = '<uuid del perfil>' WHERE id IN (1,2,3,4);
 
 -- Inmuebles iniciales
 INSERT INTO inmuebles (
   id, propietario_id, titulo, tipo, tipo_label, precio, barrio, universidad, 
   distancia_texto, distancia_metros, tiempo_pie, estrato, area, transporte, 
   amenidades, descripcion, deposito, contrato_minimo, disponible_desde, 
-  latitud, longitud, imagen_principal, galeria, estado, propietario_nombre, propietario_telefono
+  latitud, longitud, imagen_principal, galeria, estado
 ) VALUES 
 (
   1, 
-  'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+  NULL,
   'Habitación amoblada en apartaestudio', 
   'habitacion', 
   'Habitación', 
@@ -45,13 +44,11 @@ INSERT INTO inmuebles (
     'https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?auto=format&fit=crop&w=600&q=80',
     'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=600&q=80'
   ],
-  'disponible',
-  'Marta Ruiz',
-  '573108845612'
+  'disponible'
 ),
 (
   2, 
-  'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+  NULL,
   'Apartaestudio moderno tipo loft', 
   'apartaestudio', 
   'Apartaestudio', 
@@ -76,13 +73,11 @@ INSERT INTO inmuebles (
     'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1000&q=80',
     'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=600&q=80'
   ],
-  'disponible',
-  'Andrés Beltrán',
-  '573123456789'
+  'disponible'
 ),
 (
   3, 
-  'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+  NULL,
   'Habitación individual cerca al campus', 
   'habitacion', 
   'Habitación', 
@@ -104,13 +99,11 @@ INSERT INTO inmuebles (
   -73.6375,
   'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=1000&q=80',
   ARRAY['https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=1000&q=80'],
-  'disponible',
-  'Gladys Rodríguez',
-  '573159988776'
+  'disponible'
 ),
 (
   4, 
-  'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+  NULL,
   'Apartamento compartido de 2 alcobas', 
   'apartamento', 
   'Apartamento', 
@@ -132,9 +125,7 @@ INSERT INTO inmuebles (
   -73.6390,
   'https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=1000&q=80',
   ARRAY['https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=1000&q=80'],
-  'disponible',
-  'Carlos Julio Rincón',
-  '573204445566'
+  'disponible'
 )
 ON CONFLICT (id) DO NOTHING;
 

@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../css/style.css">
 </head>
 
 <body>
@@ -36,7 +36,7 @@
 
       <div class="header-right">
         <span class="user-role-badge">Estudiante</span>
-        <a href="index.html" class="btn-logout-pill" id="btn-logout">Cerrar sesión</a>
+        <a href="../index.html" class="btn-logout-pill" id="btn-logout">Cerrar sesión</a>
       </div>
     </div>
   </header>
@@ -160,7 +160,7 @@
           </div>
 
           <!-- Botón Contactar por WhatsApp -->
-          <button type="button" class="btn-contact-wa-large" id="btn-wa-directo" onclick="abrirModalContacto(1)">
+          <button type="button" class="btn-contact-wa-large" id="btn-wa-directo" >
             <svg class="svg-icon-wa" viewBox="0 0 24 24" style="width: 18px; height: 18px;"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.668-.699c.969.587 1.942.88 2.792.881 3.179 0 5.766-2.587 5.767-5.766.001-3.18-2.586-5.767-5.767-5.767zm3.391 8.232c-.147.414-.755.767-1.042.813-.287.047-.638.077-2.074-.518-1.748-.724-2.871-2.5-2.958-2.616-.087-.116-.708-.941-.708-1.794 0-.853.447-1.273.606-1.446.16-.174.348-.218.464-.218.116 0 .232.001.333.006.107.005.25.04.391.378.147.355.503 1.229.547 1.318.044.088.073.191.015.307-.058.116-.088.19-.175.292-.087.102-.183.228-.261.306-.088.088-.18.184-.078.36.102.175.454.749.974 1.212.67.597 1.235.782 1.41.869.175.088.277.073.38-.044.102-.116.436-.508.552-.682.116-.175.233-.146.392-.088.16.058 1.013.477 1.188.564.175.088.291.131.334.204.043.073.043.42-.104.834z"/></svg>
             Contactar por WhatsApp
           </button>
@@ -175,10 +175,10 @@
 
           <!-- Perfil del Propietario -->
           <div class="owner-profile-compact">
-            <div class="owner-avatar-circle" id="det-owner-avatar">MR</div>
+            <div class="owner-avatar-circle" id="det-owner-avatar">…</div>
             <div class="owner-details-text">
-              <strong id="det-owner-nombre">Marta Ruiz</strong>
-              <span id="det-owner-sub">Propietaria verificada · responde en 2 h</span>
+              <strong id="det-owner-nombre">Cargando…</strong>
+              <span id="det-owner-sub">Publicado por un usuario de Roumix</span>
             </div>
           </div>
         </aside>
@@ -199,7 +199,7 @@
         <div class="modal-owner-box">
           <div class="owner-avatar">👤</div>
           <div class="owner-info">
-            <strong id="modal-prop-dueno">Marta Ruiz (Propietaria verificada)</strong>
+            <strong id="modal-prop-dueno">Usuario de Roumix</strong>
             <span>Villavicencio, Meta</span>
           </div>
         </div>
@@ -235,7 +235,7 @@
           <li><a href="buscar.html" class="footer-link">Buscar vivienda</a></li>
           <li><a href="comparar.html" class="footer-link">Comparar opciones</a></li>
           <li><a href="como-funciona.html" class="footer-link">Cómo funciona</a></li>
-          <li><a href="index.html" class="footer-link">Cerrar sesión</a></li>
+          <li><a href="../index.html" class="footer-link">Cerrar sesión</a></li>
         </ul>
       </div>
 
@@ -254,29 +254,47 @@
     </div>
   </footer>
 
-  <script src="app.js"></script>
+  <script src="../js/app.js"></script>
+  <script src="../js/api.js"></script>
   <script>
     document.addEventListener("DOMContentLoaded", async () => {
       const params = new URLSearchParams(window.location.search);
-      const id = params.get("id") || 1;
-      const item = await RoumixAPI.getInmueblePorId(id);
+      const id = params.get("id");
+
+      let item = null;
+      let mensajeError = "No se indicó qué inmueble mostrar.";
+      if (id) {
+        try {
+          item = await RoumixAPI.getInmueblePorId(id);
+        } catch (error) {
+          mensajeError = error.message;
+        }
+      }
+
+      if (!item) {
+        document.getElementById("det-titulo").textContent = "Inmueble no disponible";
+        document.getElementById("det-ubicacion").textContent = mensajeError;
+        document.getElementById("det-descripcion").textContent = "Vuelve a la búsqueda para ver los inmuebles disponibles.";
+        document.getElementById("btn-wa-directo").disabled = true;
+        return;
+      }
 
       if (item) {
         document.getElementById("det-titulo").textContent = item.titulo;
         document.getElementById("det-ubicacion").textContent = `Barrio ${item.barrio}, Villavicencio · ${item.distanciaTexto}`;
         document.getElementById("det-tipo").textContent = item.tipoLabel;
-        document.getElementById("det-estrato").textContent = `Estrato ${item.estrato}`;
+        document.getElementById("det-estrato").textContent = item.estrato ? `Estrato ${item.estrato}` : "Estrato sin informar";
         document.getElementById("det-precio").innerHTML = `${item.precioFormato} <small>/mes</small>`;
-        document.getElementById("det-descripcion").textContent = item.descripcion;
-        document.getElementById("det-area").textContent = `${item.area || "14 m²"} construidos`;
-        document.getElementById("det-deposito").textContent = item.deposito || `${item.precioFormato} (un mes)`;
-        document.getElementById("det-contrato").textContent = item.contratoMinimo || "6 meses";
+        document.getElementById("det-descripcion").textContent = item.descripcion || "El propietario no agregó una descripción.";
+        document.getElementById("det-area").textContent = item.area ? `${item.area} construidos` : "Sin informar";
+        document.getElementById("det-deposito").textContent = item.deposito || "Sin informar";
+        document.getElementById("det-contrato").textContent = item.contratoMinimo || "Sin informar";
         document.getElementById("det-disponibilidad").textContent = item.disponibleDesde || "Inmediato";
 
         if (item.propietario) {
           document.getElementById("det-owner-nombre").textContent = item.propietario.nombre;
-          document.getElementById("det-owner-avatar").textContent = item.propietario.iniciales || item.propietario.nombre.slice(0, 2).toUpperCase();
-          document.getElementById("det-owner-sub").textContent = `Propietario verificado · ${item.propietario.tiempoRespuesta || "responde pronto"}`;
+          document.getElementById("det-owner-avatar").textContent = item.propietario.iniciales;
+          document.getElementById("det-owner-sub").textContent = "Publicado por un usuario de Roumix";
         }
 
         if (item.imagen) {
