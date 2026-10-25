@@ -53,7 +53,7 @@
 |----|--------|-------------|
 | U-01 | Logo en `frontend/pages/*.html` | Al hacer click lleva a `../index.html` |
 | U-02 | Cerrar sesión | Elimina token, redirige a index |
-| U-03 | Acceso directo a `publicar.html` sin sesión | Redirige a `iniciarsesion.html` |
+| U-03 | Acceso directo a `publicar.html` sin sesión | Redirige a `index.html?redirigir=publicar.html` |
 | U-04 | Comparador con 0 inmuebles | Muestra mensaje "No has seleccionado inmuebles" |
 | U-05 | Comparador con 3 inmuebles | Muestra tabla con 3 columnas correctas |
 

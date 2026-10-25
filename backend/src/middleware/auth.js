@@ -2,17 +2,25 @@ const db = require('../config/db');
 const { supabase } = require('../config/supabase');
 
 /**
- * Exige un token de Supabase Auth válido en "Authorization: Bearer <token>".
- * Carga el perfil desde la tabla usuarios en req.usuario.
- * El rol SIEMPRE sale de la base de datos, nunca del navegador.
+ * Responde 503 si faltan SUPABASE_URL / SUPABASE_ANON_KEY en el servidor.
  */
-async function requireAuth(req, res, next) {
+function requireAuthConfigurada(req, res, next) {
   if (!supabase) {
     return res.status(503).json({
       status: 'error',
       message: 'La autenticación no está configurada en el servidor (SUPABASE_URL / SUPABASE_ANON_KEY).'
     });
   }
+  next();
+}
+
+/**
+ * Exige un token de Supabase Auth válido en "Authorization: Bearer <token>".
+ * Carga el perfil desde la tabla usuarios en req.usuario.
+ * El rol SIEMPRE sale de la base de datos, nunca del navegador.
+ */
+async function requireAuth(req, res, next) {
+  if (!supabase) return requireAuthConfigurada(req, res, next);
 
   const header = req.headers.authorization || '';
   const [tipo, token] = header.split(' ');
@@ -54,4 +62,4 @@ function requireRol(...roles) {
   };
 }
 
-module.exports = { requireAuth, requireRol };
+module.exports = { requireAuth, requireRol, requireAuthConfigurada };

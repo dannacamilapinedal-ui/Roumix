@@ -7,14 +7,24 @@
 
 // 1. Los inmuebles se consultan siempre a la API (ver js/api.js); aquí no hay datos de ejemplo.
 
-// 2. Sesión del usuario en el navegador (temporal hasta integrar Supabase Auth)
+// 2. Sesión de Supabase Auth guardada en el navegador.
+// Solo se guardan los tokens y el perfil que devuelve el servidor; nunca la contraseña.
 const RoumixStorage = {
+  _leer: function(clave) {
+    try {
+      return localStorage.getItem(clave);
+    } catch (e) {
+      return null;
+    }
+  },
+
+  // Perfil del usuario con sesión (o null si es visitante)
   getUsuario: function() {
     try {
-      const u = localStorage.getItem("roumix_usuario");
-      return u ? JSON.parse(u) : { rol: "estudiante", nombre: "Estudiante" };
+      const u = this._leer("roumix_usuario");
+      return u && this.getToken() ? JSON.parse(u) : null;
     } catch (e) {
-      return { rol: "estudiante", nombre: "Estudiante" };
+      return null;
     }
   },
 
@@ -22,19 +32,43 @@ const RoumixStorage = {
     localStorage.setItem("roumix_usuario", JSON.stringify(usuario));
   },
 
-  // Token de sesión de Supabase Auth que se envía al backend
-  getToken: function() {
-    try {
-      return localStorage.getItem("roumix_token");
-    } catch (e) {
-      return null;
-    }
+  // Guarda la respuesta de /api/auth/login, /registro o /refresh
+  setSesion: function(sesion, usuario) {
+    localStorage.setItem("roumix_token", sesion.access_token);
+    localStorage.setItem("roumix_refresh_token", sesion.refresh_token);
+    localStorage.setItem("roumix_expira", String(sesion.expires_at || 0));
+    this.setUsuario(usuario);
   },
 
-  cerrarSesion: function() {
-    localStorage.removeItem("roumix_usuario");
-    localStorage.removeItem("roumix_token");
-    localStorage.removeItem("roumix_inmuebles"); // copia local antigua, ya no se usa
+  // Token de sesión de Supabase Auth que se envía al backend
+  getToken: function() {
+    return this._leer("roumix_token");
+  },
+
+  getRefreshToken: function() {
+    return this._leer("roumix_refresh_token");
+  },
+
+  // Segundos (epoch) en que vence el token de acceso
+  getExpiracion: function() {
+    return Number(this._leer("roumix_expira")) || 0;
+  },
+
+  limpiarSesion: function() {
+    ["roumix_usuario", "roumix_token", "roumix_refresh_token", "roumix_expira", "roumix_inmuebles"]
+      .forEach((clave) => localStorage.removeItem(clave));
+  },
+
+  cerrarSesion: async function() {
+    // Se invalida la sesión en Supabase; aunque falle, se borra localmente
+    if (this.getToken() && typeof RoumixAPI !== "undefined") {
+      try {
+        await RoumixAPI.logout();
+      } catch (e) {
+        console.warn("No se pudo cerrar la sesión en el servidor:", e.message);
+      }
+    }
+    this.limpiarSesion();
     const enCarpetaPages = window.location.pathname.includes("/pages/");
     window.location.href = enCarpetaPages ? "../index.html" : "index.html";
   }
@@ -110,6 +144,7 @@ function sincronizarBarraNavegacion() {
   const prefixPages = enCarpetaPages ? "" : "pages/";
   const prefixRoot = enCarpetaPages ? "../" : "";
 
+  // El rol guardado solo decide qué enlaces se muestran; el servidor vuelve a validarlo
   const usuario = RoumixStorage.getUsuario();
   const esPropietario = usuario && usuario.rol === "propietario";
   const paginaActual = window.location.pathname.split("/").pop() || "buscar.html";
@@ -139,12 +174,73 @@ function sincronizarBarraNavegacion() {
   }
 
   if (rightContainer) {
-    const rolTexto = esPropietario ? "Propietario" : "Estudiante";
-    rightContainer.innerHTML = `
-      <span class="user-role-badge">${rolTexto}</span>
-      <a href="${prefixRoot}index.html" class="btn-logout-pill" onclick="RoumixStorage.cerrarSesion(); return false;">Cerrar sesión</a>
-    `;
+    if (usuario) {
+      const rolTexto = esPropietario ? "Propietario" : "Estudiante";
+      rightContainer.innerHTML = `
+        <span class="user-role-badge">${rolTexto}</span>
+        <a href="${prefixRoot}index.html" class="btn-logout-pill" onclick="RoumixStorage.cerrarSesion(); return false;">Cerrar sesión</a>
+      `;
+      rightContainer.querySelector(".user-role-badge").title = usuario.nombre;
+    } else {
+      rightContainer.innerHTML = `
+        <a href="${prefixRoot}index.html" class="btn-logout-pill">Iniciar sesión</a>
+      `;
+    }
   }
+
+  // Los enlaces "Cerrar sesión" fijos del HTML (pie de página) también cierran la sesión real
+  document.querySelectorAll('a.footer-link, a#btn-logout').forEach((enlace) => {
+    if (enlace.textContent.trim() !== "Cerrar sesión") return;
+    if (!usuario) {
+      enlace.textContent = "Iniciar sesión";
+      return;
+    }
+    enlace.addEventListener("click", (e) => {
+      e.preventDefault();
+      RoumixStorage.cerrarSesion();
+    });
+  });
+}
+
+// 6. Protección de páginas privadas
+// Uso: await protegerPagina(["propietario"]). Redirige si no hay sesión o el rol no corresponde.
+// Además confirma la sesión y el rol con el servidor (la fuente de verdad).
+async function protegerPagina(rolesPermitidos) {
+  const enCarpetaPages = window.location.pathname.includes("/pages/");
+  const prefixRoot = enCarpetaPages ? "../" : "";
+  const paginaActual = window.location.pathname.split("/").pop();
+
+  // La página no se muestra hasta confirmar el acceso
+  document.body.style.visibility = "hidden";
+
+  if (!RoumixStorage.getToken()) {
+    window.location.replace(`${prefixRoot}index.html?redirigir=${encodeURIComponent(paginaActual)}`);
+    return null;
+  }
+
+  let usuario;
+  try {
+    usuario = await RoumixAPI.getPerfil();
+  } catch (error) {
+    if (error.status === 401 || error.status === 403) {
+      RoumixStorage.limpiarSesion();
+      window.location.replace(`${prefixRoot}index.html?redirigir=${encodeURIComponent(paginaActual)}`);
+      return null;
+    }
+    document.body.style.visibility = "";
+    alert(`No se pudo verificar tu sesión: ${error.message}`);
+    return null;
+  }
+
+  if (!rolesPermitidos.includes(usuario.rol)) {
+    alert("Esta sección es solo para propietarios.");
+    window.location.replace(`${enCarpetaPages ? "" : "pages/"}buscar.html`);
+    return null;
+  }
+
+  sincronizarBarraNavegacion();
+  document.body.style.visibility = "";
+  return usuario;
 }
 
 document.addEventListener("DOMContentLoaded", () => {

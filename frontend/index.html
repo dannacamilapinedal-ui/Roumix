@@ -78,6 +78,8 @@
                 id="auth-nombre" 
                 class="auth-input" 
                 placeholder="Tu nombre completo"
+                autocomplete="name"
+                maxlength="120"
               >
             </div>
 
@@ -88,7 +90,9 @@
                 type="email" 
                 id="auth-email" 
                 class="auth-input" 
-                placeholder="nombre@ustavillavicencio.edu.co" 
+                placeholder="nombre@ustavillavicencio.edu.co"
+                autocomplete="email"
+                maxlength="150"
                 required
               >
             </div>
@@ -102,6 +106,8 @@
                   id="auth-password" 
                   class="auth-input" 
                   placeholder="••••••••••••" 
+                  autocomplete="current-password"
+                  maxlength="72"
                   required
                 >
                 <button type="button" class="btn-toggle-pwd" id="btn-show-pwd" aria-label="Mostrar u ocultar contraseña">
@@ -113,14 +119,30 @@
               </div>
             </div>
 
-            <!-- Selector: Entro como (Exacto al boceto 1) -->
-            <div class="auth-role-group">
-              <label class="auth-label">Entro como</label>
+            <!-- Selector de rol (solo en registro: al iniciar sesión el rol sale del perfil guardado) -->
+            <div class="auth-role-group" id="field-rol" style="display: none;">
+              <label class="auth-label">Me registro como</label>
               <div class="role-selector-pill">
-                <button type="button" class="role-btn active" data-role="estudiante">Estudiante</button>
-                <button type="button" class="role-btn" data-role="propietario">Propietario</button>
+                <button type="button" class="role-btn active" data-role="estudiante" aria-pressed="true">Estudiante</button>
+                <button type="button" class="role-btn" data-role="propietario" aria-pressed="false">Propietario</button>
               </div>
             </div>
+
+            <!-- Celular (solo en registro; obligatorio para propietarios) -->
+            <div class="auth-field-group" id="field-telefono" style="display: none;">
+              <label for="auth-telefono" class="auth-label" id="label-telefono">Celular / WhatsApp (opcional)</label>
+              <input
+                type="tel"
+                id="auth-telefono"
+                class="auth-input"
+                placeholder="3101234567"
+                autocomplete="tel"
+                maxlength="20"
+              >
+            </div>
+
+            <!-- Mensajes de error o confirmación -->
+            <p id="auth-mensaje" role="alert" aria-live="polite" style="display: none; margin: 0; padding: 10px 14px; border-radius: 12px; font-size: 0.9rem;"></p>
 
             <!-- Botón Entrar / Crear cuenta -->
             <button type="submit" id="btn-submit-auth" class="btn-auth-primary">
@@ -129,8 +151,8 @@
 
             <!-- Enlaces al pie -->
             <div class="auth-footer-links">
-              <a href="#" class="auth-footer-link" onclick="alert('Se enviará un enlace de recuperación a tu correo institucional.'); return false;">¿Olvidé mi contraseña?</a>
-              <span class="auth-privacy-notice">Tus datos se protegen y no se comparten.</span>
+              <a href="pages/buscar.html" class="auth-footer-link">Explorar sin iniciar sesión</a>
+              <span class="auth-privacy-notice">Tu contraseña la protege Supabase Auth; Roumix nunca la guarda.</span>
             </div>
           </form>
         </div>
@@ -145,36 +167,87 @@
       const btnTabLogin = document.getElementById("tab-login");
       const btnTabRegister = document.getElementById("tab-register");
       const fieldNombre = document.getElementById("field-nombre");
+      const fieldRol = document.getElementById("field-rol");
+      const fieldTelefono = document.getElementById("field-telefono");
+      const labelTelefono = document.getElementById("label-telefono");
       const btnSubmit = document.getElementById("btn-submit-auth");
       const formAuth = document.getElementById("form-auth");
       const roleBtns = document.querySelectorAll(".role-btn");
       const btnShowPwd = document.getElementById("btn-show-pwd");
       const inputPwd = document.getElementById("auth-password");
+      const mensaje = document.getElementById("auth-mensaje");
 
       let modo = "login";
       let rol = "estudiante";
+
+      // Página a la que volver después de iniciar sesión (solo páginas propias de Roumix)
+      const params = new URLSearchParams(window.location.search);
+      const redirigir = params.get("redirigir");
+      const destino = redirigir && /^[a-z-]+\.html$/.test(redirigir) ? `pages/${redirigir}` : "pages/buscar.html";
+
+      function mostrarMensaje(texto, tipo) {
+        mensaje.textContent = texto;
+        mensaje.style.display = texto ? "block" : "none";
+        mensaje.style.background = tipo === "exito" ? "#e8f5e9" : "#fdecea";
+        mensaje.style.color = tipo === "exito" ? "#1b5e20" : "#8a1c1c";
+      }
+
+      // Si ya hay sesión, no tiene sentido volver a iniciarla
+      if (RoumixStorage.getUsuario()) {
+        window.location.replace(destino);
+        return;
+      }
+
+      // Llegada desde el enlace de confirmación del correo (Supabase agrega datos en el #hash)
+      if (window.location.hash.includes("type=signup")) {
+        history.replaceState(null, "", window.location.pathname + window.location.search);
+        mostrarMensaje("¡Correo confirmado! Ya puedes iniciar sesión.", "exito");
+      } else if (window.location.hash.includes("error_description")) {
+        const hash = new URLSearchParams(window.location.hash.slice(1));
+        history.replaceState(null, "", window.location.pathname + window.location.search);
+        mostrarMensaje(`No se pudo confirmar el correo: ${hash.get("error_description")}`, "error");
+      } else if (redirigir) {
+        mostrarMensaje("Inicia sesión para continuar.", "error");
+      }
+
+      function actualizarTelefono() {
+        labelTelefono.textContent = rol === "propietario" ? "Celular / WhatsApp (obligatorio)" : "Celular / WhatsApp (opcional)";
+      }
 
       btnTabLogin.addEventListener("click", () => {
         btnTabLogin.classList.add("active");
         btnTabRegister.classList.remove("active");
         fieldNombre.style.display = "none";
+        fieldRol.style.display = "none";
+        fieldTelefono.style.display = "none";
+        inputPwd.autocomplete = "current-password";
         btnSubmit.textContent = "Entrar";
         modo = "login";
+        mostrarMensaje("");
       });
 
       btnTabRegister.addEventListener("click", () => {
         btnTabRegister.classList.add("active");
         btnTabLogin.classList.remove("active");
         fieldNombre.style.display = "flex";
+        fieldRol.style.display = "";
+        fieldTelefono.style.display = "flex";
+        inputPwd.autocomplete = "new-password";
         btnSubmit.textContent = "Crear cuenta";
         modo = "register";
+        mostrarMensaje("");
       });
 
       roleBtns.forEach(btn => {
         btn.addEventListener("click", () => {
-          roleBtns.forEach(b => b.classList.remove("active"));
+          roleBtns.forEach(b => {
+            b.classList.remove("active");
+            b.setAttribute("aria-pressed", "false");
+          });
           btn.classList.add("active");
+          btn.setAttribute("aria-pressed", "true");
           rol = btn.dataset.role;
+          actualizarTelefono();
         });
       });
 
@@ -186,31 +259,59 @@
         }
       });
 
-      formAuth.addEventListener("submit", (e) => {
+      formAuth.addEventListener("submit", async (e) => {
         e.preventDefault();
         const email = document.getElementById("auth-email").value.trim();
+        const password = inputPwd.value;
         const nombre = document.getElementById("auth-nombre").value.trim();
+        const telefono = document.getElementById("auth-telefono").value.trim();
 
-        if (!email) {
-          alert("Por favor ingresa tu correo electrónico.");
+        if (!email || !password) {
+          mostrarMensaje("Escribe tu correo y tu contraseña.", "error");
           return;
         }
-
-        const usuario = {
-          email: email,
-          nombre: nombre || email.split("@")[0],
-          rol: rol
-        };
-
-        RoumixStorage.setUsuario(usuario);
-
-        if (rol === "estudiante") {
-          alert(`¡Bienvenido! Has ingresado como ESTUDIANTE (${usuario.nombre}).`);
-          window.location.href = "pages/buscar.html";
-        } else {
-          alert(`¡Bienvenido! Has ingresado como PROPIETARIO (${usuario.nombre}).`);
-          window.location.href = "pages/buscar.html";
+        if (modo === "register") {
+          if (nombre.length < 2) {
+            mostrarMensaje("Escribe tu nombre completo.", "error");
+            return;
+          }
+          if (password.length < 8) {
+            mostrarMensaje("La contraseña debe tener al menos 8 caracteres.", "error");
+            return;
+          }
+          if (rol === "propietario" && !telefono) {
+            mostrarMensaje("Como propietario necesitas un celular para que te contacten por WhatsApp.", "error");
+            return;
+          }
         }
+
+        const textoBoton = btnSubmit.textContent;
+        btnSubmit.disabled = true;
+        btnSubmit.textContent = modo === "login" ? "Entrando…" : "Creando cuenta…";
+        mostrarMensaje("");
+
+        try {
+          if (modo === "login") {
+            await RoumixAPI.login(email, password);
+            window.location.href = destino;
+            return;
+          }
+
+          const respuesta = await RoumixAPI.registrar({ nombre, email, password, rol, telefono });
+          if (respuesta.requiereConfirmacion) {
+            formAuth.reset();
+            btnTabLogin.click();
+            mostrarMensaje(respuesta.message, "exito");
+          } else {
+            window.location.href = destino;
+            return;
+          }
+        } catch (error) {
+          mostrarMensaje(error.message, "error");
+        }
+
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = textoBoton;
       });
     });
   </script>

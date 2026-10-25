@@ -5,6 +5,7 @@ const cors = require('cors');
 // Rutas
 const healthRoutes = require('./routes/healthRoutes');
 const inmueblesRoutes = require('./routes/inmueblesRoutes');
+const authRoutes = require('./routes/authRoutes');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -23,6 +24,7 @@ app.use(express.json({ limit: '1mb' }));
 
 // Montaje de rutas de la API
 app.use('/api/health', healthRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/api/inmuebles', inmueblesRoutes);
 
 // Rutas de API inexistentes (404)

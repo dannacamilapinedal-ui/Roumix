@@ -22,7 +22,12 @@ const RoumixAPI = {
   /**
    * Petición genérica: devuelve el JSON o lanza un Error con el mensaje del servidor.
    */
-  _request: async function(ruta, opciones = {}) {
+  _request: async function(ruta, opciones = {}, reintento = true) {
+    // Renueva el token si vence en menos de un minuto
+    if (RoumixStorage.getRefreshToken() && RoumixStorage.getExpiracion() - 60 < Date.now() / 1000) {
+      await this._renovarSesion();
+    }
+
     const headers = { ...(opciones.headers || {}) };
     if (opciones.body) headers['Content-Type'] = 'application/json';
 
@@ -36,6 +41,11 @@ const RoumixAPI = {
       throw new Error('No se pudo conectar con el servidor de Roumix. Verifica que el backend esté encendido.');
     }
 
+    // Token rechazado: se intenta renovar una vez y repetir la petición
+    if (res.status === 401 && token && reintento && await this._renovarSesion()) {
+      return this._request(ruta, opciones, false);
+    }
+
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
       const err = new Error(json.message || `Error en el servidor (${res.status})`);
@@ -43,6 +53,63 @@ const RoumixAPI = {
       throw err;
     }
     return json;
+  },
+
+  /**
+   * Usa el refresh token para obtener un token de acceso nuevo.
+   * Devuelve true si lo logró; si no, borra la sesión local.
+   */
+  _renovarSesion: async function() {
+    const refreshToken = RoumixStorage.getRefreshToken();
+    if (!refreshToken) return false;
+
+    try {
+      const res = await fetch(`${this.baseURL}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken })
+      });
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) RoumixStorage.limpiarSesion();
+        return false;
+      }
+      const json = await res.json();
+      RoumixStorage.setSesion(json.sesion, json.usuario);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  },
+
+  /**
+   * Crea una cuenta. Si Supabase no exige confirmar el correo, deja la sesión iniciada.
+   */
+  registrar: async function(datos) {
+    const json = await this._request('/auth/registro', { method: 'POST', body: JSON.stringify(datos) });
+    if (json.sesion) RoumixStorage.setSesion(json.sesion, json.usuario);
+    return json;
+  },
+
+  /**
+   * Inicia sesión con correo y contraseña. El rol llega desde el perfil guardado.
+   */
+  login: async function(email, password) {
+    const json = await this._request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
+    RoumixStorage.setSesion(json.sesion, json.usuario);
+    return json.usuario;
+  },
+
+  /**
+   * Perfil del usuario con sesión, confirmado por el servidor
+   */
+  getPerfil: async function() {
+    const json = await this._request('/auth/perfil');
+    RoumixStorage.setUsuario(json.usuario);
+    return json.usuario;
+  },
+
+  logout: async function() {
+    await this._request('/auth/logout', { method: 'POST' }, false);
   },
 
   /**

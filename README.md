@@ -82,12 +82,17 @@ Abra **http://localhost:3000** — el mismo servidor entrega la página y la API
 |--------|------|--------|-------------|
 | GET | `/api/health` | Público | Estado del servidor |
 | GET | `/api/health/db` | Público | Prueba la conexión con PostgreSQL |
+| POST | `/api/auth/registro` | Público | Crear cuenta (nombre, email, password, rol, telefono) |
+| POST | `/api/auth/login` | Público | Iniciar sesión; devuelve tokens y el perfil |
+| POST | `/api/auth/refresh` | Público | Renovar el token con el refresh token |
+| GET | `/api/auth/perfil` | Con sesión | Perfil del usuario (rol leído de la BD) |
+| POST | `/api/auth/logout` | Con sesión | Cerrar sesión en Supabase Auth |
 | GET | `/api/inmuebles?tipo=&precioMax=&universidad=&q=` | Público | Inmuebles disponibles |
 | GET | `/api/inmuebles/:id` | Público | Detalle de un inmueble disponible |
 | GET | `/api/inmuebles/mios` | Propietario | Inmuebles del propietario autenticado |
 | POST | `/api/inmuebles` | Propietario | Publicar un inmueble |
 
-Las rutas protegidas exigen `Authorization: Bearer <token de Supabase Auth>`. El rol y el
+Las contraseñas las gestiona Supabase Auth; Roumix nunca las guarda. Las rutas protegidas exigen `Authorization: Bearer <token de Supabase Auth>`. El rol y el
 propietario se obtienen en el servidor, nunca de lo que envía el navegador.
 
 ## 👥 Roles
@@ -101,7 +106,7 @@ propietario se obtienen en el servidor, nunca de lo que envía el navegador.
 - [x] Conexión del backend con PostgreSQL en Supabase y migraciones
 - [x] Perfiles ligados a Supabase Auth, claves foráneas, RLS y bucket de imágenes
 - [x] Búsqueda y detalle leen la base de datos real, sin respaldos locales silenciosos
-- [ ] Registro e inicio de sesión con Supabase Auth
+- [x] Registro, inicio y cierre de sesión con Supabase Auth; páginas de propietario protegidas
 - [ ] Publicación con carga de imágenes a Supabase Storage
 - [ ] Editar, pausar y marcar como arrendada una publicación
 - [ ] Comparador dinámico con los inmuebles seleccionados
