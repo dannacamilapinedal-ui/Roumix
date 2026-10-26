@@ -10,6 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
   <link rel="stylesheet" href="../css/style.css">
 </head>
 
@@ -27,7 +28,6 @@
 
       <nav class="main-nav" aria-label="Navegación principal">
         <ul class="nav-links">
-          <li><a href="buscar.html" class="nav-link">Inicio</a></li>
           <li><a href="buscar.html" class="nav-link">Buscar</a></li>
           <li><a href="como-funciona.html" class="nav-link">Cómo funciona</a></li>
           <li><a href="comparar.html" class="nav-link">Comparar</a></li>
@@ -93,6 +93,15 @@
           <h2 class="section-subheading">Características clave</h2>
           <div class="features-cards-grid" id="det-caracteristicas">
           </div>
+
+          <div class="detail-divider"></div>
+
+          <!-- Ubicación aproximada: la dirección exacta se acuerda con el propietario -->
+          <h2 class="section-subheading">Zona aproximada</h2>
+          <p class="detail-description-p" id="det-ubicacion-nota">
+            Por privacidad mostramos un área de unos 250 m alrededor del inmueble. Acuerda la dirección exacta con el propietario antes de visitarlo.
+          </p>
+          <div id="mapa-detalle" class="mapa-detalle" aria-label="Mapa con la zona aproximada del inmueble"></div>
         </div>
 
         <!-- Columna Derecha: Tarjeta Flotante (Precio y Contacto) -->
@@ -139,6 +148,16 @@
               <span id="det-owner-sub">Publicado por un usuario de Roumix</span>
             </div>
           </div>
+
+          <!-- Insignias: solo las respaldadas por una comprobación real -->
+          <div class="insignias-fila" id="det-insignias"></div>
+          <p class="detalle-revision" id="det-revision" hidden></p>
+          <p class="detalle-aviso-confianza">
+            Roumix no cobra por reservar. Nunca pagues depósitos sin visitar el inmueble y firmar un contrato.
+            <a href="como-funciona.html#insignias">¿Qué significan las insignias?</a>
+          </p>
+
+          <button type="button" class="btn-report btn-reportar-detalle" id="btn-reportar-inmueble" hidden>⚑ Reportar publicación</button>
         </aside>
 
       </div>
@@ -202,7 +221,7 @@
         <address>
           Universidad Santo Tomás, Villavicencio<br>
           Facultad de Ingeniería de Sistemas<br>
-          <a href="mailto:contacto@roumix.com">contacto@roumix.com</a>
+          <a href="mailto:roumix04@gmail.com">roumix04@gmail.com</a>
         </address>
       </div>
     </div>
@@ -214,6 +233,8 @@
 
   <script src="../js/app.js"></script>
   <script src="../js/api.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="../js/mapa.js"></script>
   <script>
     document.addEventListener("DOMContentLoaded", async () => {
       const params = new URLSearchParams(window.location.search);
@@ -259,6 +280,20 @@
         document.getElementById("det-owner-sub").textContent = "Publicado por un usuario de Roumix";
       }
 
+      document.getElementById("det-insignias").innerHTML = insigniasConfianza(item);
+      if (item.revisado_en) {
+        const revision = document.getElementById("det-revision");
+        const fecha = new Date(item.revisado_en).toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" });
+        revision.textContent = `Revisada por Roumix el ${fecha}. Se comprobó: ${item.revision_alcance || "información general"}. ` +
+          "Esto no garantiza que no exista fraude ni reemplaza tu propia verificación.";
+        revision.hidden = false;
+      }
+      if (puedeReportar(item)) {
+        const btnReportar = document.getElementById("btn-reportar-inmueble");
+        btnReportar.hidden = false;
+        btnReportar.addEventListener("click", () => abrirModalReporte(item.id, item.titulo));
+      }
+
       // Características: solo las que el propietario registró
       const caracteristicas = [];
       if (item.area) caracteristicas.push(["Área", item.area]);
@@ -285,6 +320,22 @@
         caja.append(strong, span);
         contenedorCaract.appendChild(caja);
       });
+
+      // ---------- Zona aproximada en el mapa ----------
+      const contenedorMapa = document.getElementById("mapa-detalle");
+      if (item.lat === null || item.lng === null) {
+        RoumixMapa.mostrarNoDisponible(contenedorMapa, "El propietario no registró la ubicación de este inmueble.");
+      } else {
+        const mapa = RoumixMapa.disponible() ? RoumixMapa.crear(contenedorMapa, { centro: [item.lat, item.lng], zoom: 15 }) : null;
+        if (!mapa) {
+          RoumixMapa.mostrarNoDisponible(contenedorMapa);
+        } else {
+          L.circle([item.lat, item.lng], {
+            radius: RoumixMapa.RADIO_APROXIMADO_M, color: "#3d7053", weight: 2, fillColor: "#3d7053", fillOpacity: 0.15
+          }).addTo(mapa).bindTooltip(`Zona aproximada · ${item.barrio}`, { direction: "top" });
+          RoumixMapa.marcadorCampus(mapa);
+        }
+      }
 
       // ---------- Galería completa ----------
       const fotos = item.galeria.filter(Boolean);

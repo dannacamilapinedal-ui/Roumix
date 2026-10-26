@@ -4,17 +4,36 @@ const fotos = require('../services/fotosService');
 const TIPOS = ['habitacion', 'apartaestudio', 'apartamento'];
 const TIPO_LABELS = { habitacion: 'Habitación', apartaestudio: 'Apartaestudio', apartamento: 'Apartamento' };
 
-// Columnas públicas de un inmueble + datos de contacto tomados del perfil del propietario
-const SELECT_INMUEBLE = `
-  SELECT i.id, i.propietario_id, i.titulo, i.tipo, i.tipo_label, i.precio, i.barrio,
-         i.universidad, i.distancia_texto, i.distancia_metros, i.tiempo_pie, i.estrato,
-         i.area, i.transporte, i.amenidades, i.descripcion, i.deposito, i.contrato_minimo,
-         i.disponible_desde, i.latitud, i.longitud, i.imagen_principal, i.galeria,
-         i.estado, i.created_at, i.updated_at,
-         u.nombre AS propietario_nombre, u.telefono AS propietario_telefono
-  FROM inmuebles i
-  LEFT JOIN usuarios u ON u.id = i.propietario_id
-`;
+// Columnas comunes de un inmueble + datos del propietario tomados de su perfil.
+// La insignia "correo confirmado" sale de Supabase Auth, no de lo que diga el usuario.
+function selectInmueble({ exacto }) {
+  // En las páginas públicas la ubicación se redondea a ~100 m para no revelar la dirección exacta
+  const coordenadas = exacto
+    ? 'i.latitud, i.longitud'
+    : 'ROUND(i.latitud, 3) AS latitud, ROUND(i.longitud, 3) AS longitud';
+  return `
+    SELECT i.id, i.propietario_id, i.titulo, i.tipo, i.tipo_label, i.precio, i.barrio,
+           i.universidad, i.distancia_texto, i.distancia_metros, i.tiempo_pie, i.estrato,
+           i.area, i.transporte, i.amenidades, i.descripcion, i.deposito, i.contrato_minimo,
+           i.disponible_desde, ${coordenadas}, i.imagen_principal, i.galeria,
+           i.estado, i.moderacion, i.revisado_en, i.revision_alcance, i.created_at, i.updated_at,
+           ${exacto ? 'i.moderacion_mensaje,' : ''}
+           u.nombre AS propietario_nombre, u.telefono AS propietario_telefono,
+           (a.email_confirmed_at IS NOT NULL) AS propietario_correo_confirmado
+    FROM inmuebles i
+    LEFT JOIN usuarios u ON u.id = i.propietario_id
+    LEFT JOIN auth.users a ON a.id = i.propietario_id
+  `;
+}
+
+const SELECT_PUBLICO = selectInmueble({ exacto: false });
+const SELECT_PROPIETARIO = selectInmueble({ exacto: true });
+
+// Lo que puede ver cualquier visitante: disponible, aprobado por moderación y de una cuenta activa
+const CONDICION_PUBLICA = "i.estado = 'disponible' AND i.moderacion = 'aprobada' AND (u.id IS NULL OR u.estado = 'activo')";
+
+// Zona de Villavicencio y alrededores: las ubicaciones fuera de ella se rechazan
+const ZONA = { latMin: 3.95, latMax: 4.35, lngMin: -73.85, lngMax: -73.4 };
 
 function errorValidacion(message) {
   const err = new Error(message);
@@ -68,6 +87,12 @@ function validarInmueble(body) {
   const precio = enteroOpcional(body.precio, 'precio', 1, 100000000);
   if (precio === null) throw errorValidacion('precio es obligatorio.');
 
+  const sinUbicacion = body.latitud === undefined || body.latitud === null || body.latitud === '' ||
+    body.longitud === undefined || body.longitud === null || body.longitud === '';
+  if (sinUbicacion) throw errorValidacion('Marca la ubicación del inmueble en el mapa.');
+  const fueraDeZona = Number(body.latitud) < ZONA.latMin || Number(body.latitud) > ZONA.latMax ||
+    Number(body.longitud) < ZONA.lngMin || Number(body.longitud) > ZONA.lngMax;
+  if (fueraDeZona) throw errorValidacion('La ubicación debe estar en Villavicencio o sus alrededores.');
 
   return {
     titulo: textoObligatorio(body.titulo, 'titulo', 200),
@@ -87,8 +112,8 @@ function validarInmueble(body) {
     deposito: textoOpcional(body.deposito, 'deposito', 100),
     contratoMinimo: textoOpcional(body.contratoMinimo, 'contratoMinimo', 50),
     disponibleDesde: textoOpcional(body.disponibleDesde, 'disponibleDesde', 50) || 'Inmediato',
-    latitud: numeroOpcional(body.latitud, 'latitud', -90, 90),
-    longitud: numeroOpcional(body.longitud, 'longitud', -180, 180)
+    latitud: numeroOpcional(body.latitud, 'latitud', ZONA.latMin, ZONA.latMax),
+    longitud: numeroOpcional(body.longitud, 'longitud', ZONA.lngMin, ZONA.lngMax)
   };
 }
 
@@ -114,8 +139,8 @@ function patronBusqueda(valor) {
 async function getInmuebles(req, res) {
   const { tipo, precioMax, universidad, q, orden, ids } = req.query;
 
-  let queryText = `${SELECT_INMUEBLE} WHERE i.estado = $1`;
-  const queryParams = ['disponible'];
+  let queryText = `${SELECT_PUBLICO} WHERE ${CONDICION_PUBLICA}`;
+  const queryParams = [];
 
   if (ids !== undefined) {
     const lista = String(ids).split(',').filter(Boolean).map((v) => enteroOpcional(v, 'ids', 1, 2147483647));
@@ -172,7 +197,7 @@ async function getInmueblePorId(req, res) {
   const id = enteroOpcional(req.params.id, 'id', 1, 2147483647);
   if (id === null) throw errorValidacion('id no válido.');
 
-  const result = await db.query(`${SELECT_INMUEBLE} WHERE i.id = $1 AND i.estado = 'disponible'`, [id]);
+  const result = await db.query(`${SELECT_PUBLICO} WHERE i.id = $1 AND ${CONDICION_PUBLICA}`, [id]);
 
   if (result.rows.length === 0) {
     return res.status(404).json({
@@ -193,7 +218,7 @@ async function getInmueblePorId(req, res) {
  */
 async function getMisInmuebles(req, res) {
   const result = await db.query(
-    `${SELECT_INMUEBLE} WHERE i.propietario_id = $1 ORDER BY i.created_at DESC, i.id DESC`,
+    `${SELECT_PROPIETARIO} WHERE i.propietario_id = $1 ORDER BY i.created_at DESC, i.id DESC`,
     [req.usuario.id]
   );
 
@@ -206,6 +231,16 @@ async function getMisInmuebles(req, res) {
 
 
 const ESTADOS = ['disponible', 'pausado', 'arrendado'];
+
+// Una publicación rechazada o retirada por Roumix ya no se puede editar ni reactivar
+// (el propietario sí puede eliminarla).
+function verificarEditable(moderacion) {
+  if (moderacion === 'rechazada' || moderacion === 'retirada') {
+    const err = new Error(`Esta publicación fue ${moderacion} por Roumix y no se puede modificar. Puedes eliminarla.`);
+    err.status = 409;
+    throw err;
+  }
+}
 
 function idDeRuta(req) {
   const id = enteroOpcional(req.params.id, 'id', 1, 2147483647);
@@ -224,7 +259,7 @@ function noEncontrado(res, id) {
  */
 async function getMiInmueble(req, res) {
   const id = idDeRuta(req);
-  const result = await db.query(`${SELECT_INMUEBLE} WHERE i.id = $1 AND i.propietario_id = $2`, [id, req.usuario.id]);
+  const result = await db.query(`${SELECT_PROPIETARIO} WHERE i.id = $1 AND i.propietario_id = $2`, [id, req.usuario.id]);
   if (result.rows.length === 0) return noEncontrado(res, id);
   res.status(200).json({ status: 'success', data: result.rows[0] });
 }
@@ -267,7 +302,7 @@ async function crearInmueble(req, res) {
     throw error;
   }
 
-  const creado = await db.query(`${SELECT_INMUEBLE} WHERE i.id = $1`, [id]);
+  const creado = await db.query(`${SELECT_PROPIETARIO} WHERE i.id = $1`, [id]);
   res.status(201).json({
     status: 'success',
     message: 'Inmueble publicado con éxito',
@@ -283,9 +318,13 @@ async function actualizarInmueble(req, res) {
   const id = idDeRuta(req);
   const d = validarInmueble(req.body || {});
 
-  const actual = await db.query('SELECT galeria FROM inmuebles WHERE id = $1 AND propietario_id = $2', [id, req.usuario.id]);
+  const actual = await db.query(
+    'SELECT galeria, moderacion, titulo FROM inmuebles WHERE id = $1 AND propietario_id = $2',
+    [id, req.usuario.id]
+  );
   if (actual.rows.length === 0) return noEncontrado(res, id);
-  const galeriaActual = actual.rows[0].galeria;
+  const { galeria: galeriaActual, moderacion } = actual.rows[0];
+  verificarEditable(moderacion);
 
   const conservar = Array.isArray(req.body.fotosConservar) ? req.body.fotosConservar : galeriaActual;
   if (conservar.some((url) => !galeriaActual.includes(url))) {
@@ -327,7 +366,21 @@ async function actualizarInmueble(req, res) {
   // Las fotos retiradas se borran de Storage solo después de guardar el cambio
   await fotos.borrarFotos(req.token, galeriaActual.filter((url) => !conservar.includes(url)));
 
-  const editado = await db.query(`${SELECT_INMUEBLE} WHERE i.id = $1`, [id]);
+  // Si Roumix pidió correcciones, al guardarlas la publicación vuelve a revisión
+  if (moderacion === 'requiere_cambios') {
+    await db.query(
+      "UPDATE inmuebles SET moderacion = 'en_revision', moderacion_mensaje = NULL WHERE id = $1 AND moderacion = 'requiere_cambios'",
+      [id]
+    );
+    await db.query(
+      `INSERT INTO moderacion_historial
+         (inmueble_id, inmueble_titulo, usuario_afectado_id, admin_id, accion, moderacion_anterior, moderacion_nueva, justificacion)
+       VALUES ($1, $2, $3, NULL, 'correcciones_enviadas', 'requiere_cambios', 'en_revision', 'El propietario editó la publicación')`,
+      [id, d.titulo, req.usuario.id]
+    );
+  }
+
+  const editado = await db.query(`${SELECT_PROPIETARIO} WHERE i.id = $1`, [id]);
   res.status(200).json({ status: 'success', message: 'Inmueble actualizado', data: editado.rows[0] });
 }
 
@@ -339,8 +392,14 @@ async function cambiarEstado(req, res) {
   const estado = (req.body || {}).estado;
   if (!ESTADOS.includes(estado)) throw errorValidacion(`estado debe ser uno de: ${ESTADOS.join(', ')}.`);
 
+  const actual = await db.query('SELECT moderacion FROM inmuebles WHERE id = $1 AND propietario_id = $2', [id, req.usuario.id]);
+  if (actual.rows.length === 0) return noEncontrado(res, id);
+  verificarEditable(actual.rows[0].moderacion);
+
+  // El estado comercial se puede cambiar aunque esté en revisión: seguirá oculta
+  // hasta que Roumix la apruebe, porque la moderación es independiente.
   const result = await db.query(
-    'UPDATE inmuebles SET estado = $3 WHERE id = $1 AND propietario_id = $2 RETURNING id, estado',
+    'UPDATE inmuebles SET estado = $3 WHERE id = $1 AND propietario_id = $2 RETURNING id, estado, moderacion',
     [id, req.usuario.id, estado]
   );
   if (result.rowCount === 0) return noEncontrado(res, id);

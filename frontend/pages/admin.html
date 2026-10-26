@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Panel privado de administración de Roumix.">
+  <meta name="robots" content="noindex">
+  <title>Administración — Roumix</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body>
+  <!-- ======================================================== -->
+  <!-- BARRA DE NAVEGACIÓN SUPERIOR (SIN SOBRE NOSOTROS DUPLICADO) -->
+  <!-- ======================================================== -->
+  <header class="main-header">
+    <div class="header-inner">
+      <div class="header-left">
+        <a href="buscar.html" class="logo">
+          <span class="logo-text">roumix</span><span class="logo-dot">.</span>
+        </a>
+      </div>
+
+      <nav class="main-nav" aria-label="Navegación principal">
+        <ul class="nav-links">
+          <li><a href="buscar.html" class="nav-link">Buscar</a></li>
+          <li><a href="como-funciona.html" class="nav-link">Cómo funciona</a></li>
+          <li><a href="comparar.html" class="nav-link">Comparar</a></li>
+        </ul>
+      </nav>
+
+      <div class="header-right">
+        <span class="user-role-badge">Estudiante</span>
+        <a href="../index.html" class="btn-logout-pill" id="btn-logout">Cerrar sesión</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ======================================================== -->
+  <!-- CONTENIDO: CÓMO FUNCIONA, PROBLEMA, FAQ & EQUIPO         -->
+  <!-- ======================================================== -->
+  <main>
+    <div class="admin-container">
+      <header class="admin-encabezado">
+        <h1>Panel de administración</h1>
+        <p>Revisa reportes, modera publicaciones y gestiona cuentas. Cada decisión queda registrada con su justificación.</p>
+      </header>
+
+      <div class="admin-tabs" role="tablist" aria-label="Secciones del panel">
+        <button type="button" role="tab" class="admin-tab activa" aria-selected="true" aria-controls="panel-resumen" id="tab-resumen" data-panel="resumen">Resumen</button>
+        <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-reportes" id="tab-reportes" data-panel="reportes">Reportes <span class="admin-contador" id="contador-reportes" hidden></span></button>
+        <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-inmuebles" id="tab-inmuebles" data-panel="inmuebles">Publicaciones</button>
+        <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-usuarios" id="tab-usuarios" data-panel="usuarios">Usuarios</button>
+        <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-historial" id="tab-historial" data-panel="historial">Historial</button>
+      </div>
+
+      <section class="admin-panel" id="panel-resumen" role="tabpanel" aria-labelledby="tab-resumen">
+        <div class="admin-metricas" id="admin-metricas"><p class="admin-cargando">Cargando…</p></div>
+      </section>
+
+      <section class="admin-panel" id="panel-reportes" role="tabpanel" aria-labelledby="tab-reportes" hidden>
+        <div class="admin-filtros">
+          <label for="filtro-reportes">Estado</label>
+          <select id="filtro-reportes">
+            <option value="pendiente" selected>Pendientes</option>
+            <option value="procedente">Procedentes</option>
+            <option value="no_procede">No proceden</option>
+            <option value="todos">Todos</option>
+          </select>
+        </div>
+        <div id="lista-reportes" class="admin-lista"></div>
+      </section>
+
+      <section class="admin-panel" id="panel-inmuebles" role="tabpanel" aria-labelledby="tab-inmuebles" hidden>
+        <div class="admin-filtros">
+          <label for="filtro-moderacion">Moderación</label>
+          <select id="filtro-moderacion">
+            <option value="todas">Todas</option>
+            <option value="en_revision" selected>En revisión</option>
+            <option value="requiere_cambios">Requiere cambios</option>
+            <option value="aprobada">Aprobadas</option>
+            <option value="rechazada">Rechazadas</option>
+            <option value="retirada">Retiradas</option>
+          </select>
+          <label for="buscar-inmuebles" class="sr-only">Buscar publicaciones</label>
+          <input type="search" id="buscar-inmuebles" placeholder="Título, barrio o propietario" maxlength="100">
+        </div>
+        <div id="lista-inmuebles-admin" class="admin-lista"></div>
+      </section>
+
+      <section class="admin-panel" id="panel-usuarios" role="tabpanel" aria-labelledby="tab-usuarios" hidden>
+        <div class="admin-filtros">
+          <label for="filtro-rol">Rol</label>
+          <select id="filtro-rol">
+            <option value="todos" selected>Todos</option>
+            <option value="estudiante">Estudiantes</option>
+            <option value="propietario">Propietarios</option>
+            <option value="admin">Administradores</option>
+          </select>
+          <label for="filtro-estado-usuario">Estado</label>
+          <select id="filtro-estado-usuario">
+            <option value="todos" selected>Todos</option>
+            <option value="activo">Activos</option>
+            <option value="suspendido">Suspendidos</option>
+          </select>
+          <label for="buscar-usuarios" class="sr-only">Buscar usuarios</label>
+          <input type="search" id="buscar-usuarios" placeholder="Nombre o correo" maxlength="100">
+        </div>
+        <div id="lista-usuarios" class="admin-lista"></div>
+      </section>
+
+      <section class="admin-panel" id="panel-historial" role="tabpanel" aria-labelledby="tab-historial" hidden>
+        <div id="lista-historial" class="admin-lista"></div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Detalle de una publicación y decisión de moderación -->
+  <dialog id="dialogo-inmueble" class="admin-dialogo" aria-labelledby="dialogo-inmueble-titulo">
+    <button type="button" class="visor-cerrar admin-cerrar" data-cerrar aria-label="Cerrar">×</button>
+    <div id="dialogo-inmueble-contenido"></div>
+  </dialog>
+
+  <!-- Suspender o reactivar una cuenta -->
+  <dialog id="dialogo-usuario" class="admin-dialogo admin-dialogo-pequeno" aria-labelledby="dialogo-usuario-titulo">
+    <form id="form-usuario" novalidate>
+      <h2 id="dialogo-usuario-titulo">Cambiar estado de la cuenta</h2>
+      <p id="dialogo-usuario-texto"></p>
+      <label for="usuario-justificacion" class="reporte-label">Justificación (queda en el historial)</label>
+      <textarea id="usuario-justificacion" rows="3" maxlength="1000" required></textarea>
+      <p class="pub-mensaje pub-mensaje-error" id="usuario-error" role="alert" hidden></p>
+      <div class="reporte-acciones">
+        <button type="button" class="btn-card-action" data-cerrar>Cancelar</button>
+        <button type="submit" class="btn-search-action" id="btn-confirmar-usuario">Confirmar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Pie de página -->
+  <footer class="app-footer">
+    <div class="footer-container">
+      <div class="footer-col">
+        <div class="footer-logo">
+          <span>roumix</span><span class="dot-orange">.</span>
+        </div>
+        <p class="footer-desc">
+          Plataforma de vivienda universitaria para la comunidad estudiantil de Villavicencio.
+        </p>
+      </div>
+
+      <div class="footer-col">
+        <h4>Navegación</h4>
+        <ul>
+          <li><a href="buscar.html" class="footer-link">Buscar vivienda</a></li>
+          <li><a href="comparar.html" class="footer-link">Comparar opciones</a></li>
+          <li><a href="publicar.html" class="footer-link">Publicar inmueble</a></li>
+          <li><a href="../index.html" class="footer-link">Portal de acceso</a></li>
+          <li><a href="privacidad.html" class="footer-link">Política de datos personales</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Contacto Académico</h4>
+        <address>
+          Universidad Santo Tomás, Villavicencio<br>
+          Facultad de Ingeniería de Sistemas<br>
+          <a href="mailto:roumix04@gmail.com">roumix04@gmail.com</a>
+        </address>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <small>© 2026 Roumix · Construcción de Software · Villavicencio, Colombia</small>
+    </div>
+  </footer>
+
+  <script src="../js/app.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/admin.js"></script>
+</body>
+</html>

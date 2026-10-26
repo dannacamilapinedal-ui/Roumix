@@ -30,7 +30,6 @@
 
       <nav class="main-nav" aria-label="Navegación principal">
         <ul class="nav-links">
-          <li><a href="buscar.html" class="nav-link active">Inicio</a></li>
           <li><a href="buscar.html" class="nav-link">Buscar</a></li>
           <li><a href="como-funciona.html" class="nav-link">Cómo funciona</a></li>
           <li><a href="comparar.html" class="nav-link">Comparar</a></li>
@@ -54,7 +53,7 @@
           <div class="hero-titles">
             <h1 class="hero-title">Vivienda cerca de tu universidad, sin dar vueltas.</h1>
             <p class="hero-subtitle">
-              Habitaciones, apartaestudios y apartamentos en Villavicencio, con distancia real a tu campus y contacto directo con el propietario.
+              Habitaciones, apartaestudios y apartamentos en Villavicencio, con su zona en el mapa y contacto directo con el propietario.
             </p>
           </div>
           <div class="hero-stats">
@@ -231,7 +230,7 @@
         <address>
           Universidad Santo Tomás, Villavicencio<br>
           Facultad de Ingeniería de Sistemas<br>
-          <a href="mailto:contacto@roumix.com">contacto@roumix.com</a>
+          <a href="mailto:roumix04@gmail.com">roumix04@gmail.com</a>
         </address>
       </div>
     </div>
@@ -243,6 +242,7 @@
 
   <!-- Leaflet JS para el mapa -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="../js/mapa.js"></script>
   <script src="../js/app.js"></script>
   <script src="../js/api.js"></script>
 
@@ -338,6 +338,7 @@
 
                 <h3 class="property-title">${escaparHTML(item.titulo)}</h3>
                 <p class="property-location">${escaparHTML(item.distanciaTexto)}</p>
+                <div class="insignias-fila">${insigniasConfianza(item)}</div>
 
                 <div class="property-tags">
                   ${item.estrato ? `<span class="tag-pill">Estrato ${item.estrato}</span>` : ""}
@@ -350,7 +351,10 @@
               </div>
 
               <div class="card-footer-actions">
-                ${botonComparar(item)}
+                <div class="acciones-secundarias">
+                  ${botonComparar(item)}
+                  ${puedeReportar(item) ? `<button type="button" class="btn-report" data-reportar="${item.id}" aria-label="Reportar publicación: ${escaparHTML(item.titulo)}">⚑ Reportar</button>` : ""}
+                </div>
                 <div style="display: flex; gap: 8px;">
                   <a href="detalle.html?id=${item.id}" class="btn-learn-more">
                     Saber más
@@ -370,6 +374,12 @@
 
       // Agregar o quitar de la comparación (delegado en la lista)
       listaContenedor.addEventListener("click", (e) => {
+        const reportar = e.target.closest("button[data-reportar]");
+        if (reportar) {
+          const item = inmuebles.find(i => i.id === Number(reportar.dataset.reportar));
+          abrirModalReporte(item.id, item.titulo);
+          return;
+        }
         const boton = e.target.closest("button[data-comparar]");
         if (!boton) return;
         const id = Number(boton.dataset.comparar);
@@ -458,88 +468,69 @@
         .catch(() => { if (statTotal) statTotal.textContent = "–"; });
 
       function initMapa() {
-        const coordsUSTA = [4.1520, -73.6345];
+        const contenedorMapa = document.getElementById("mapa-villavicencio");
         try {
-          if (typeof L !== "undefined") {
-            mapaInstancia = L.map("mapa-villavicencio", {
-              center: coordsUSTA,
-              zoom: 15,
-              zoomControl: true
-            });
-
-            L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-              attribution: '&copy; CARTO &copy; OpenStreetMap',
-              maxZoom: 19
-            }).addTo(mapaInstancia);
-
-            const iconUSTA = L.divIcon({
-              className: "custom-div-icon",
-              html: `<div class="map-pin-university">@SANTO TOMÁS</div>`,
-              iconSize: [120, 32],
-              iconAnchor: [60, 16]
-            });
-
-            L.marker(coordsUSTA, { icon: iconUSTA })
-              .addTo(mapaInstancia)
-              .bindPopup("<strong>Universidad Santo Tomás</strong><br>Campus Villavicencio");
-
-            actualizarPines(inmuebles);
-          } else {
-            renderFallbackSVG();
-          }
+          mapaInstancia = RoumixMapa.crear(contenedorMapa, { centro: RoumixMapa.CAMPUS_USTA, zoom: 14 });
         } catch (e) {
-          renderFallbackSVG();
+          mapaInstancia = null;
         }
+        if (!mapaInstancia) {
+          RoumixMapa.mostrarNoDisponible(contenedorMapa, "El mapa no está disponible en este momento. Puedes seguir buscando con la lista.");
+          return;
+        }
+        RoumixMapa.marcadorCampus(mapaInstancia);
+        actualizarPines(inmuebles);
+      }
+
+      // Tarjeta pequeña del marcador (se arma con nodos para no interpretar texto como HTML)
+      function tarjetaPopup(item) {
+        const tarjeta = document.createElement("div");
+        tarjeta.className = "map-popup-card";
+        const img = document.createElement("img");
+        img.src = item.imagen;
+        img.alt = "";
+        const titulo = document.createElement("strong");
+        titulo.textContent = item.titulo;
+        const precio = document.createElement("span");
+        precio.className = "map-popup-precio";
+        precio.textContent = `${item.precioFormato} /mes`;
+        const barrio = document.createElement("span");
+        barrio.textContent = `${item.barrio} · zona aproximada`;
+        const enlace = document.createElement("a");
+        enlace.href = `detalle.html?id=${item.id}`;
+        enlace.textContent = "Ver detalle →";
+        tarjeta.append(img, titulo, precio, barrio, enlace);
+        return tarjeta;
       }
 
       function actualizarPines(lista) {
-        if (!mapaInstancia || typeof L === "undefined") return;
+        if (!mapaInstancia) return;
         mapaMarcadores.forEach(m => mapaInstancia.removeLayer(m));
         mapaMarcadores = [];
 
+        const puntos = [];
         lista.forEach(item => {
-          if (!item.lat || !item.lng) return;
-          const precioK = Math.round(item.precio / 1000) + "k";
-          const iconPin = L.divIcon({
-            className: "custom-div-icon",
-            html: `<div class="map-pin-price" data-id="${item.id}">$${precioK}</div>`,
-            iconSize: [68, 28],
-            iconAnchor: [34, 14]
-          });
-
-          const marker = L.marker([item.lat, item.lng], { icon: iconPin }).addTo(mapaInstancia);
+          if (item.lat === null || item.lng === null) return;
+          const marker = L.marker([item.lat, item.lng], { icon: RoumixMapa.iconoPrecio(item.precio, item.id), title: item.titulo })
+            .addTo(mapaInstancia)
+            .bindPopup(() => tarjetaPopup(item), { maxWidth: 240, minWidth: 200 });
           marker.on("click", () => {
             const card = document.querySelector(`.property-card[data-id="${item.id}"]`);
             if (card) {
               document.querySelectorAll(".property-card").forEach(c => c.classList.remove("highlighted"));
               card.classList.add("highlighted");
-              card.scrollIntoView({ behavior: "smooth", block: "center" });
             }
           });
           mapaMarcadores.push(marker);
+          puntos.push([item.lat, item.lng]);
         });
-      }
 
-      function renderFallbackSVG() {
-        const box = document.getElementById("mapa-villavicencio");
-        box.innerHTML = `
-          <svg width="100%" height="100%" viewBox="0 0 460 460" xmlns="http://www.w3.org/2000/svg" style="background:#e8e3d6; font-family:Plus Jakarta Sans, sans-serif;">
-            <line x1="0" y1="90" x2="460" y2="90" stroke="#dcd3c1" stroke-width="16" />
-            <line x1="0" y1="180" x2="460" y2="180" stroke="#dcd3c1" stroke-width="20" />
-            <line x1="0" y1="270" x2="460" y2="270" stroke="#dcd3c1" stroke-width="16" />
-            <line x1="0" y1="360" x2="460" y2="360" stroke="#dcd3c1" stroke-width="16" />
-            <line x1="90" y1="0" x2="90" y2="460" stroke="#dcd3c1" stroke-width="16" />
-            <line x1="180" y1="0" x2="180" y2="460" stroke="#dcd3c1" stroke-width="20" />
-            <line x1="280" y1="0" x2="280" y2="460" stroke="#dcd3c1" stroke-width="16" />
-            <line x1="370" y1="0" x2="370" y2="460" stroke="#dcd3c1" stroke-width="16" />
-            <path d="M 320,0 C 300,140 270,220 220,460" fill="none" stroke="#b4cddc" stroke-width="24" stroke-linecap="round" />
-            <g transform="translate(195, 220)">
-              <rect x="0" y="0" width="124" height="26" rx="13" fill="#142219" />
-              <text x="62" y="17" fill="#ffffff" font-size="11" font-weight="800" text-anchor="middle">@SANTO TOMÁS</text>
-            </g>
-            <text x="230" y="300" fill="#546250" font-size="13" text-anchor="middle">El mapa interactivo no está disponible en este momento.</text>
-          </svg>
-        `;
+        // Encuadre automático: resultados + campus como referencia
+        if (puntos.length > 0) {
+          mapaInstancia.fitBounds(L.latLngBounds([...puntos, RoumixMapa.CAMPUS_USTA]), { padding: [40, 40], maxZoom: 16 });
+        } else {
+          mapaInstancia.setView(RoumixMapa.CAMPUS_USTA, 14);
+        }
       }
 
       initMapa();

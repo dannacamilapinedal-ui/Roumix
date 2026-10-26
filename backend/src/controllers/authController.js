@@ -36,7 +36,7 @@ function verificarClave(error) {
 
 async function obtenerPerfil(id) {
   const result = await db.query(
-    'SELECT id, nombre, email, rol, telefono, universidad FROM usuarios WHERE id = $1',
+    'SELECT id, nombre, email, rol, estado, telefono, universidad FROM usuarios WHERE id = $1',
     [id]
   );
   return result.rows[0] || null;
@@ -67,6 +67,9 @@ async function registro(req, res) {
   if (!EMAIL_REGEX.test(email) || email.length > 150) throw errorHttp(400, 'Escribe un correo electrónico válido.');
   if (password.length < 8 || password.length > 72) throw errorHttp(400, 'La contraseña debe tener entre 8 y 72 caracteres.');
   if (!ROLES.includes(rol)) throw errorHttp(400, 'Elige si te registras como estudiante o propietario.');
+  if (body.aceptoPolitica !== true) {
+    throw errorHttp(400, 'Debes aceptar la política de tratamiento de datos personales para crear la cuenta.');
+  }
 
   const telefono = normalizarTelefono(body.telefono);
   if (rol === 'propietario' && !telefono) {
@@ -76,7 +79,7 @@ async function registro(req, res) {
   const { data, error } = await crearClienteSupabase().auth.signUp({
     email,
     password,
-    options: { data: { nombre, rol, telefono, universidad: texto(body.universidad) || null } }
+    options: { data: { nombre, rol, telefono, universidad: texto(body.universidad) || null, acepto_politica: true } }
   });
 
   verificarClave(error);
@@ -138,6 +141,7 @@ async function login(req, res) {
 
   const perfil = await obtenerPerfil(data.user.id);
   if (!perfil) throw errorHttp(403, 'La cuenta no tiene un perfil en Roumix.');
+  if (perfil.estado !== 'activo') throw errorHttp(403, 'Tu cuenta está suspendida. Escribe a Roumix si crees que es un error.');
 
   res.status(200).json({
     status: 'success',
@@ -159,6 +163,7 @@ async function refresh(req, res) {
 
   const perfil = await obtenerPerfil(data.user.id);
   if (!perfil) throw errorHttp(403, 'La cuenta no tiene un perfil en Roumix.');
+  if (perfil.estado !== 'activo') throw errorHttp(403, 'Tu cuenta está suspendida. Escribe a Roumix si crees que es un error.');
 
   res.status(200).json({
     status: 'success',

@@ -27,7 +27,6 @@
 
       <nav class="main-nav" aria-label="Navegación de propietario">
         <ul class="nav-links">
-          <li><a href="buscar.html" class="nav-link">Inicio</a></li>
           <li><a href="buscar.html" class="nav-link">Buscar</a></li>
           <li><a href="publicar.html" class="nav-link">Publicar</a></li>
           <li><a href="mis-publicaciones.html" class="nav-link active">Mis publicaciones</a></li>
@@ -83,7 +82,7 @@
       <div class="footer-col">
         <h4>Panel Propietario</h4>
         <ul>
-          <li><a href="buscar.html" class="footer-link">Inicio / Buscar</a></li>
+          <li><a href="buscar.html" class="footer-link">Buscar vivienda</a></li>
           <li><a href="publicar.html" class="footer-link">Publicar inmueble</a></li>
           <li><a href="mis-publicaciones.html" class="footer-link">Mis publicaciones</a></li>
           <li><a href="como-funciona.html" class="footer-link">Cómo funciona</a></li>
@@ -97,7 +96,7 @@
         <address>
           Universidad Santo Tomás, Villavicencio<br>
           Facultad de Ingeniería de Sistemas<br>
-          <a href="mailto:contacto@roumix.com">contacto@roumix.com</a>
+          <a href="mailto:roumix04@gmail.com">roumix04@gmail.com</a>
         </address>
       </div>
     </div>
@@ -156,7 +155,18 @@
         arrendado: { badge: "ARRENDADO", clase: "badge-estado-arrendado", color: "#283593", texto: "Arrendado: no aparece en búsquedas" }
       };
 
+      // La moderación de Roumix tiene prioridad sobre el estado comercial al mostrar la publicación
+      const MODERACION = {
+        en_revision: { badge: "EN REVISIÓN", clase: "badge-estado-pausado", color: "#b26a00", texto: "Roumix está revisando esta publicación: no aparece en búsquedas mientras tanto" },
+        requiere_cambios: { badge: "REQUIERE CAMBIOS", clase: "badge-estado-pausado", color: "#b26a00", texto: "Corrige la publicación con Editar para que Roumix la revise de nuevo" },
+        rechazada: { badge: "RECHAZADA", clase: "badge-estado-rechazado", color: "#8a1c1c", texto: "Rechazada por Roumix: no se mostrará" },
+        retirada: { badge: "RETIRADA", clase: "badge-estado-rechazado", color: "#8a1c1c", texto: "Retirada por Roumix de forma definitiva" }
+      };
+
       function botonesAcciones(item) {
+        if (item.moderacion === "rechazada" || item.moderacion === "retirada") {
+          return `<button type="button" class="btn-card-action btn-card-danger" data-accion="eliminar" data-id="${item.id}">Eliminar</button>`;
+        }
         const botones = [`<a href="publicar.html?editar=${item.id}" class="btn-card-action">Editar</a>`];
         if (item.estado === "disponible") {
           botones.push(`<a href="detalle.html?id=${item.id}" class="btn-card-action">Ver</a>`);
@@ -171,7 +181,12 @@
 
       function render() {
         contenedor.innerHTML = misInmuebles.map(item => {
-          const estado = ESTADOS[item.estado] || ESTADOS.disponible;
+          const estado = MODERACION[item.moderacion] || ESTADOS[item.estado] || ESTADOS.disponible;
+          // Mensaje de Roumix para el propietario (nunca incluye datos de quien reportó)
+          const aviso = item.moderacion !== "aprobada" && item.moderacion_mensaje
+            ? `<p class="aviso-moderacion" role="note"><strong>Mensaje de Roumix:</strong> ${escaparHTML(item.moderacion_mensaje)}</p>` : "";
+          const revisada = item.moderacion === "aprobada" && item.revisado_en
+            ? `<p class="aviso-revisada">✓ Revisada por Roumix el ${new Date(item.revisado_en).toLocaleDateString("es-CO")}</p>` : "";
           const tags = [
             item.estrato ? `<span class="tag-pill">Estrato ${item.estrato}</span>` : "",
             `<span class="tag-pill">${item.amenidades.length} comodidades</span>`,
@@ -191,6 +206,7 @@
                   <div class="my-prop-price">${item.precioFormato} <small>/mes</small></div>
                   <h3 class="my-prop-title">${escaparHTML(item.titulo)}</h3>
                   <p class="my-prop-location">${escaparHTML(item.distanciaTexto)}</p>
+                  ${aviso}${revisada}
                   <div class="my-prop-tags">${tags}</div>
                 </div>
 

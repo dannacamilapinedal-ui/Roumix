@@ -95,7 +95,24 @@ su carpeta. Más adelante la galería puede normalizarse en una tabla `imagenes_
 | Archivo | Cambios |
 |---------|---------|
 | `001_esquema_inicial.sql` | Tablas `usuarios` e `inmuebles` e índices iniciales |
+| `004_moderacion_reportes_admin.sql` | Rol `admin`, `usuarios.estado` (suspensión) y `acepto_politica_en`; `inmuebles.moderacion`, `moderacion_mensaje`, `revisado_en/por`, `revision_alcance`; tablas `reportes` y `moderacion_historial` con RLS |
 | `003_politicas_storage_fotos.sql` | Función `es_propietario()` y políticas de Storage por carpeta del propietario |
 | `002_perfiles_auth_y_restricciones.sql` | `usuarios.id → auth.users`, propietario real con `ON DELETE CASCADE`, se eliminan `propietario_nombre/telefono`, `updated_at`, trigger de perfil automático, RLS y bucket `inmuebles` |
 
 Las migraciones aplicadas quedan registradas en la tabla `schema_migrations`.
+
+## 7. Moderación, reportes y administración (migración 004)
+
+| Tabla / columna | Propósito |
+|-----------------|-----------|
+| `usuarios.rol` | `estudiante`, `propietario` o `admin`. El registro público nunca crea `admin`; se asigna con `npm run admin:asignar` |
+| `usuarios.estado` | `activo` o `suspendido`. Una cuenta suspendida no puede operar y sus publicaciones se ocultan |
+| `usuarios.acepto_politica_en` | Fecha en que aceptó la política de datos (Ley 1581 de 2012) |
+| `inmuebles.moderacion` | Decisión de Roumix, independiente del estado comercial |
+| `inmuebles.moderacion_mensaje` | Mensaje de la última decisión, visible solo para el propietario |
+| `inmuebles.revisado_en / revisado_por / revision_alcance` | Respaldan la insignia "Revisada por Roumix" |
+| `reportes` | Un reporte por usuario y publicación (índice único); estado `pendiente`, `procedente` o `no_procede` |
+| `moderacion_historial` | Auditoría: acción, moderación anterior y nueva, responsable (NULL = sistema) y justificación |
+
+Visible al público: `estado = 'disponible' AND moderacion = 'aprobada'` y propietario activo.
+Coordenadas públicas redondeadas a 3 decimales (~100 m); las exactas solo las ven el propietario y la administración.

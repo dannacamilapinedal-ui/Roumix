@@ -202,6 +202,34 @@ const RoumixAPI = {
     return json.data;
   },
 
+  /**
+   * Busca una dirección o sector de Villavicencio (solo propietarios; lo resuelve el backend)
+   */
+  buscarLugar: async function(q) {
+    const json = await this._request(`/inmuebles/geocodificar?q=${encodeURIComponent(q)}`);
+    return json.data;
+  },
+
+  /**
+   * Reporta una publicación. motivo: fraude | informacion_falsa | fotos_no_corresponden |
+   * precio_enganoso | contenido_inapropiado | otro
+   */
+  reportarInmueble: async function(id, motivo, descripcion) {
+    const json = await this._request(`/inmuebles/${encodeURIComponent(id)}/reportes`, {
+      method: 'POST',
+      body: JSON.stringify({ motivo, descripcion })
+    });
+    return json.message;
+  },
+
+  /**
+   * Petición a la API de administración (el servidor exige rol admin)
+   */
+  admin: async function(ruta, opciones = {}) {
+    if (opciones.body && typeof opciones.body !== 'string') opciones.body = JSON.stringify(opciones.body);
+    return this._request(`/admin${ruta}`, opciones);
+  },
+
   eliminarInmueble: async function(id) {
     await this._request(`/inmuebles/${encodeURIComponent(id)}`, { method: 'DELETE' });
   },

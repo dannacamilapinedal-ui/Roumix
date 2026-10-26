@@ -10,6 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
   <link rel="stylesheet" href="../css/style.css">
 </head>
 
@@ -27,7 +28,6 @@
 
       <nav class="main-nav" aria-label="Navegación de propietario">
         <ul class="nav-links">
-          <li><a href="buscar.html" class="nav-link">Inicio</a></li>
           <li><a href="buscar.html" class="nav-link">Buscar</a></li>
           <li><a href="publicar.html" class="nav-link active">Publicar</a></li>
           <li><a href="mis-publicaciones.html" class="nav-link">Mis publicaciones</a></li>
@@ -174,6 +174,23 @@
               </div>
             </div>
 
+            <!-- Ubicación en el mapa -->
+            <div style="border-top: 1px solid var(--borde-suave); padding-top: 22px; margin-top: 22px;">
+              <h2 class="form-block-title" style="font-size: 1.15rem; margin-bottom: 6px;">Ubicación en el mapa</h2>
+              <p class="fotos-ayuda">
+                Busca la dirección o el sector y luego haz clic en el mapa o arrastra el marcador hasta el inmueble.
+                Los estudiantes verán solo una <strong>zona aproximada</strong> (el círculo punteado), no la dirección exacta.
+              </p>
+              <div class="ubicacion-busqueda">
+                <label for="pub-buscar-lugar" class="sr-only">Buscar dirección o sector en Villavicencio</label>
+                <input type="search" id="pub-buscar-lugar" class="form-control" maxlength="150" placeholder="Ej: Calle 33 con Carrera 42, Barzal">
+                <button type="button" id="btn-buscar-lugar" class="btn-ubicacion-buscar">Buscar</button>
+              </div>
+              <ul id="ubicacion-resultados" class="ubicacion-resultados" hidden></ul>
+              <div id="mapa-publicar" class="mapa-selector" role="application" aria-label="Mapa para elegir la ubicación del inmueble"></div>
+              <p id="ubicacion-estado" class="ubicacion-estado" aria-live="polite">Aún no has marcado la ubicación.</p>
+            </div>
+
             <!-- Condiciones del arriendo -->
             <div style="border-top: 1px solid var(--borde-suave); padding-top: 22px; margin-top: 22px;">
               <h2 class="form-block-title" style="font-size: 1.15rem; margin-bottom: 16px;">Condiciones</h2>
@@ -289,7 +306,7 @@
         <address>
           Universidad Santo Tomás, Villavicencio<br>
           Facultad de Ingeniería de Sistemas<br>
-          <a href="mailto:contacto@roumix.com">contacto@roumix.com</a>
+          <a href="mailto:roumix04@gmail.com">roumix04@gmail.com</a>
         </address>
       </div>
     </div>
@@ -301,6 +318,8 @@
 
   <script src="../js/app.js"></script>
   <script src="../js/api.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="../js/mapa.js"></script>
   <script>
     document.addEventListener("DOMContentLoaded", async () => {
       // Solo propietarios con sesión válida (el servidor también lo valida al publicar)
@@ -341,6 +360,68 @@
 
       // Modo edición: publicar.html?editar=<id>
       const idEditar = new URLSearchParams(window.location.search).get("editar");
+
+      // ---------- Ubicación: búsqueda de dirección + clic o arrastre en el mapa ----------
+      const estadoUbicacion = document.getElementById("ubicacion-estado");
+      const listaResultados = document.getElementById("ubicacion-resultados");
+      const inputLugar = document.getElementById("pub-buscar-lugar");
+      const btnBuscarLugar = document.getElementById("btn-buscar-lugar");
+
+      const selector = RoumixMapa.selector(document.getElementById("mapa-publicar"), {
+        alCambiar: (lat, lng) => {
+          estadoUbicacion.textContent = `✓ Ubicación marcada (${lat.toFixed(5)}, ${lng.toFixed(5)}). Puedes arrastrar el marcador para ajustarla.`;
+          estadoUbicacion.classList.add("ubicacion-ok");
+        }
+      });
+      if (!selector) {
+        RoumixMapa.mostrarNoDisponible(document.getElementById("mapa-publicar"),
+          "El mapa no cargó. Revisa tu conexión y recarga la página: la ubicación es obligatoria para publicar.");
+      }
+
+      async function buscarLugar() {
+        const q = inputLugar.value.trim();
+        listaResultados.hidden = true;
+        listaResultados.replaceChildren();
+        if (q.length < 3) {
+          estadoUbicacion.textContent = "Escribe al menos 3 caracteres para buscar.";
+          return;
+        }
+        btnBuscarLugar.disabled = true;
+        btnBuscarLugar.textContent = "Buscando…";
+        try {
+          const lugares = await RoumixAPI.buscarLugar(q);
+          if (lugares.length === 0) {
+            estadoUbicacion.textContent = "No encontramos ese lugar en Villavicencio. Prueba con el barrio o márcalo directamente en el mapa.";
+          }
+          lugares.forEach((lugar) => {
+            const item = document.createElement("li");
+            const boton = document.createElement("button");
+            boton.type = "button";
+            boton.textContent = lugar.nombre;
+            boton.addEventListener("click", () => {
+              // Se acerca el mapa a la zona; el propietario confirma el punto exacto
+              if (selector) selector.colocar(lugar.latitud, lugar.longitud);
+              listaResultados.hidden = true;
+            });
+            item.appendChild(boton);
+            listaResultados.appendChild(item);
+          });
+          listaResultados.hidden = lugares.length === 0;
+        } catch (error) {
+          estadoUbicacion.textContent = error.message;
+        } finally {
+          btnBuscarLugar.disabled = false;
+          btnBuscarLugar.textContent = "Buscar";
+        }
+      }
+
+      btnBuscarLugar.addEventListener("click", buscarLugar);
+      inputLugar.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          buscarLugar();
+        }
+      });
 
       function mostrarMensaje(texto, tipo) {
         mensaje.textContent = texto || "";
@@ -481,6 +562,11 @@
           inputContrato.value = item.contratoMinimo || "";
           amenityChips.forEach(chip => marcarChip(chip, item.amenidades.includes(chip.dataset.value)));
           fotos = (item.galeria || []).filter(Boolean).map(url => ({ tipo: "existente", url }));
+          if (selector && item.lat !== null && item.lng !== null) selector.colocar(item.lat, item.lng);
+          // Aviso de moderación para el propietario
+          if (item.moderacion === "requiere_cambios") {
+            mostrarMensaje(`Roumix pidió correcciones: ${item.moderacion_mensaje || "revisa la información"}. Al guardar, la publicación volverá a revisión.`, "error");
+          }
         } catch (error) {
           mostrarMensaje(`No se pudo cargar el inmueble: ${error.message}`, "error");
           btnGuardar.disabled = true;
@@ -497,6 +583,11 @@
         if (isNaN(precio) || precio <= 0) return mostrarMensaje("Escribe un canon mensual válido (mayor que cero).", "error");
         if (!barrio) return mostrarMensaje("Indica el barrio o sector del inmueble.", "error");
         if (fotos.length === 0) return mostrarMensaje("Agrega al menos una foto del inmueble.", "error");
+        const ubicacion = selector ? selector.obtener() : null;
+        if (!ubicacion) {
+          document.getElementById("mapa-publicar").scrollIntoView({ behavior: "smooth", block: "center" });
+          return mostrarMensaje("Marca la ubicación del inmueble en el mapa.", "error");
+        }
 
         // El propietario NO se envía: el servidor lo toma de la sesión iniciada.
         const datos = {
@@ -512,7 +603,9 @@
           descripcion: textDescripcion.value.trim() || null,
           area: inputArea.value.trim() || null,
           deposito: inputDeposito.value.trim() || null,
-          contratoMinimo: inputContrato.value.trim() || null
+          contratoMinimo: inputContrato.value.trim() || null,
+          latitud: ubicacion.latitud,
+          longitud: ubicacion.longitud
         };
 
         const nuevas = fotos.filter(f => f.tipo === "nueva").map(f => f.archivo);

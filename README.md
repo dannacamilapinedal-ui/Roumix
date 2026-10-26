@@ -18,10 +18,12 @@ propietario.
 roumix/
 ├── frontend/              Sitio web
 │   ├── index.html         Portal de acceso (inicio de sesión / registro)
-│   ├── pages/             buscar, detalle, comparar, publicar, mis-publicaciones, como-funciona
+│   ├── pages/             buscar, detalle, comparar, publicar, mis-publicaciones, como-funciona, admin, privacidad
 │   ├── css/style.css      Estilos compartidos
 │   ├── js/app.js          Lógica compartida (sesión, navegación, modal de contacto)
 │   ├── js/api.js          Cliente de la API (sin datos de respaldo locales)
+│   ├── js/mapa.js         Mapas Leaflet: búsqueda, selector de ubicación y zona aproximada
+│   ├── js/admin.js        Lógica del panel de administración
 │   └── assets/img/        Imágenes
 ├── backend/               API Express
 │   ├── src/app.js         Configuración de Express, rutas y archivos estáticos
@@ -31,7 +33,8 @@ roumix/
 │   ├── src/controllers/   Lógica de cada operación
 │   ├── src/middleware/    Autenticación, roles, recepción de fotos y errores
 │   ├── src/services/      Subida y borrado de fotos en Supabase Storage
-│   └── scripts/migrate.js Aplica las migraciones de la base de datos
+│   ├── scripts/migrate.js Aplica las migraciones de la base de datos
+│   └── scripts/asignar-admin.js  Procedimiento controlado para el rol administrador
 ├── database/
 │   ├── migrations/        Cambios del esquema, en orden
 │   ├── schema.sql         Foto del esquema actual (referencia)
@@ -97,6 +100,16 @@ Abra **http://localhost:3000** — el mismo servidor entrega la página y la API
 | PUT | `/api/inmuebles/:id` | Propietario | Editar datos y fotos (`datos.fotosConservar` + `fotos` nuevas) |
 | PATCH | `/api/inmuebles/:id/estado` | Propietario | `disponible`, `pausado` o `arrendado` |
 | DELETE | `/api/inmuebles/:id` | Propietario | Eliminar el inmueble y sus fotos |
+| GET | `/api/inmuebles/geocodificar?q=` | Propietario | Buscar una dirección o sector de Villavicencio (OpenStreetMap) |
+| POST | `/api/inmuebles/:id/reportes` | Estudiante o propietario | Reportar una publicación (`motivo`, `descripcion`) |
+| GET | `/api/admin/resumen` | Admin | Métricas del panel |
+| GET | `/api/admin/reportes?estado=` | Admin | Reportes `pendiente`, `procedente`, `no_procede` o `todos` |
+| GET | `/api/admin/inmuebles?moderacion=&q=` | Admin | Publicaciones con su moderación y reportes pendientes |
+| GET | `/api/admin/inmuebles/:id` | Admin | Detalle completo, reportes e historial |
+| POST | `/api/admin/inmuebles/:id/moderacion` | Admin | `aprobar`, `solicitar_cambios`, `rechazar` o `retirar` con justificación |
+| GET | `/api/admin/usuarios?rol=&estado=&q=` | Admin | Usuarios y sus antecedentes |
+| POST | `/api/admin/usuarios/:id/estado` | Admin | Suspender o reactivar (no a sí mismo ni a otros admins) |
+| GET | `/api/admin/historial` | Admin | Auditoría de decisiones |
 
 Las contraseñas las gestiona Supabase Auth; Roumix nunca las guarda. Las rutas protegidas exigen `Authorization: Bearer <token de Supabase Auth>`. El rol y el
 propietario se obtienen en el servidor, nunca de lo que envía el navegador. Un propietario solo puede
@@ -109,8 +122,53 @@ No se necesita la clave secreta de Supabase.
 
 ## 👥 Roles
 
-1. **Estudiante:** busca con filtros, ve el detalle, compara opciones y contacta por WhatsApp.
+1. **Estudiante:** busca con filtros, ve el detalle, compara opciones, contacta por WhatsApp y reporta anuncios sospechosos.
 2. **Propietario:** además publica inmuebles y gestiona solo sus propias publicaciones.
+3. **Administrador:** revisa reportes, modera publicaciones, suspende cuentas y consulta el historial en `/pages/admin.html`.
+
+### Asignar el primer administrador
+
+No existe opción de registrarse como administrador. El rol se asigna con un procedimiento controlado
+que solo puede ejecutar quien tiene las credenciales de la base de datos (`backend/.env`):
+
+1. Crea una cuenta normal en Roumix (como estudiante) y confirma el correo. Usa una cuenta distinta a la
+   de propietario, para que nadie modere sus propias publicaciones.
+2. Desde `backend/` ejecuta:
+
+```bash
+npm run admin:asignar -- correo@ejemplo.com
+```
+
+3. Cierra sesión y vuelve a entrar: aparecerá "Administración" en el menú.
+   Para retirar el rol: `npm run admin:asignar -- correo@ejemplo.com --quitar`.
+
+Se recomienda activar la autenticación multifactor (MFA) de Supabase para las cuentas de administración
+cuando se despliegue la plataforma.
+
+## 🛡️ Moderación y confianza
+
+- **Estado comercial y moderación son independientes.** El propietario decide `disponible`, `pausado` o
+  `arrendado`; Roumix decide `aprobada`, `en_revision`, `requiere_cambios`, `rechazada` o `retirada`.
+  Solo se muestra lo que está disponible **y** aprobado. Aprobar una revisión nunca reactiva algo que el
+  propietario había pausado.
+- **Reportar inicia una revisión, no es una condena.** Pausa preventiva con el primer reporte, salvo que la
+  publicación haya sido revisada y aprobada en los últimos 30 días (entonces se necesitan 2 personas).
+- **Anti-abuso:** sesión obligatoria, un reporte por persona y publicación, máximo 5 por día, nadie reporta lo propio.
+- **Auditoría:** cada pausa, decisión y suspensión queda en `moderacion_historial` con responsable y justificación.
+- **Insignias reales:** "Correo confirmado" (Supabase Auth) y "Revisada por Roumix" (aprobación registrada con
+  fecha y alcance). No hay "teléfono verificado" porque aún no se verifica.
+- **Privacidad:** la API pública redondea la ubicación a ~100 m y el detalle muestra una zona de 250 m.
+  El propietario nunca sabe quién lo reportó. Política de datos (Ley 1581 de 2012) en `/pages/privacidad.html`
+  y aceptación obligatoria al registrarse.
+
+## 🗺️ Mapas
+
+Leaflet con teselas de OpenStreetMap servidas por el backend (`/api/mapa/teselas`, con caché y limitado a la
+región de Villavicencio): pedirlas directo desde el navegador falla con "403 Access blocked" cuando el navegador
+no envía la cabecera Referer. La búsqueda de direcciones usa Nominatim, también a
+través del backend (máximo 1 petición por segundo y caché, según su política de uso). No requiere claves ni
+facturación. Para un sitio con mucho tráfico conviene contratar un proveedor de teselas (o Google Maps
+Platform, que exige clave restringida por dominio y facturación).
 
 ## 📌 Estado del proyecto
 
@@ -123,6 +181,9 @@ No se necesita la clave secreta de Supabase.
 - [x] Editar, pausar, reactivar, marcar como arrendada y eliminar publicaciones propias
 - [x] Búsqueda con filtros y orden en la API, detalle con galería completa y visor de fotos
 - [x] Comparador dinámico: hasta 3 inmuebles elegidos por el estudiante, con datos actuales de la API
+- [x] Reportes, moderación con historial de auditoría y panel de administración
+- [x] Insignias de confianza respaldadas por comprobaciones reales y política de datos personales
+- [x] Selector de ubicación en el mapa y zona aproximada pública
 - [ ] Despliegue
 
 ---

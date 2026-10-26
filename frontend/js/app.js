@@ -228,28 +228,21 @@ function sincronizarBarraNavegacion() {
   const rightContainer = header.querySelector(".header-right");
 
   if (navContainer) {
+    // Un solo enlace "Buscar" (antes "Inicio" y "Buscar" llevaban al mismo lugar)
+    const enlace = (pagina, texto) =>
+      `<li><a href="${prefixPages}${pagina}" class="nav-link ${paginaActual === pagina ? 'active' : ''}"${paginaActual === pagina ? ' aria-current="page"' : ''}>${texto}</a></li>`;
+    const enlaces = [enlace("buscar.html", "Buscar"), enlace("comparar.html", "Comparar")];
     if (esPropietario) {
-      navContainer.innerHTML = `
-        <li><a href="${prefixPages}buscar.html" class="nav-link ${paginaActual === 'buscar.html' ? 'active' : ''}">Inicio</a></li>
-        <li><a href="${prefixPages}buscar.html" class="nav-link">Buscar</a></li>
-        <li><a href="${prefixPages}publicar.html" class="nav-link ${paginaActual === 'publicar.html' ? 'active' : ''}">Publicar</a></li>
-        <li><a href="${prefixPages}mis-publicaciones.html" class="nav-link ${paginaActual === 'mis-publicaciones.html' ? 'active' : ''}">Mis publicaciones</a></li>
-        <li><a href="${prefixPages}como-funciona.html" class="nav-link ${paginaActual === 'como-funciona.html' ? 'active' : ''}">Cómo funciona</a></li>
-        <li><a href="${prefixPages}comparar.html" class="nav-link ${paginaActual === 'comparar.html' ? 'active' : ''}">Comparar</a></li>
-      `;
-    } else {
-      navContainer.innerHTML = `
-        <li><a href="${prefixPages}buscar.html" class="nav-link ${paginaActual === 'buscar.html' ? 'active' : ''}">Inicio</a></li>
-        <li><a href="${prefixPages}buscar.html" class="nav-link">Buscar</a></li>
-        <li><a href="${prefixPages}como-funciona.html" class="nav-link ${paginaActual === 'como-funciona.html' ? 'active' : ''}">Cómo funciona</a></li>
-        <li><a href="${prefixPages}comparar.html" class="nav-link ${paginaActual === 'comparar.html' ? 'active' : ''}">Comparar</a></li>
-      `;
+      enlaces.push(enlace("publicar.html", "Publicar"), enlace("mis-publicaciones.html", "Mis publicaciones"));
     }
+    if (usuario && usuario.rol === "admin") enlaces.push(enlace("admin.html", "Administración"));
+    enlaces.push(enlace("como-funciona.html", "Cómo funciona"));
+    navContainer.innerHTML = enlaces.join("");
   }
 
   if (rightContainer) {
     if (usuario) {
-      const rolTexto = esPropietario ? "Propietario" : "Estudiante";
+      const rolTexto = { propietario: "Propietario", admin: "Administración" }[usuario.rol] || "Estudiante";
       rightContainer.innerHTML = `
         <span class="user-role-badge">${rolTexto}</span>
         <a href="${prefixRoot}index.html" class="btn-logout-pill" onclick="RoumixStorage.cerrarSesion(); return false;">Cerrar sesión</a>
@@ -274,6 +267,118 @@ function sincronizarBarraNavegacion() {
       RoumixStorage.cerrarSesion();
     });
   });
+}
+
+// 5.1 Insignias de confianza. Cada una corresponde a una comprobación real:
+//  - "Correo confirmado": Supabase Auth verificó que el propietario accede a su correo.
+//  - "Revisada por Roumix": un administrador revisó la publicación y registró qué comprobó.
+// No existe insignia de teléfono verificado porque Roumix aún no comprueba teléfonos.
+function insigniasConfianza(item, prefijoPaginas) {
+  const prefijo = prefijoPaginas ?? "";
+  const insignias = [];
+  if (item.propietario_correo_confirmado) {
+    insignias.push(`<a class="insignia insignia-correo" href="${prefijo}como-funciona.html#insignias" title="El propietario confirmó su correo. No demuestra que sea el dueño del inmueble.">✉ Correo confirmado</a>`);
+  }
+  if (item.revisado_en) {
+    const fecha = new Date(item.revisado_en).toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "numeric" });
+    insignias.push(`<a class="insignia insignia-revisada" href="${prefijo}como-funciona.html#insignias" title="Revisada por Roumix el ${fecha}: ${escaparHTML(item.revision_alcance || "")}">✓ Revisada por Roumix</a>`);
+  }
+  return insignias.join("");
+}
+
+// 5.2 Reportar una publicación: modal accesible creado bajo demanda
+const MOTIVOS_REPORTE = [
+  ["fraude", "Posible fraude o estafa"],
+  ["informacion_falsa", "Información falsa o engañosa"],
+  ["fotos_no_corresponden", "Las fotos no corresponden al inmueble"],
+  ["precio_enganoso", "Precio engañoso"],
+  ["contenido_inapropiado", "Contenido inapropiado"],
+  ["otro", "Otro motivo"]
+];
+
+function puedeReportar(item) {
+  const usuario = RoumixStorage.getUsuario();
+  // Visitantes ven el botón (se les pide iniciar sesión); el dueño y los administradores no
+  return !usuario || (usuario.rol !== "admin" && usuario.id !== item.propietario_id);
+}
+
+function abrirModalReporte(id, titulo) {
+  const enCarpetaPages = window.location.pathname.includes("/pages/");
+  if (!RoumixStorage.getToken()) {
+    const pagina = window.location.pathname.split("/").pop() + window.location.search;
+    if (confirm("Para reportar una publicación debes iniciar sesión. ¿Ir a iniciar sesión?")) {
+      window.location.href = `${enCarpetaPages ? "../" : ""}index.html?redirigir=${encodeURIComponent(pagina.split("?")[0])}`;
+    }
+    return;
+  }
+
+  let dialogo = document.getElementById("modal-reporte");
+  if (!dialogo) {
+    dialogo = document.createElement("dialog");
+    dialogo.id = "modal-reporte";
+    dialogo.className = "modal-reporte";
+    dialogo.setAttribute("aria-labelledby", "reporte-titulo");
+    dialogo.innerHTML = `
+      <form method="dialog" class="reporte-form" novalidate>
+        <h2 id="reporte-titulo">Reportar publicación</h2>
+        <p class="reporte-inmueble"></p>
+        <p class="reporte-ayuda">Cuéntanos qué está mal. El equipo de Roumix revisará el caso: reportar
+          <strong>no elimina</strong> la publicación ni la marca como falsa. Tu identidad no se mostrará al propietario.</p>
+        <fieldset>
+          <legend>Motivo</legend>
+          ${MOTIVOS_REPORTE.map(([valor, texto]) => `
+            <label class="reporte-opcion"><input type="radio" name="motivo" value="${valor}"> ${texto}</label>`).join("")}
+        </fieldset>
+        <label for="reporte-descripcion" class="reporte-label">Explicación <span>(opcional, obligatoria si eliges "Otro")</span></label>
+        <textarea id="reporte-descripcion" maxlength="1000" rows="4" placeholder="Ej: las fotos aparecen en otro anuncio con otra dirección."></textarea>
+        <p class="reporte-mensaje" role="alert" hidden></p>
+        <div class="reporte-acciones">
+          <button type="button" class="btn-card-action" data-cerrar>Cancelar</button>
+          <button type="submit" class="btn-search-action" data-enviar>Enviar reporte</button>
+        </div>
+      </form>`;
+    document.body.appendChild(dialogo);
+    dialogo.querySelector("[data-cerrar]").addEventListener("click", () => dialogo.close());
+    dialogo.addEventListener("click", (e) => { if (e.target === dialogo) dialogo.close(); });
+  }
+
+  const form = dialogo.querySelector("form");
+  const mensaje = dialogo.querySelector(".reporte-mensaje");
+  const botonEnviar = dialogo.querySelector("[data-enviar]");
+  form.reset();
+  mensaje.hidden = true;
+  botonEnviar.disabled = false;
+  botonEnviar.hidden = false;
+  form.querySelector("fieldset").disabled = false;
+  dialogo.querySelector(".reporte-inmueble").textContent = titulo || "";
+
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const motivo = (form.querySelector('input[name="motivo"]:checked') || {}).value;
+    const descripcion = dialogo.querySelector("#reporte-descripcion").value.trim();
+    const mostrar = (texto, tipo) => {
+      mensaje.textContent = texto;
+      mensaje.className = `reporte-mensaje pub-mensaje ${tipo === "exito" ? "pub-mensaje-exito" : "pub-mensaje-error"}`;
+      mensaje.hidden = false;
+    };
+    if (!motivo) return mostrar("Elige un motivo.", "error");
+    if (motivo === "otro" && descripcion.length < 10) return mostrar('Explica brevemente el problema (mínimo 10 caracteres).', "error");
+
+    botonEnviar.disabled = true;
+    try {
+      const respuesta = await RoumixAPI.reportarInmueble(id, motivo, descripcion);
+      mostrar(respuesta, "exito");
+      botonEnviar.hidden = true;
+      form.querySelector("fieldset").disabled = true;
+      dialogo.querySelector("[data-cerrar]").textContent = "Cerrar";
+    } catch (error) {
+      mostrar(error.message, "error");
+      botonEnviar.disabled = false;
+    }
+  };
+
+  dialogo.querySelector("[data-cerrar]").textContent = "Cancelar";
+  dialogo.showModal();
 }
 
 // 6. Protección de páginas privadas
@@ -307,7 +412,7 @@ async function protegerPagina(rolesPermitidos) {
   }
 
   if (!rolesPermitidos.includes(usuario.rol)) {
-    alert("Esta sección es solo para propietarios.");
+    alert(rolesPermitidos.includes("admin") ? "Esta sección es solo para el equipo de Roumix." : "Esta sección es solo para propietarios.");
     window.location.replace(`${enCarpetaPages ? "" : "pages/"}buscar.html`);
     return null;
   }

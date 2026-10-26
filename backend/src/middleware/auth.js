@@ -35,14 +35,21 @@ async function requireAuth(req, res, next) {
     }
 
     const result = await db.query(
-      'SELECT id, nombre, email, rol, telefono, universidad FROM usuarios WHERE id = $1',
+      'SELECT id, nombre, email, rol, estado, telefono, universidad FROM usuarios WHERE id = $1',
       [data.user.id]
     );
     if (result.rows.length === 0) {
       return res.status(403).json({ status: 'error', message: 'La cuenta no tiene un perfil en Roumix.' });
     }
+    if (result.rows[0].estado !== 'activo') {
+      return res.status(403).json({
+        status: 'error',
+        codigo: 'cuenta_suspendida',
+        message: 'Tu cuenta está suspendida. Escribe a Roumix si crees que es un error.'
+      });
+    }
 
-    req.usuario = result.rows[0];
+    req.usuario = { ...result.rows[0], correoConfirmado: Boolean(data.user.email_confirmed_at) };
     req.token = token; // para operar en Storage en nombre del usuario
     next();
   } catch (error) {

@@ -141,6 +141,14 @@
               >
             </div>
 
+            <!-- Consentimiento (solo en registro): Ley 1581 de 2012 -->
+            <div class="auth-consentimiento" id="field-politica" style="display: none;">
+              <label class="auth-check">
+                <input type="checkbox" id="auth-politica">
+                <span>He leído y acepto la <a href="pages/privacidad.html" target="_blank" rel="noopener">política de tratamiento de datos personales</a> de Roumix.</span>
+              </label>
+            </div>
+
             <!-- Mensajes de error o confirmación -->
             <p id="auth-mensaje" role="alert" aria-live="polite" style="display: none; margin: 0; padding: 10px 14px; border-radius: 12px; font-size: 0.9rem;"></p>
 
@@ -152,7 +160,7 @@
             <!-- Enlaces al pie -->
             <div class="auth-footer-links">
               <a href="pages/buscar.html" class="auth-footer-link">Explorar sin iniciar sesión</a>
-              <span class="auth-privacy-notice">Tu contraseña la protege Supabase Auth; Roumix nunca la guarda.</span>
+              <span class="auth-privacy-notice">Tu contraseña la protege Supabase Auth; Roumix nunca la guarda. <a href="pages/privacidad.html">Política de datos</a></span>
             </div>
           </form>
         </div>
@@ -169,6 +177,8 @@
       const fieldNombre = document.getElementById("field-nombre");
       const fieldRol = document.getElementById("field-rol");
       const fieldTelefono = document.getElementById("field-telefono");
+      const fieldPolitica = document.getElementById("field-politica");
+      const checkPolitica = document.getElementById("auth-politica");
       const labelTelefono = document.getElementById("label-telefono");
       const btnSubmit = document.getElementById("btn-submit-auth");
       const formAuth = document.getElementById("form-auth");
@@ -220,6 +230,7 @@
         fieldNombre.style.display = "none";
         fieldRol.style.display = "none";
         fieldTelefono.style.display = "none";
+        fieldPolitica.style.display = "none";
         inputPwd.autocomplete = "current-password";
         btnSubmit.textContent = "Entrar";
         modo = "login";
@@ -232,6 +243,7 @@
         fieldNombre.style.display = "flex";
         fieldRol.style.display = "";
         fieldTelefono.style.display = "flex";
+        fieldPolitica.style.display = "";
         inputPwd.autocomplete = "new-password";
         btnSubmit.textContent = "Crear cuenta";
         modo = "register";
@@ -279,6 +291,10 @@
             mostrarMensaje("La contraseña debe tener al menos 8 caracteres.", "error");
             return;
           }
+          if (!checkPolitica.checked) {
+            mostrarMensaje("Para crear la cuenta debes aceptar la política de tratamiento de datos personales.", "error");
+            return;
+          }
           if (rol === "propietario" && !telefono) {
             mostrarMensaje("Como propietario necesitas un celular para que te contacten por WhatsApp.", "error");
             return;
@@ -297,7 +313,7 @@
             return;
           }
 
-          const respuesta = await RoumixAPI.registrar({ nombre, email, password, rol, telefono });
+          const respuesta = await RoumixAPI.registrar({ nombre, email, password, rol, telefono, aceptoPolitica: checkPolitica.checked });
           if (respuesta.requiereConfirmacion) {
             formAuth.reset();
             btnTabLogin.click();
