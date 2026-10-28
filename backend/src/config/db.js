@@ -1,10 +1,17 @@
 const { Pool } = require('pg');
 require('dotenv').config({ quiet: true });
 
-const connectionString = process.env.DATABASE_URL;
+// Se limpian espacios, comillas y el prefijo "DATABASE_URL=" que a veces se pega en el hosting
+let connectionString = String(process.env.DATABASE_URL || '').trim();
+if (connectionString.toUpperCase().startsWith('DATABASE_URL=')) connectionString = connectionString.slice(13).trim();
+connectionString = connectionString.replace(/^["']|["']$/g, '').trim();
 
 if (!connectionString) {
-  console.error('❌ Falta DATABASE_URL en backend/.env (vea backend/.env.example).');
+  console.error('❌ Falta DATABASE_URL en las variables de entorno (en local: backend/.env, vea backend/.env.example).');
+  process.exit(1);
+}
+if (!/^postgres(ql)?:\/\//i.test(connectionString)) {
+  console.error('❌ DATABASE_URL no es válida: debe empezar por postgresql:// (cópiala desde Supabase → Connect).');
   process.exit(1);
 }
 
