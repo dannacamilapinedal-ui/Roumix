@@ -17,7 +17,7 @@
   <!-- ======================================================== -->
   <!-- BARRA DE ACCESO LIMPIA (SOLO LOGO, SIN DISTRACCIONES)    -->
   <!-- ======================================================== -->
-  <header class="main-header login-header">
+  <header class="main-header login-header entrada-arriba">
     <div class="header-inner">
       <div class="header-left">
         <a href="index.html" class="logo">
@@ -32,39 +32,56 @@
   <!-- ======================================================== -->
   <main>
     <div class="auth-split-screen">
-      <!-- Lado Izquierdo: Verde Oscuro con Beneficios -->
-      <div class="auth-brand-side">
+      <!-- Lado Izquierdo: fondo fotográfico animado y pasos interactivos -->
+      <div class="auth-brand-side auth-animado">
+        <div class="auth-fondos" aria-hidden="true">
+          <div class="auth-fondo activo" data-paso="1" style="background-image: url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1600&q=70');"></div>
+          <div class="auth-fondo" data-paso="2" style="background-image: url('https://images.unsplash.com/photo-1611162617474-5b21e879e113?auto=format&fit=crop&w=1600&q=70');"></div>
+          <div class="auth-fondo" data-paso="3" style="background-image: url('https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1600&q=70');"></div>
+          <div class="auth-fondo-capa"></div>
+        </div>
+
         <div class="auth-brand-content">
-          <div class="auth-brand-logo">
+          <div class="auth-brand-logo entrada-lateral" style="animation-delay: 0.1s;">
             <span>roumix</span><span class="dot-orange">.</span>
           </div>
 
-          <h1 class="auth-brand-title">
-            Crea tu cuenta y guarda los inmuebles que te interesan.
+          <h1 class="auth-brand-title entrada-lateral" style="animation-delay: 0.2s;">
+            Crea tu cuenta y encuentra vivienda cerca de tu universidad.
           </h1>
 
-          <ol class="auth-benefits-list">
-            <li class="benefit-item">
-              <span class="benefit-number">1</span>
-              <span class="benefit-text">Guarda favoritos y compara precios, distancia y seguridad.</span>
+          <ol class="auth-pasos entrada-lateral" style="animation-delay: 0.3s;" aria-label="Cómo funciona Roumix">
+            <li>
+              <button type="button" class="auth-paso activo" data-paso="1" aria-expanded="true" aria-controls="paso-desc-1">
+                <span class="auth-paso-numero">1</span>
+                <span class="auth-paso-titulo">Explora y compara</span>
+              </button>
+              <p class="auth-paso-desc" id="paso-desc-1">Busca por universidad, precio y tipo, mira la zona en el mapa y compara hasta 3 inmuebles lado a lado.</p>
             </li>
-            <li class="benefit-item">
-              <span class="benefit-number">2</span>
-              <span class="benefit-text">Contacta propietarios por WhatsApp desde la publicación.</span>
+            <li>
+              <button type="button" class="auth-paso" data-paso="2" aria-expanded="false" aria-controls="paso-desc-2">
+                <span class="auth-paso-numero">2</span>
+                <span class="auth-paso-titulo">Contacto directo</span>
+              </button>
+              <p class="auth-paso-desc" id="paso-desc-2">Escribe al propietario por WhatsApp desde la publicación, sin intermediarios.</p>
             </li>
-            <li class="benefit-item">
-              <span class="benefit-number">3</span>
-              <span class="benefit-text">Si eres propietario, publica y administra tus inmuebles.</span>
+            <li>
+              <button type="button" class="auth-paso" data-paso="3" aria-expanded="false" aria-controls="paso-desc-3">
+                <span class="auth-paso-numero">3</span>
+                <span class="auth-paso-titulo">Publica y gestiona</span>
+              </button>
+              <p class="auth-paso-desc" id="paso-desc-3">Si eres propietario, publica con fotos y ubicación, y pausa o edita tus inmuebles cuando quieras.</p>
             </li>
           </ol>
         </div>
       </div>
 
       <!-- Lado Derecho: Formulario en Fondo Crema -->
-      <div class="auth-form-side">
+      <div class="auth-form-side entrada-arriba" style="animation-delay: 0.2s;">
         <div class="auth-form-wrapper">
           <!-- Toggle Tabs: Iniciar sesión / Registrarme (Exacto al boceto 1) -->
           <div class="auth-toggle-tabs" role="tablist">
+            <span class="auth-toggle-indicador" aria-hidden="true"></span>
             <button type="button" class="auth-tab-btn active" id="tab-login">Iniciar sesión</button>
             <button type="button" class="auth-tab-btn" id="tab-register">Registrarme</button>
           </div>
@@ -158,7 +175,7 @@
             </button>
 
             <!-- Enlaces al pie -->
-            <div class="auth-footer-links">
+            <div class="auth-footer-links entrada-arriba" style="animation-delay: 0.5s;">
               <a href="pages/buscar.html" class="auth-footer-link">Explorar sin iniciar sesión</a>
               <span class="auth-privacy-notice">Tu contraseña la protege Supabase Auth; Roumix nunca la guarda. <a href="pages/privacidad.html">Política de datos</a></span>
             </div>
@@ -330,6 +347,50 @@
         btnSubmit.textContent = textoBoton;
       });
     });
+
+    // Pasos animados del lado izquierdo: avanzan solos cada 5 s y se pueden elegir con clic.
+    // Se detienen al pasar el mouse o con el foco, y si el usuario prefiere menos movimiento.
+    (function() {
+      const pasos = document.querySelectorAll(".auth-paso");
+      const fondos = document.querySelectorAll(".auth-fondo");
+      const lado = document.querySelector(".auth-animado");
+      const reducirMovimiento = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      let actual = 1;
+      let intervalo = null;
+
+      function mostrar(numero) {
+        actual = numero;
+        pasos.forEach(boton => {
+          const activo = Number(boton.dataset.paso) === numero;
+          boton.classList.toggle("activo", activo);
+          boton.setAttribute("aria-expanded", String(activo));
+        });
+        fondos.forEach(fondo => fondo.classList.toggle("activo", Number(fondo.dataset.paso) === numero));
+      }
+
+      function iniciar() {
+        if (reducirMovimiento) return;
+        clearInterval(intervalo);
+        intervalo = setInterval(() => mostrar(actual >= pasos.length ? 1 : actual + 1), 5000);
+      }
+
+      function detener() {
+        clearInterval(intervalo);
+      }
+
+      pasos.forEach(boton => boton.addEventListener("click", () => {
+        mostrar(Number(boton.dataset.paso));
+        iniciar();
+      }));
+      lado.addEventListener("mouseenter", detener);
+      lado.addEventListener("mouseleave", iniciar);
+      lado.addEventListener("focusin", detener);
+      lado.addEventListener("focusout", iniciar);
+      document.addEventListener("visibilitychange", () => (document.hidden ? detener() : iniciar()));
+
+      mostrar(1);
+      iniciar();
+    })();
   </script>
 </body>
 </html>

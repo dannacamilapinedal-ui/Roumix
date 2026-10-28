@@ -20,7 +20,8 @@ const ETIQUETAS = {
     pausa_preventiva: "Pausa preventiva por reporte", aprobar: "Aprobada", solicitar_cambios: "Cambios solicitados",
     rechazar: "Rechazada", retirar: "Retirada", correcciones_enviadas: "Correcciones enviadas por el propietario",
     cuenta_suspendida: "Cuenta suspendida", cuenta_reactivada: "Cuenta reactivada",
-    rol_admin_asignado: "Rol de administrador asignado", rol_admin_retirado: "Rol de administrador retirado"
+    rol_admin_asignado: "Rol de administrador asignado", rol_admin_retirado: "Rol de administrador retirado",
+    eliminado_demo: "Publicación de demostración eliminada"
   }
 };
 

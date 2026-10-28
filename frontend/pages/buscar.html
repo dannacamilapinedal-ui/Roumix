@@ -264,6 +264,7 @@
 
       let mapaInstancia = null;
       let mapaMarcadores = [];
+      let campusMarcadores = [];
 
       function mostrarAviso(icono, titulo, texto, boton) {
         listaContenedor.innerHTML = `
@@ -478,7 +479,6 @@
           RoumixMapa.mostrarNoDisponible(contenedorMapa, "El mapa no está disponible en este momento. Puedes seguir buscando con la lista.");
           return;
         }
-        RoumixMapa.marcadorCampus(mapaInstancia);
         actualizarPines(inmuebles);
       }
 
@@ -525,11 +525,22 @@
           puntos.push([item.lat, item.lng]);
         });
 
-        // Encuadre automático: resultados + campus como referencia
-        if (puntos.length > 0) {
-          mapaInstancia.fitBounds(L.latLngBounds([...puntos, RoumixMapa.CAMPUS_USTA]), { padding: [40, 40], maxZoom: 16 });
+        // Campus: todos visibles, resaltando la universidad elegida en el filtro
+        campusMarcadores.forEach(m => mapaInstancia.removeLayer(m));
+        campusMarcadores = RoumixMapa.marcadoresCampus(mapaInstancia, filtros.universidad);
+
+        // Encuadre automático: resultados + campus de la universidad elegida (o todos los campus)
+        const referencia = filtros.universidad === "todas"
+          ? RoumixMapa.CAMPUS.map(c => c.coords)
+          : RoumixMapa.coordsCampus(filtros.universidad);
+        const encuadre = [...puntos, ...referencia];
+        if (encuadre.length > 1) {
+          mapaInstancia.fitBounds(L.latLngBounds(encuadre), { padding: [40, 40], maxZoom: 16 });
+        } else if (encuadre.length === 1) {
+          mapaInstancia.setView(encuadre[0], 15);
         } else {
-          mapaInstancia.setView(RoumixMapa.CAMPUS_USTA, 14);
+          // "Todas las universidades" sin resultados: se ven todos los campus
+          mapaInstancia.fitBounds(L.latLngBounds(RoumixMapa.CAMPUS.map(c => c.coords)), { padding: [30, 30] });
         }
       }
 

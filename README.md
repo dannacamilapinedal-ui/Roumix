@@ -80,6 +80,11 @@ npm start      # modo normal
 
 Abra **http://localhost:3000** — el mismo servidor entrega la página y la API.
 
+> Estos comandos funcionan tanto desde `backend/` como desde la carpeta raíz del proyecto: el
+> `package.json` de la raíz solo reenvía `dev`, `start`, `migrate` y `admin:asignar` al backend.
+> Deja la terminal abierta mientras usas Roumix; si se cierra, la página mostrará
+> "No se pudo conectar con el servidor de Roumix".
+
 ## 🔌 API
 
 | Método | Ruta | Acceso | Descripción |
@@ -169,6 +174,19 @@ no envía la cabecera Referer. La búsqueda de direcciones usa Nominatim, tambi�
 través del backend (máximo 1 petición por segundo y caché, según su política de uso). No requiere claves ni
 facturación. Para un sitio con mucho tráfico conviene contratar un proveedor de teselas (o Google Maps
 Platform, que exige clave restringida por dominio y facturación).
+
+## ☁️ Despliegue (Render)
+
+Roumix se despliega como un solo servicio web en [Render](https://render.com) usando `render.yaml`:
+
+1. En Render: **New → Blueprint**, conecta GitHub y elige este repositorio.
+2. Render pedirá `DATABASE_URL`, `SUPABASE_URL` y `SUPABASE_ANON_KEY` (los mismos valores de `backend/.env`).
+3. Cuando termine, la aplicación queda en `https://<nombre>.onrender.com` con HTTPS.
+4. En Supabase → **Authentication → URL Configuration**, cambia **Site URL** por esa dirección
+   (y agrégala en **Redirect URLs**) para que los correos de confirmación lleven a la página publicada.
+
+Cada `git push` a `main` vuelve a desplegar automáticamente. El plan gratuito se "duerme" tras 15 minutos
+sin visitas: la primera carga después puede tardar cerca de un minuto.
 
 ## 📌 Estado del proyecto
 

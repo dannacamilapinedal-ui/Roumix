@@ -1,0 +1,16 @@
+{
+  "name": "roumix",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Roumix - Vivienda universitaria en Villavicencio. Atajos para ejecutar el backend desde la carpeta raíz.",
+  "scripts": {
+    "postinstall": "npm --prefix backend install",
+    "dev": "npm --prefix backend run dev",
+    "start": "npm --prefix backend start",
+    "migrate": "npm --prefix backend run migrate",
+    "admin:asignar": "npm --prefix backend run admin:asignar --"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

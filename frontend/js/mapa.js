@@ -9,6 +9,16 @@
 const RoumixMapa = {
   // Universidad Santo Tomás, sede Aguas Claras (Anillo Vial). Fuente: OpenStreetMap / Nominatim.
   CAMPUS_USTA: [4.1220, -73.6155],
+  // Campus universitarios de Villavicencio. Coordenadas tomadas de OpenStreetMap (Nominatim).
+  // "universidad" coincide con los valores del filtro de buscar.html.
+  // La Universidad Antonio Nariño no aparece en OpenStreetMap: no se ubica para no inventar coordenadas.
+  CAMPUS: [
+    { universidad: "Santo Tomás", nombre: "Santo Tomás", sede: "Sede Aguas Claras", coords: [4.1220, -73.6155] },
+    { universidad: "Unillanos", nombre: "Unillanos", sede: "Sede San Antonio", coords: [4.14615, -73.64307] },
+    { universidad: "Unillanos", nombre: "Unillanos Barcelona", sede: "Sede Barcelona (vía a Puerto López)", coords: [4.07435, -73.58310] },
+    { universidad: "Cooperativa", nombre: "Cooperativa", sede: "Universidad Cooperativa de Colombia", coords: [4.11611, -73.60918] },
+    { universidad: "Uniminuto", nombre: "Uniminuto", sede: "Uniminuto Villavicencio", coords: [4.11273, -73.63418] }
+  ],
   CENTRO_VILLAVICENCIO: [4.1420, -73.6266],
   // Radio de la zona aproximada que ven los estudiantes (la API pública redondea a ~100 m)
   RADIO_APROXIMADO_M: 250,
@@ -39,16 +49,32 @@ const RoumixMapa = {
     return mapa;
   },
 
-  marcadorCampus: function(mapa) {
-    const icono = L.divIcon({
-      className: "custom-div-icon",
-      html: '<div class="map-pin-university">🎓 Santo Tomás</div>',
-      iconSize: [120, 32],
-      iconAnchor: [60, 16]
+  /**
+   * Marca todos los campus universitarios. "destacada" (valor del filtro) resalta esa universidad.
+   */
+  marcadoresCampus: function(mapa, destacada) {
+    return this.CAMPUS.map((campus) => {
+      const resaltado = destacada && destacada !== "todas" && campus.universidad === destacada;
+      const icono = L.divIcon({
+        className: "custom-div-icon",
+        html: `<div class="map-pin-university${resaltado ? " map-pin-university-activa" : ""}">🎓 ${campus.nombre}</div>`,
+        iconSize: [0, 0]
+      });
+      return L.marker(campus.coords, { icon: icono, keyboard: false, zIndexOffset: resaltado ? 500 : -100, title: campus.sede })
+        .addTo(mapa)
+        .bindPopup(`<strong>${campus.nombre}</strong><br>${campus.sede}`);
     });
-    return L.marker(this.CAMPUS_USTA, { icon: icono, keyboard: false, zIndexOffset: -100 })
-      .addTo(mapa)
-      .bindPopup("<strong>Universidad Santo Tomás</strong><br>Sede Aguas Claras");
+  },
+
+  // Compatibilidad: algunas páginas solo necesitan los campus sin resaltar
+  marcadorCampus: function(mapa) {
+    return this.marcadoresCampus(mapa);
+  },
+
+  // Coordenadas de los campus de la universidad elegida en el filtro (vacío si es "todas")
+  coordsCampus: function(universidad) {
+    if (!universidad || universidad === "todas") return [];
+    return this.CAMPUS.filter((c) => c.universidad === universidad).map((c) => c.coords);
   },
 
   iconoPrecio: function(precio, id) {

@@ -3492,3 +3492,275 @@ button.admin-metrica:hover {
   isolation: isolate;
   z-index: 0;
 }
+
+/* Etiquetas de campus: centradas sobre su punto, de ancho automático */
+.map-pin-university {
+  display: inline-block;
+  transform: translate(-50%, -50%);
+}
+
+.map-pin-university-activa {
+  background: var(--acento-naranja);
+  box-shadow: 0 0 0 3px rgba(196, 124, 43, 0.3), 0 4px 10px rgba(0, 0, 0, 0.25);
+}
+
+/* ==========================================================================
+   ACCESO ANIMADO (index.html)
+   ========================================================================== */
+@keyframes entradaArriba {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes entradaLateral {
+  from { opacity: 0; transform: translateX(-30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* Movimiento lento de cámara sobre las fotos (efecto Ken Burns) */
+@keyframes kenBurns {
+  from { transform: scale(1); }
+  to { transform: scale(1.15); }
+}
+
+.entrada-arriba {
+  opacity: 0;
+  animation: entradaArriba 0.8s ease-out forwards;
+}
+
+.entrada-lateral {
+  opacity: 0;
+  animation: entradaLateral 0.8s ease-out forwards;
+}
+
+.auth-brand-side.auth-animado {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.auth-animado .auth-brand-content {
+  position: relative;
+  z-index: 2;
+}
+
+.auth-fondos {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.auth-fondo {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0;
+  transition: opacity 1s ease;
+  animation: kenBurns 25s ease-in-out infinite alternate;
+}
+
+.auth-fondo.activo {
+  opacity: 1;
+}
+
+/* Capa oscura para que el texto se lea bien sobre cualquier foto */
+.auth-fondo-capa {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to top, var(--verde-950) 0%, rgba(20, 34, 25, 0.25) 50%, rgba(20, 34, 25, 0.6) 100%),
+    rgba(20, 34, 25, 0.82);
+}
+
+.auth-pasos {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+}
+
+/* Línea que conecta los pasos */
+.auth-pasos::before {
+  content: "";
+  position: absolute;
+  left: 30px;
+  top: 28px;
+  bottom: 28px;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.auth-pasos li {
+  position: relative;
+}
+
+.auth-paso {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radio-md) var(--radio-md) 0 0;
+  color: #ffffff;
+  text-align: left;
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 0.4s ease, background-color 0.4s ease;
+}
+
+.auth-paso:hover,
+.auth-paso:focus-visible {
+  opacity: 0.85;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.auth-paso.activo {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(196, 124, 43, 0.3);
+  border-bottom-color: transparent;
+}
+
+.auth-paso-numero {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #3a4a3f;
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.auth-paso.activo .auth-paso-numero {
+  background: var(--acento-naranja);
+  box-shadow: 0 0 15px rgba(217, 130, 66, 0.8);
+}
+
+.auth-paso-titulo {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+/* Descripción en acordeón: se despliega solo en el paso activo */
+.auth-paso-desc {
+  margin: 0;
+  padding: 0 16px 0 60px;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  color: #d1ded0;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  border: 1px solid transparent;
+  border-top: none;
+  border-radius: 0 0 var(--radio-md) var(--radio-md);
+  transition: max-height 0.5s ease, opacity 0.5s ease, padding 0.5s ease;
+}
+
+.auth-paso.activo + .auth-paso-desc {
+  max-height: 120px;
+  opacity: 1;
+  padding-bottom: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(196, 124, 43, 0.3);
+}
+
+/* Pestañas con indicador que se desliza */
+.auth-toggle-tabs {
+  position: relative;
+}
+
+.auth-toggle-indicador {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  background: var(--verde-950);
+  border-radius: var(--radio-pill);
+  transition: transform 0.3s ease-in-out;
+  z-index: 0;
+}
+
+.auth-toggle-tabs:has(#tab-register.active) .auth-toggle-indicador {
+  transform: translateX(100%);
+}
+
+.auth-toggle-tabs .auth-tab-btn {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+  transition: color 0.3s ease;
+}
+
+.auth-toggle-tabs .auth-tab-btn.active {
+  background: transparent;
+}
+
+/* Campos y botón con respuesta al foco y al pasar el mouse */
+.auth-input {
+  transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s;
+}
+
+.auth-input:focus {
+  transform: translateY(-2px);
+  box-shadow: 0 0 0 3px rgba(61, 112, 83, 0.15), var(--sombra-md);
+}
+
+.btn-auth-primary {
+  transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+}
+
+.btn-auth-primary:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px -6px rgba(20, 34, 25, 0.45);
+}
+
+.btn-auth-primary:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.login-header .logo {
+  display: inline-block;
+  transition: transform 0.3s ease;
+}
+
+.login-header .logo:hover {
+  transform: scale(1.05);
+}
+
+/* Quien prefiere menos movimiento ve todo sin animaciones */
+@media (prefers-reduced-motion: reduce) {
+  .entrada-arriba,
+  .entrada-lateral {
+    opacity: 1;
+    animation: none;
+  }
+
+  .auth-fondo {
+    animation: none;
+  }
+
+  .auth-fondo,
+  .auth-paso,
+  .auth-paso-desc,
+  .auth-toggle-indicador,
+  .auth-input,
+  .btn-auth-primary {
+    transition: none;
+  }
+}

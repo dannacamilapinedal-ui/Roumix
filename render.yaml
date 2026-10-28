@@ -1,0 +1,25 @@
+# Despliegue de Roumix en Render (https://render.com) como "Blueprint".
+# Un solo servicio web: Express entrega la página y la API.
+# Cada `git push` a la rama main vuelve a desplegar la aplicación automáticamente.
+# Las credenciales NO están aquí: Render las pide al crear el servicio (sync: false).
+services:
+  - type: web
+    name: roumix
+    runtime: node
+    plan: free
+    branch: main
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
