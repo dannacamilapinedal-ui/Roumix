@@ -197,4 +197,70 @@ async function logout(req, res) {
   res.status(200).json({ status: 'success', message: 'Sesión cerrada.' });
 }
 
-module.exports = { registro, login, refresh, perfil, logout };
+/**
+ * Dirección pública de la aplicación (para el enlace del correo de recuperación).
+ * Supabase solo acepta direcciones incluidas en Authentication → URL Configuration → Redirect URLs.
+ */
+function urlAplicacion(req) {
+  const configurada = String(process.env.APP_URL || '').trim().replace(/\/+$/, '');
+  return configurada || `${req.protocol}://${req.get('host')}`;
+}
+
+/**
+ * POST /api/auth/recuperar  { email, captchaToken }
+ * Envía el correo para crear una contraseña nueva. Responde siempre igual, exista o no
+ * la cuenta, para que nadie pueda averiguar qué correos están registrados.
+ */
+async function recuperar(req, res) {
+  const email = texto((req.body || {}).email).toLowerCase();
+  if (!EMAIL_REGEX.test(email) || email.length > 150) throw errorHttp(400, 'Escribe un correo electrónico válido.');
+
+  const { error } = await crearClienteSupabase().auth.resetPasswordForEmail(email, {
+    redirectTo: `${urlAplicacion(req)}/pages/restablecer.html`
+  });
+
+  verificarClave(error);
+  if (error) {
+    if (error.status === 429) throw errorHttp(429, 'Ya enviamos varios correos. Espera unos minutos antes de pedir otro.');
+    // Otros errores (p. ej. correo inexistente) no se revelan
+    console.error('⚠️ Recuperación de contraseña:', error.message);
+  }
+
+  res.status(200).json({
+    status: 'success',
+    message: 'Si el correo está registrado en Roumix, te enviamos un enlace para crear una contraseña nueva. Revisa también la carpeta de spam.'
+  });
+}
+
+/**
+ * POST /api/auth/restablecer  (requireAuth con el token del enlace de recuperación)  { password }
+ * Guarda la contraseña nueva en Supabase Auth y cierra todas las sesiones abiertas de la cuenta.
+ */
+async function restablecer(req, res) {
+  const password = typeof (req.body || {}).password === 'string' ? req.body.password : '';
+  if (password.length < 8 || password.length > 72) throw errorHttp(400, 'La contraseña debe tener entre 8 y 72 caracteres.');
+
+  const token = req.headers.authorization.split(' ')[1];
+  const cabeceras = { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+  const respuesta = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    method: 'PUT',
+    headers: cabeceras,
+    body: JSON.stringify({ password })
+  });
+  const json = await respuesta.json().catch(() => ({}));
+
+  if (!respuesta.ok) {
+    if (json.error_code === 'same_password') throw errorHttp(400, 'La contraseña nueva debe ser diferente de la anterior.');
+    if (json.error_code === 'weak_password') throw errorHttp(400, 'La contraseña es demasiado débil. Usa letras y números.');
+    if (respuesta.status === 401 || respuesta.status === 403) throw errorHttp(401, 'El enlace expiró o ya se usó. Pide uno nuevo.');
+    throw errorHttp(502, 'No se pudo guardar la contraseña nueva. Inténtalo de nuevo.');
+  }
+
+  // Por seguridad se cierran todas las sesiones (incluida la del enlace)
+  await fetch(`${SUPABASE_URL}/auth/v1/logout?scope=global`, { method: 'POST', headers: cabeceras }).catch(() => {});
+
+  res.status(200).json({ status: 'success', message: 'Tu contraseña se cambió. Ya puedes iniciar sesión con la nueva.' });
+}
+
+module.exports = { registro, login, refresh, perfil, logout, recuperar, restablecer };

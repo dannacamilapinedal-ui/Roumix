@@ -3764,3 +3764,84 @@ button.admin-metrica:hover {
     transition: none;
   }
 }
+
+/* ==========================================================================
+   CAPTCHA Y RECUPERACIÓN DE CONTRASEÑA
+   ========================================================================== */
+.auth-captcha {
+  min-height: 65px;
+  display: flex;
+  justify-content: center;
+}
+
+.auth-captcha.captcha-error {
+  min-height: 0;
+  font-size: 0.85rem;
+  color: #8a1c1c;
+  background: #fdecea;
+  padding: 10px 14px;
+  border-radius: var(--radio-md);
+}
+
+.auth-link-olvide {
+  align-self: flex-end;
+  background: none;
+  border: none;
+  padding: 4px 0 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--verde-800);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.auth-link-olvide:hover,
+.auth-link-olvide:focus-visible {
+  color: var(--acento-naranja);
+}
+
+.auth-link-volver {
+  align-self: center;
+}
+
+.restablecer-contenedor {
+  min-height: calc(100vh - 72px);
+  background: var(--fondo-crema);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px;
+}
+
+.restablecer-tarjeta {
+  width: 100%;
+  max-width: 420px;
+  background: var(--superficie);
+  border: 1px solid var(--borde-arena);
+  border-radius: var(--radio-xl);
+  padding: 32px;
+  box-shadow: var(--sombra-md);
+}
+
+.restablecer-tarjeta h1 {
+  font-size: 1.5rem;
+  color: var(--verde-950);
+  margin-bottom: 8px;
+}
+
+.restablecer-ayuda {
+  color: var(--tinta-media);
+  font-size: 0.9rem;
+  margin-bottom: 18px;
+}
+
+.restablecer-mostrar {
+  font-size: 0.85rem;
+  color: var(--tinta-media);
+}
+
+.restablecer-volver {
+  display: inline-block;
+  margin-top: 18px;
+}

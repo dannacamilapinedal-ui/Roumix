@@ -32,7 +32,8 @@ const RoumixAPI = {
     // Con FormData (fotos) el navegador pone el Content-Type multipart por sí solo
     if (opciones.body && !(opciones.body instanceof FormData)) headers['Content-Type'] = 'application/json';
 
-    const token = RoumixStorage.getToken();
+    // Si la petición ya trae su propio token (p. ej. el del enlace de recuperación) se respeta
+    const token = headers['Authorization'] ? null : RoumixStorage.getToken();
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
     let res;
@@ -94,8 +95,28 @@ const RoumixAPI = {
   /**
    * Inicia sesión con correo y contraseña. El rol llega desde el perfil guardado.
    */
-  login: async function(email, password) {
-    const json = await this._request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
+  /**
+   * Pide el correo para crear una contraseña nueva (la respuesta no revela si la cuenta existe)
+   */
+  recuperarContrasena: async function(email, captchaToken) {
+    const json = await this._request('/auth/recuperar', { method: 'POST', body: JSON.stringify({ email, captchaToken }) });
+    return json.message;
+  },
+
+  /**
+   * Guarda la contraseña nueva usando el token que trae el enlace del correo
+   */
+  restablecerContrasena: async function(tokenRecuperacion, password) {
+    const json = await this._request('/auth/restablecer', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${tokenRecuperacion}` },
+      body: JSON.stringify({ password })
+    }, false);
+    return json.message;
+  },
+
+  login: async function(email, password, captchaToken) {
+    const json = await this._request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password, captchaToken }) });
     RoumixStorage.setSesion(json.sesion, json.usuario);
     return json.usuario;
   },

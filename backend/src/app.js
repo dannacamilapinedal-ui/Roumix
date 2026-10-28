@@ -8,9 +8,13 @@ const inmueblesRoutes = require('./routes/inmueblesRoutes');
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const mapaRoutes = require('./routes/mapaRoutes');
+const configRoutes = require('./routes/configRoutes');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
+
+// Detrás del proxy de Render: req.ip y req.protocol (https) salen de las cabeceras del proxy
+app.set('trust proxy', 1);
 
 // CORS: en producción solo los orígenes listados en CORS_ORIGIN (separados por coma).
 // En desarrollo se permite cualquier origen (Live Server, archivos locales, etc.).
@@ -30,6 +34,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/inmuebles', inmueblesRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/mapa', mapaRoutes);
+app.use('/api/config', configRoutes);
 
 // Rutas de API inexistentes (404)
 app.use('/api', (req, res) => {

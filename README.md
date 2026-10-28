@@ -61,6 +61,8 @@ Copie `backend/.env.example` como `backend/.env` y complete los valores
 | `SUPABASE_ANON_KEY` | Clave pública *anon* / *publishable* |
 | `PORT` | Puerto del servidor (por defecto 3000) |
 | `CORS_ORIGIN` | Solo en producción: orígenes permitidos |
+| `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | CAPTCHA de Cloudflare Turnstile (si faltan, el CAPTCHA queda desactivado) |
+| `APP_URL` | Dirección pública, para el enlace de "recuperar contraseña" |
 
 > `backend/.env` contiene credenciales y **nunca** se sube a GitHub (está en `.gitignore`).
 
@@ -91,8 +93,11 @@ Abra **http://localhost:3000** — el mismo servidor entrega la página y la API
 |--------|------|--------|-------------|
 | GET | `/api/health` | Público | Estado del servidor |
 | GET | `/api/health/db` | Público | Prueba la conexión con PostgreSQL |
-| POST | `/api/auth/registro` | Público | Crear cuenta (nombre, email, password, rol, telefono) |
-| POST | `/api/auth/login` | Público | Iniciar sesión; devuelve tokens y el perfil |
+| POST | `/api/auth/registro` | Público + CAPTCHA | Crear cuenta (nombre, email, password, rol, telefono) |
+| POST | `/api/auth/login` | Público + CAPTCHA | Iniciar sesión; devuelve tokens y el perfil |
+| POST | `/api/auth/recuperar` | Público + CAPTCHA | Envía el correo para crear una contraseña nueva (no revela si la cuenta existe) |
+| POST | `/api/auth/restablecer` | Token del enlace | Guarda la contraseña nueva y cierra todas las sesiones |
+| GET | `/api/config` | Público | Configuración pública del frontend (clave pública del CAPTCHA) |
 | POST | `/api/auth/refresh` | Público | Renovar el token con el refresh token |
 | GET | `/api/auth/perfil` | Con sesión | Perfil del usuario (rol leído de la BD) |
 | POST | `/api/auth/logout` | Con sesión | Cerrar sesión en Supabase Auth |
@@ -182,8 +187,11 @@ Roumix se despliega como un solo servicio web en [Render](https://render.com) us
 1. En Render: **New → Blueprint**, conecta GitHub y elige este repositorio.
 2. Render pedirá `DATABASE_URL`, `SUPABASE_URL` y `SUPABASE_ANON_KEY` (los mismos valores de `backend/.env`).
 3. Cuando termine, la aplicación queda en `https://<nombre>.onrender.com` con HTTPS.
-4. En Supabase → **Authentication → URL Configuration**, cambia **Site URL** por esa dirección
-   (y agrégala en **Redirect URLs**) para que los correos de confirmación lleven a la página publicada.
+4. En Supabase → **Authentication → URL Configuration**, cambia **Site URL** por esa dirección y en
+   **Redirect URLs** agrega `https://<nombre>.onrender.com/**` y `http://localhost:3000/**`, para que los
+   correos de confirmación y de recuperación de contraseña lleven a la página correcta.
+5. CAPTCHA: en Cloudflare → **Turnstile → Add widget** registra los dominios `<nombre>.onrender.com` y
+   `localhost`, y copia la clave de sitio y la secreta en `TURNSTILE_SITE_KEY` y `TURNSTILE_SECRET_KEY`.
 
 Cada `git push` a `main` vuelve a desplegar automáticamente. El plan gratuito se "duerme" tras 15 minutos
 sin visitas: la primera carga después puede tardar cerca de un minuto.
