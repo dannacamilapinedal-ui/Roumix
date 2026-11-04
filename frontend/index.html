@@ -11,6 +11,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   
   <link rel="stylesheet" href="css/style.css">
+  <!-- Pantalla de carga: solo se muestra si la página tarda más de 0,3 s (ver app.js) -->
+  <script>(function(d){d.classList.add("rx-cargando");setTimeout(function(){if(d.classList.contains("rx-cargando"))d.classList.add("rx-mostrar")},300);setTimeout(function(){d.classList.remove("rx-mostrar","rx-cargando")},6000)})(document.documentElement)</script>
 </head>
 
 <body class="page-login">
@@ -35,9 +37,9 @@
       <!-- Lado Izquierdo: fondo fotográfico animado y pasos interactivos -->
       <div class="auth-brand-side auth-animado">
         <div class="auth-fondos" aria-hidden="true">
-          <div class="auth-fondo activo" data-paso="1" style="background-image: url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1600&q=70');"></div>
-          <div class="auth-fondo" data-paso="2" style="background-image: url('https://images.unsplash.com/photo-1611162617474-5b21e879e113?auto=format&fit=crop&w=1600&q=70');"></div>
-          <div class="auth-fondo" data-paso="3" style="background-image: url('https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1600&q=70');"></div>
+          <div class="auth-fondo activo" data-paso="1" style="background-image: url('https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1600&q=70');"></div>
+          <div class="auth-fondo" data-paso="2" style="background-image: url('https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=1600&q=70');"></div>
+          <div class="auth-fondo" data-paso="3" style="background-image: url('https://images.unsplash.com/photo-1617098474202-0d0d7f60c56b?auto=format&fit=crop&w=1600&q=70');"></div>
           <div class="auth-fondo-capa"></div>
         </div>
 

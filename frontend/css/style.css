@@ -3845,3 +3845,381 @@ button.admin-metrica:hover {
   display: inline-block;
   margin-top: 18px;
 }
+
+/* ==========================================================================
+   EXPERIENCIA VISUAL: CARGA, TRANSICIONES Y MICROINTERACCIONES
+   Solo presentación: no cambia colores de marca ni el funcionamiento.
+   ========================================================================== */
+
+/* ---------- Pantalla de carga (solo si la página tarda más de 0,3 s) ---------- */
+html.rx-cargando body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background:
+    linear-gradient(var(--acento-naranja), var(--acento-naranja)) center calc(50% + 36px) / 0 3px no-repeat,
+    var(--fondo-crema);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.35s ease, visibility 0s linear 0.35s;
+}
+
+html.rx-cargando body::after {
+  content: "roumix";
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  z-index: 9999;
+  font-family: var(--font-principal);
+  font-size: 2.6rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--verde-950);
+  transform: translate(-50%, -50%) scale(0.92);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.35s ease, transform 0.35s ease, visibility 0s linear 0.35s;
+}
+
+html.rx-cargando.rx-mostrar body::before {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.25s ease;
+  animation: rxBarraCarga 1.2s ease-in-out infinite;
+}
+
+html.rx-cargando.rx-mostrar body::after {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, -50%) scale(1);
+  transition: opacity 0.3s ease, transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes rxBarraCarga {
+  0% { background-size: 0 3px, auto; }
+  60%, 100% { background-size: 110px 3px, auto; }
+}
+
+/* ---------- Transición suave entre páginas (navegadores compatibles) ---------- */
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.25s;
+}
+
+/* ---------- Keyframes compartidos ---------- */
+@keyframes rxFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes rxEntrada {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes rxPop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+@keyframes rxBrillo {
+  from { background-position: 150% 0; }
+  to { background-position: -50% 0; }
+}
+
+/* ---------- Tarjetas de inmuebles ---------- */
+.property-card,
+.my-property-card {
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.property-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 14px 30px -12px rgba(20, 34, 25, 0.28);
+}
+
+.property-card:hover .card-img,
+.my-property-card:hover .my-prop-img {
+  transform: scale(1.04);
+}
+
+.my-prop-img {
+  transition: transform 0.4s ease;
+}
+
+.my-property-card:hover {
+  transform: translateY(-3px);
+}
+
+/* Las tarjetas entran escalonadas al mostrar o actualizar resultados */
+.cards-list > .property-card,
+#lista-mis-publicaciones > .my-property-card {
+  animation: rxEntrada 0.45s ease both;
+}
+
+.cards-list > :nth-child(2), #lista-mis-publicaciones > :nth-child(2) { animation-delay: 0.06s; }
+.cards-list > :nth-child(3), #lista-mis-publicaciones > :nth-child(3) { animation-delay: 0.12s; }
+.cards-list > :nth-child(4), #lista-mis-publicaciones > :nth-child(4) { animation-delay: 0.18s; }
+.cards-list > :nth-child(5), #lista-mis-publicaciones > :nth-child(5) { animation-delay: 0.24s; }
+.cards-list > :nth-child(n+6), #lista-mis-publicaciones > :nth-child(n+6) { animation-delay: 0.3s; }
+
+/* Mientras se actualizan los filtros, los resultados anteriores se atenúan */
+.cards-list {
+  transition: opacity 0.2s ease;
+}
+
+.cards-list.rx-actualizando {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.feature-box {
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.feature-box:hover {
+  transform: translateY(-2px);
+  border-color: var(--verde-pastilla-borde);
+}
+
+/* ---------- Skeleton loaders ---------- */
+.rx-skeleton {
+  background: linear-gradient(90deg, #ece5d6 25%, #f6f1e6 37%, #ece5d6 63%);
+  background-size: 400% 100%;
+  animation: rxBrillo 1.4s ease infinite;
+  border-radius: var(--radio-sm);
+}
+
+.rx-skeleton-card {
+  background: var(--superficie);
+  border: 1px solid var(--borde-arena);
+  border-radius: var(--radio-lg);
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 20px;
+}
+
+.rx-skeleton-card .rx-skeleton-img {
+  height: 185px;
+  border-radius: var(--radio-md);
+}
+
+.rx-skeleton-card .rx-skeleton-lineas {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 6px;
+}
+
+.rx-skeleton-linea {
+  height: 14px;
+}
+
+.rx-skeleton-linea.ancha { height: 22px; width: 45%; }
+.rx-skeleton-linea.media { width: 75%; }
+.rx-skeleton-linea.corta { width: 35%; }
+
+@media (max-width: 768px) {
+  .rx-skeleton-card {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- Imágenes: aparecen al terminar de cargar ---------- */
+img.rx-img-espera {
+  opacity: 0;
+}
+
+.card-img,
+.my-prop-img,
+.gallery-main-img,
+.gallery-thumb-img,
+.compare-thumb-img,
+.foto-item img,
+.admin-galeria img,
+.admin-celda-inmueble img,
+#preview-img {
+  transition: opacity 0.45s ease, transform 0.4s ease;
+}
+
+/* ---------- Botones: respuesta al pasar el mouse y al presionar ---------- */
+.btn-auth-primary,
+.btn-search-action,
+.btn-contact,
+.btn-learn-more,
+.btn-card-action,
+.pill-btn,
+.btn-compare-wa,
+.btn-save-property,
+.btn-submit-publish,
+.btn-publish-new-property,
+.btn-report,
+.btn-contact-wa-large,
+.btn-ubicacion-buscar,
+.btn-compare-quitar,
+.role-btn,
+.amenity-chip {
+  transition: transform 0.18s ease, box-shadow 0.2s ease, background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.btn-learn-more:hover,
+.btn-card-action:hover,
+.pill-btn:hover,
+.btn-save-property:hover,
+.btn-submit-publish:hover,
+.btn-publish-new-property:hover,
+.btn-contact-wa-large:hover,
+.amenity-chip:hover {
+  transform: translateY(-1px);
+}
+
+.btn-auth-primary:active:not(:disabled),
+.btn-search-action:active,
+.btn-contact:active,
+.btn-learn-more:active,
+.btn-card-action:active:not(:disabled),
+.pill-btn:active,
+.btn-compare-wa:active,
+.btn-save-property:active:not(:disabled),
+.btn-submit-publish:active:not(:disabled),
+.btn-publish-new-property:active,
+.btn-report:active,
+.btn-contact-wa-large:active,
+.role-btn:active,
+.amenity-chip:active {
+  transform: scale(0.96);
+}
+
+/* Agregar a comparar: pequeño "pop" al seleccionar */
+.btn-comparar-toggle.seleccionado,
+.btn-save-property[aria-pressed="true"] {
+  animation: rxPop 0.35s ease;
+}
+
+/* Contador del comparador cuando cambia */
+.btn-compare.rx-bump {
+  display: inline-block;
+  animation: rxPop 0.4s ease;
+}
+
+/* ---------- Modales y ventanas emergentes ---------- */
+.modal-backdrop.open {
+  animation: rxFade 0.2s ease;
+}
+
+.modal-reporte,
+.admin-dialogo,
+.visor-fotos {
+  opacity: 0;
+  transform: translateY(14px) scale(0.98);
+  transition: opacity 0.22s ease, transform 0.22s ease, overlay 0.22s allow-discrete, display 0.22s allow-discrete;
+}
+
+.modal-reporte[open],
+.admin-dialogo[open],
+.visor-fotos[open] {
+  opacity: 1;
+  transform: none;
+}
+
+@starting-style {
+  .modal-reporte[open],
+  .admin-dialogo[open],
+  .visor-fotos[open] {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+}
+
+.modal-reporte[open]::backdrop,
+.admin-dialogo[open]::backdrop,
+.visor-fotos[open]::backdrop {
+  animation: rxFade 0.22s ease;
+}
+
+/* ---------- Mensajes de éxito, error y avisos ---------- */
+.pub-mensaje:not([hidden]),
+#auth-mensaje,
+.compare-aviso-alerta:not([hidden]),
+.aviso-moderacion,
+.reporte-mensaje:not([hidden]),
+.ubicacion-estado.ubicacion-ok {
+  animation: rxEntrada 0.3s ease;
+}
+
+/* ---------- Comparador ---------- */
+#comparador-contenido > * {
+  animation: rxEntrada 0.35s ease both;
+}
+
+.compare-table td,
+.compare-table th {
+  transition: background-color 0.2s ease;
+}
+
+.compare-table tbody tr:hover td,
+.compare-table tbody tr:hover th {
+  background-color: var(--fondo-crema-alt);
+}
+
+/* ---------- Aparición al hacer scroll ---------- */
+.rx-revelar {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.rx-revelar.rx-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---------- Usuarios que prefieren menos movimiento ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .rx-revelar {
+    opacity: 1;
+    transform: none;
+  }
+
+  @view-transition {
+    navigation: none;
+  }
+}
+
+/* Acceso en celular: la foto ocupa menos espacio para que el formulario quede a la vista */
+@media (max-width: 768px) {
+  .auth-brand-side.auth-animado {
+    padding: 32px 24px;
+  }
+
+  .auth-animado .auth-brand-logo {
+    margin-bottom: 12px;
+  }
+
+  .auth-animado .auth-brand-title {
+    font-size: 1.6rem;
+    margin-bottom: 0;
+  }
+
+  .auth-animado .auth-pasos {
+    display: none;
+  }
+}

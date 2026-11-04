@@ -11,6 +11,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   
   <link rel="stylesheet" href="../css/style.css">
+  <!-- Pantalla de carga: solo se muestra si la página tarda más de 0,3 s (ver app.js) -->
+  <script>(function(d){d.classList.add("rx-cargando");setTimeout(function(){if(d.classList.contains("rx-cargando"))d.classList.add("rx-mostrar")},300);setTimeout(function(){d.classList.remove("rx-mostrar","rx-cargando")},6000)})(document.documentElement)</script>
 </head>
 
 <body>
@@ -261,7 +263,7 @@
           return;
         }
 
-        contenedor.innerHTML = '<p class="compare-aviso" role="status">Cargando la comparación…</p>';
+        contenedor.innerHTML = RoumixUI.skeletonTarjetas(2);
         acciones.replaceChildren();
 
         let inmuebles;

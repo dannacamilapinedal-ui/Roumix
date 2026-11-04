@@ -196,6 +196,10 @@ Roumix se despliega como un solo servicio web en [Render](https://render.com) us
 Cada `git push` a `main` vuelve a desplegar automáticamente. El plan gratuito se "duerme" tras 15 minutos
 sin visitas: la primera carga después puede tardar cerca de un minuto.
 
+**Evitar la pantalla "Service waking up" de Render:** el plan gratuito apaga el servidor tras 15 minutos sin
+visitas. Para mantenerlo despierto, un monitor gratuito (por ejemplo UptimeRobot) puede consultar
+`https://<nombre>.onrender.com/api/health` cada 5 minutos; o se puede pasar al plan pago de Render, que no se duerme.
+
 ## 📌 Estado del proyecto
 
 - [x] Estructura de carpetas organizada (frontend / backend / database / docs)

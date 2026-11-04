@@ -1,6 +1,7 @@
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
+const compression = require('compression');
 
 // Rutas
 const healthRoutes = require('./routes/healthRoutes');
@@ -26,6 +27,8 @@ const origenesPermitidos = (process.env.CORS_ORIGIN || '')
 app.use(cors({
   origin: origenesPermitidos.length ? origenesPermitidos : true
 }));
+// Comprime HTML, CSS, JS y JSON (las páginas cargan más rápido)
+app.use(compression());
 app.use(express.json({ limit: '1mb' }));
 
 // Montaje de rutas de la API
@@ -45,7 +48,11 @@ app.use('/api', (req, res) => {
 });
 
 // El mismo servidor entrega el frontend: http://localhost:3000/
-app.use(express.static(path.join(__dirname, '..', '..', 'frontend')));
+// HTML, CSS y JS se revalidan en cada visita (ETag) para que los cambios se vean al desplegar;
+// las imágenes propias se guardan 7 días en el navegador
+const carpetaFrontend = path.join(__dirname, '..', '..', 'frontend');
+app.use('/assets', express.static(path.join(carpetaFrontend, 'assets'), { maxAge: '7d' }));
+app.use(express.static(carpetaFrontend));
 
 app.use((req, res) => {
   res.status(404).send('Página no encontrada');

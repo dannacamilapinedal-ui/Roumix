@@ -14,6 +14,8 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
   
   <link rel="stylesheet" href="../css/style.css">
+  <!-- Pantalla de carga: solo se muestra si la página tarda más de 0,3 s (ver app.js) -->
+  <script>(function(d){d.classList.add("rx-cargando");setTimeout(function(){if(d.classList.contains("rx-cargando"))d.classList.add("rx-mostrar")},300);setTimeout(function(){d.classList.remove("rx-mostrar","rx-cargando")},6000)})(document.documentElement)</script>
 </head>
 
 <body>
@@ -284,6 +286,12 @@
         const consulta = ++consultaActual;
         contadorResultados.innerHTML = "<strong>Buscando…</strong>";
         listaContenedor.setAttribute("aria-busy", "true");
+        // Primera carga: tarjetas de relleno; al filtrar: se atenúan los resultados anteriores
+        if (listaContenedor.querySelector(".property-card")) {
+          listaContenedor.classList.add("rx-actualizando");
+        } else {
+          listaContenedor.innerHTML = RoumixUI.skeletonTarjetas(3);
+        }
 
         let resultado;
         try {
@@ -291,6 +299,7 @@
         } catch (error) {
           if (consulta !== consultaActual) return;
           listaContenedor.removeAttribute("aria-busy");
+          listaContenedor.classList.remove("rx-actualizando");
           contadorResultados.innerHTML = "<strong>Sin conexión</strong>";
           mostrarAviso("⚠️", "No pudimos cargar los inmuebles", error.message, { texto: "Reintentar", accion: cargar });
           actualizarPines([]);
@@ -299,6 +308,7 @@
         if (consulta !== consultaActual) return;
 
         listaContenedor.removeAttribute("aria-busy");
+          listaContenedor.classList.remove("rx-actualizando");
         inmuebles = resultado;
         render();
       }

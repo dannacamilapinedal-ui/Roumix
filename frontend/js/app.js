@@ -134,7 +134,15 @@ function actualizarBotonComparar() {
   const boton = document.getElementById("btn-abrir-comparador");
   if (!boton) return;
   const n = RoumixComparador.getIds().length;
-  boton.textContent = n ? `Comparar (${n}/${RoumixComparador.MAX}) →` : "Comparar opciones →";
+  const texto = n ? `Comparar (${n}/${RoumixComparador.MAX}) →` : "Comparar opciones →";
+  // Pequeña animación cuando cambia la cantidad seleccionada
+  if (boton.dataset.rxCantidad !== undefined && boton.dataset.rxCantidad !== String(n)) {
+    boton.classList.remove("rx-bump");
+    void boton.offsetWidth;
+    boton.classList.add("rx-bump");
+  }
+  boton.dataset.rxCantidad = String(n);
+  boton.textContent = texto;
 }
 
 // 2.1 Escapa texto antes de insertarlo con innerHTML.
@@ -437,4 +445,113 @@ document.addEventListener("DOMContentLoaded", () => {
       if (e.target === modal) cerrarModalContacto();
     });
   }
+});
+
+// 7. Experiencia visual: pantalla de carga, imágenes, aparición al hacer scroll y skeletons.
+// Solo presentación: no cambia datos, rutas ni permisos.
+const RoumixUI = {
+  reducirMovimiento: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+
+  // Oculta la pantalla de carga (si llegó a mostrarse) con un desvanecimiento.
+  // Las páginas privadas ocultan el contenido mientras verifican la sesión: se espera a que terminen.
+  ocultarCarga: function() {
+    const html = document.documentElement;
+    if (!html.classList.contains("rx-cargando")) return;
+    if (document.body && document.body.style.visibility === "hidden") {
+      setTimeout(() => this.ocultarCarga(), 150);
+      return;
+    }
+    // Si la página cargó antes de 0,3 s, la pantalla nunca se mostró: se retira sin esperar
+    if (!html.classList.contains("rx-mostrar")) {
+      html.classList.remove("rx-cargando");
+      return;
+    }
+    html.classList.remove("rx-mostrar");
+    setTimeout(() => html.classList.remove("rx-cargando"), 400);
+  },
+
+  SELECTOR_IMAGENES: ".card-img, .my-prop-img, .gallery-main-img, .gallery-thumb-img, .compare-thumb-img, " +
+    ".foto-item img, .map-popup-card img, .admin-galeria img, .admin-celda-inmueble img",
+
+  // La imagen se muestra con un fundido cuando termina de cargar (las que ya están listas no se tocan)
+  prepararImagen: function(img) {
+    if (img.dataset.rxImg) return;
+    img.dataset.rxImg = "1";
+    if (img.complete && img.naturalWidth > 0) return;
+    img.classList.add("rx-img-espera");
+    const mostrar = () => img.classList.remove("rx-img-espera");
+    img.addEventListener("load", mostrar, { once: true });
+    img.addEventListener("error", mostrar, { once: true });
+    // Respaldo: una imagen lenta (o diferida por "loading=lazy") nunca queda oculta indefinidamente
+    setTimeout(mostrar, 5000);
+  },
+
+  SELECTOR_REVELAR: ".info-card, .feature-box, .mapa-detalle, .app-footer .footer-col, " +
+    ".insignias-explicacion > div, .admin-metrica, .compare-actions-row",
+
+  // Los bloques que están más abajo aparecen suavemente al llegar a ellos
+  registrarRevelar: function(raiz) {
+    if (!this._observadorScroll) return;
+    raiz.querySelectorAll(this.SELECTOR_REVELAR).forEach((el) => {
+      if (el.dataset.rxRevelar) return;
+      el.dataset.rxRevelar = "1";
+      // Lo que ya está en pantalla nunca se oculta
+      if (el.getBoundingClientRect().top < window.innerHeight) return;
+      el.classList.add("rx-revelar");
+      this._observadorScroll.observe(el);
+    });
+  },
+
+  iniciar: function() {
+    if (!this.reducirMovimiento && "IntersectionObserver" in window) {
+      this._observadorScroll = new IntersectionObserver((entradas) => {
+        entradas.forEach((entrada) => {
+          if (!entrada.isIntersecting) return;
+          entrada.target.classList.add("rx-visible");
+          this._observadorScroll.unobserve(entrada.target);
+        });
+      }, { rootMargin: "0px 0px -40px 0px", threshold: 0.08 });
+    }
+
+    document.querySelectorAll(this.SELECTOR_IMAGENES).forEach((img) => this.prepararImagen(img));
+    this.registrarRevelar(document);
+
+    // Contenido que las páginas agregan después (tarjetas, galería, tablas)
+    let pendiente = null;
+    new MutationObserver((cambios) => {
+      cambios.forEach((cambio) => cambio.addedNodes.forEach((nodo) => {
+        if (nodo.nodeType !== 1) return;
+        if (nodo.matches(this.SELECTOR_IMAGENES)) this.prepararImagen(nodo);
+        nodo.querySelectorAll(this.SELECTOR_IMAGENES).forEach((img) => this.prepararImagen(img));
+      }));
+      clearTimeout(pendiente);
+      pendiente = setTimeout(() => this.registrarRevelar(document), 50);
+    }).observe(document.body, { childList: true, subtree: true });
+
+    // Pantalla de carga: se retira cuando la página y sus fuentes están listas (máximo 1,2 s)
+    const fuentes = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
+    Promise.race([fuentes, new Promise((r) => setTimeout(r, 1200))]).then(() => this.ocultarCarga());
+  },
+
+  // Tarjetas de relleno mientras llegan los resultados
+  skeletonTarjetas: function(cantidad) {
+    const tarjeta = `
+      <div class="rx-skeleton-card" aria-hidden="true">
+        <div class="rx-skeleton rx-skeleton-img"></div>
+        <div class="rx-skeleton-lineas">
+          <div class="rx-skeleton rx-skeleton-linea ancha"></div>
+          <div class="rx-skeleton rx-skeleton-linea media"></div>
+          <div class="rx-skeleton rx-skeleton-linea corta"></div>
+          <div class="rx-skeleton rx-skeleton-linea media"></div>
+        </div>
+      </div>`;
+    return `<div class="sr-only" role="status">Cargando…</div>${tarjeta.repeat(cantidad)}`;
+  }
+};
+
+document.addEventListener("DOMContentLoaded", () => RoumixUI.iniciar());
+
+// Al volver con "Atrás", la página puede venir de la caché del navegador: sin pantalla de carga
+window.addEventListener("pageshow", (e) => {
+  if (e.persisted) document.documentElement.classList.remove("rx-mostrar", "rx-cargando");
 });
