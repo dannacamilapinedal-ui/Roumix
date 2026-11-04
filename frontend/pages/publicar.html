@@ -58,25 +58,25 @@
 
         <!-- Stepper de 4 pasos (Boceto 3) -->
         <nav class="stepper-nav" aria-label="Pasos de publicación">
-          <div class="step-item active" data-step="1">
+          <button type="button" class="step-item active" data-step="1" data-destino="paso-datos" aria-controls="paso-datos" aria-current="step">
             <span class="step-circle">1</span>
             <span class="step-text">Datos</span>
-          </div>
+          </button>
           <div class="step-connector"></div>
-          <div class="step-item" data-step="2">
+          <button type="button" class="step-item" data-step="2" data-destino="paso-ubicacion" aria-controls="paso-ubicacion">
             <span class="step-circle">2</span>
             <span class="step-text">Ubicación</span>
-          </div>
+          </button>
           <div class="step-connector"></div>
-          <div class="step-item" data-step="3">
+          <button type="button" class="step-item" data-step="3" data-destino="paso-precio" aria-controls="paso-precio">
             <span class="step-circle">3</span>
             <span class="step-text">Precio</span>
-          </div>
+          </button>
           <div class="step-connector"></div>
-          <div class="step-item" data-step="4">
+          <button type="button" class="step-item" data-step="4" data-destino="paso-fotos" aria-controls="paso-fotos">
             <span class="step-circle">4</span>
             <span class="step-text">Fotos</span>
-          </div>
+          </button>
         </nav>
       </header>
 
@@ -84,7 +84,7 @@
         <!-- Columna Izquierda: Formulario -->
         <div class="publish-form-card">
           <form id="form-publicar" novalidate>
-            <h2 class="form-block-title">Datos del inmueble</h2>
+            <h2 class="form-block-title" id="paso-datos">Datos del inmueble</h2>
 
             <!-- Título de la publicación -->
             <div class="form-group">
@@ -149,9 +149,9 @@
               </div>
             </div>
 
-            <!-- Ubicación y Precio -->
-            <div style="border-top: 1px solid var(--borde-suave); padding-top: 22px; margin-top: 22px;">
-              <h2 class="form-block-title" style="font-size: 1.15rem; margin-bottom: 16px;">Ubicación y Precio</h2>
+            <!-- Paso 2: Ubicación -->
+            <div id="paso-ubicacion" class="paso-seccion" style="border-top: 1px solid var(--borde-suave); padding-top: 22px; margin-top: 22px;">
+              <h2 class="form-block-title" style="font-size: 1.15rem; margin-bottom: 16px;">Ubicación</h2>
               
               <div class="form-row-two">
                 <div class="form-group">
@@ -164,21 +164,15 @@
                 </div>
               </div>
 
-              <div class="form-row-two">
-                <div class="form-group">
-                  <label for="pub-precio" class="form-label">CANON MENSUAL ($ COP)</label>
-                  <input type="number" id="pub-precio" class="form-control" min="1" step="10000" placeholder="420000">
-                </div>
-                <div class="form-group">
-                  <label for="pub-transporte" class="form-label">RUTA DE TRANSPORTE</label>
-                  <input type="text" id="pub-transporte" class="form-control" maxlength="150" placeholder="Ej: Ruta bus a 1 cuadra">
-                </div>
+              <div class="form-group">
+                <label for="pub-transporte" class="form-label">RUTA DE TRANSPORTE</label>
+                <input type="text" id="pub-transporte" class="form-control" maxlength="150" placeholder="Ej: Ruta bus a 1 cuadra">
               </div>
             </div>
 
-            <!-- Ubicación en el mapa -->
-            <div style="border-top: 1px solid var(--borde-suave); padding-top: 22px; margin-top: 22px;">
-              <h2 class="form-block-title" style="font-size: 1.15rem; margin-bottom: 6px;">Ubicación en el mapa</h2>
+            <!-- Paso 2 (continuación): ubicación en el mapa -->
+            <div style="margin-top: 18px;">
+              <h3 class="form-label" style="margin-bottom: 6px;">UBICACIÓN EN EL MAPA</h3>
               <p class="fotos-ayuda">
                 Busca la dirección o el sector y luego haz clic en el mapa o arrastra el marcador hasta el inmueble.
                 Los estudiantes verán solo una <strong>zona aproximada</strong> (el círculo punteado), no la dirección exacta.
@@ -193,27 +187,33 @@
               <p id="ubicacion-estado" class="ubicacion-estado" aria-live="polite">Aún no has marcado la ubicación.</p>
             </div>
 
-            <!-- Condiciones del arriendo -->
-            <div style="border-top: 1px solid var(--borde-suave); padding-top: 22px; margin-top: 22px;">
-              <h2 class="form-block-title" style="font-size: 1.15rem; margin-bottom: 16px;">Condiciones</h2>
+            <!-- Paso 3: Precio y condiciones -->
+            <div id="paso-precio" class="paso-seccion" style="border-top: 1px solid var(--borde-suave); padding-top: 22px; margin-top: 22px;">
+              <h2 class="form-block-title" style="font-size: 1.15rem; margin-bottom: 16px;">Precio y condiciones</h2>
               <div class="form-row-two">
                 <div class="form-group">
-                  <label for="pub-area" class="form-label">ÁREA</label>
-                  <input type="text" id="pub-area" class="form-control" maxlength="30" placeholder="Ej: 14 m²">
+                  <label for="pub-precio" class="form-label">CANON MENSUAL ($ COP)</label>
+                  <input type="number" id="pub-precio" class="form-control" min="1" step="10000" placeholder="420000">
                 </div>
                 <div class="form-group">
                   <label for="pub-deposito" class="form-label">DEPÓSITO</label>
                   <input type="text" id="pub-deposito" class="form-control" maxlength="100" placeholder="Ej: Un mes de arriendo">
                 </div>
               </div>
-              <div class="form-group">
-                <label for="pub-contrato" class="form-label">CONTRATO MÍNIMO</label>
-                <input type="text" id="pub-contrato" class="form-control" maxlength="50" placeholder="Ej: 6 meses">
+              <div class="form-row-two">
+                <div class="form-group">
+                  <label for="pub-area" class="form-label">ÁREA</label>
+                  <input type="text" id="pub-area" class="form-control" maxlength="30" placeholder="Ej: 14 m²">
+                </div>
+                <div class="form-group">
+                  <label for="pub-contrato" class="form-label">CONTRATO MÍNIMO</label>
+                  <input type="text" id="pub-contrato" class="form-control" maxlength="50" placeholder="Ej: 6 meses">
+                </div>
               </div>
             </div>
 
-            <!-- Fotos -->
-            <div style="border-top: 1px solid var(--borde-suave); padding-top: 22px; margin-top: 22px;">
+            <!-- Paso 4: Fotos -->
+            <div id="paso-fotos" class="paso-seccion" style="border-top: 1px solid var(--borde-suave); padding-top: 22px; margin-top: 22px;">
               <h2 class="form-block-title" style="font-size: 1.15rem; margin-bottom: 6px;">Fotos</h2>
               <p class="fotos-ayuda" id="fotos-ayuda">JPG, PNG o WebP · máximo 5 MB cada una · hasta 10 fotos. La primera será la portada.</p>
               <label for="pub-fotos" class="fotos-selector">
@@ -359,6 +359,62 @@
 
       // Fotos del formulario, en orden: { tipo: "existente", url } o { tipo: "nueva", archivo, url }
       let fotos = [];
+
+      // ---------- Pasos: clic lleva a la sección; el paso activo sigue al scroll ----------
+      const pasos = [...document.querySelectorAll(".stepper-nav .step-item")];
+      const secciones = pasos.map(p => document.getElementById(p.dataset.destino));
+      const reducirMovimiento = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      function marcarPaso(numero) {
+        pasos.forEach(p => {
+          const n = Number(p.dataset.step);
+          p.classList.toggle("active", n === numero);
+          p.classList.toggle("completado", n < numero);
+          if (n === numero) p.setAttribute("aria-current", "step");
+          else p.removeAttribute("aria-current");
+        });
+      }
+
+      let desplazandoHasta = null;
+      pasos.forEach(paso => {
+        paso.addEventListener("click", () => {
+          const numero = Number(paso.dataset.step);
+          const seccion = document.getElementById(paso.dataset.destino);
+          desplazandoHasta = numero;
+          marcarPaso(numero);
+          seccion.scrollIntoView({ behavior: reducirMovimiento ? "auto" : "smooth", block: "start" });
+          // El foco pasa al primer campo de la sección (útil con teclado y lectores de pantalla)
+          const campo = (seccion.closest(".paso-seccion") || seccion.parentElement).querySelector("input, select, textarea");
+          if (campo) setTimeout(() => campo.focus({ preventScroll: true }), reducirMovimiento ? 0 : 450);
+          // El paso elegido se mantiene hasta que termina el desplazamiento
+          const liberar = () => { desplazandoHasta = null; };
+          if ("onscrollend" in window) window.addEventListener("scrollend", liberar, { once: true });
+          setTimeout(liberar, 1500);
+        });
+      });
+
+      if ("IntersectionObserver" in window) {
+        const visibles = new Map();
+        const observador = new IntersectionObserver((entradas) => {
+          entradas.forEach(e => visibles.set(e.target, e.isIntersecting));
+          if (desplazandoHasta) return; // durante un clic manda el paso elegido
+          // El paso activo es la última sección que ya entró en la parte superior de la pantalla
+          let activo = 1;
+          secciones.forEach((seccion, i) => {
+            if (seccion.getBoundingClientRect().top < window.innerHeight * 0.4) activo = i + 1;
+          });
+          marcarPaso(activo);
+        }, { threshold: [0, 0.25, 0.5, 1] });
+        secciones.forEach(seccion => observador.observe(seccion));
+        window.addEventListener("scroll", () => {
+          if (desplazandoHasta) return;
+          let activo = 1;
+          secciones.forEach((seccion, i) => {
+            if (seccion.getBoundingClientRect().top < window.innerHeight * 0.4) activo = i + 1;
+          });
+          marcarPaso(activo);
+        }, { passive: true });
+      }
 
       // Modo edición: publicar.html?editar=<id>
       const idEditar = new URLSearchParams(window.location.search).get("editar");

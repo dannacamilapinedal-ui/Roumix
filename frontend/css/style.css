@@ -4223,3 +4223,49 @@ img.rx-img-espera {
     display: none;
   }
 }
+
+/* ==========================================================================
+   PASOS DE PUBLICACIÓN CLICABLES (publicar.html)
+   ========================================================================== */
+button.step-item {
+  background: none;
+  border: none;
+  padding: 4px 6px;
+  margin: -4px -6px;
+  border-radius: var(--radio-pill);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--tinta-tenue);
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+button.step-item:hover,
+button.step-item:focus-visible {
+  background: rgba(20, 34, 25, 0.06);
+  color: var(--verde-950);
+}
+
+.step-circle {
+  transition: background-color 0.3s ease, color 0.3s ease, transform 0.3s ease;
+}
+
+button.step-item:hover .step-circle {
+  transform: scale(1.08);
+}
+
+.step-item.completado .step-circle {
+  background: var(--verde-pastilla);
+  color: var(--verde-badge-text);
+}
+
+.step-item.completado .step-text {
+  color: var(--verde-800);
+}
+
+/* Al saltar a una sección, el título no queda oculto bajo la barra superior */
+#paso-datos,
+.paso-seccion {
+  scroll-margin-top: 96px;
+}

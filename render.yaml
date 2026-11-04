@@ -27,13 +27,9 @@ services:
         sync: false
       - key: TURNSTILE_SECRET_KEY
         sync: false
-      - key: SMTP_HOST
-        value: smtp.gmail.com
-      - key: SMTP_PORT
-        value: "465"
-      - key: SMTP_USER
+      - key: CORREO_RELAY_URL
         sync: false
-      - key: SMTP_PASS
+      - key: CORREO_RELAY_SECRETO
         sync: false
       - key: CORREO_ADMIN
         sync: false

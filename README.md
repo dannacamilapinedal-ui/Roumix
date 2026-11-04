@@ -210,6 +210,11 @@ Diferencias con un servidor tradicional, ya resueltas en el código:
   directo a lo que debe hacer (p. ej. corregir la publicación).
 - Ningún correo incluye la identidad de quien reportó. Si el envío falla, el reporte o la decisión se guardan igual.
 
+**Cómo se envían:** el plan gratuito de Render bloquea los puertos SMTP, así que en Render se usa un
+Google Apps Script en la cuenta roumix04@gmail.com (llamado por HTTPS con `CORREO_RELAY_URL` y
+`CORREO_RELAY_SECRETO`). El código del script y las instrucciones están en `docs/correo-apps-script.gs`.
+En local o en un hosting que permita SMTP también se puede usar `SMTP_HOST`, `SMTP_USER` y `SMTP_PASS`.
+
 ## ☁️ Despliegue (Render)
 
 Roumix se despliega como un solo servicio web en [Render](https://render.com) usando `render.yaml`:

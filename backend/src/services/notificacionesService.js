@@ -18,10 +18,46 @@ const SMTP = {
 };
 const REMITENTE = limpiar(process.env.CORREO_REMITENTE) || (SMTP.user ? `Roumix <${SMTP.user}>` : '');
 const CORREO_ADMIN = limpiar(process.env.CORREO_ADMIN);
-const correoActivo = Boolean(SMTP.host && SMTP.user && SMTP.pass);
 
-if (!correoActivo) {
-  console.warn('⚠️  Correos desactivados: defina SMTP_HOST, SMTP_USER y SMTP_PASS para enviar notificaciones.');
+// Opción recomendada en Render gratis (que bloquea los puertos SMTP): un Google Apps Script
+// en la cuenta de Gmail de Roumix que envía los correos y se llama por HTTPS.
+// Ver docs/correo-apps-script.gs
+const RELAY = {
+  url: limpiar(process.env.CORREO_RELAY_URL),
+  secreto: limpiar(process.env.CORREO_RELAY_SECRETO)
+};
+const relayActivo = Boolean(RELAY.url && RELAY.secreto);
+const smtpActivo = Boolean(SMTP.host && SMTP.user && SMTP.pass);
+const correoActivo = relayActivo || smtpActivo;
+
+if (relayActivo) {
+  console.log('✉️  Correos: Google Apps Script (HTTPS).');
+} else if (smtpActivo) {
+  console.log(`✉️  Correos: SMTP ${SMTP.host}:${SMTP.port}.`);
+} else {
+  console.warn('⚠️  Correos desactivados: defina CORREO_RELAY_URL y CORREO_RELAY_SECRETO (o SMTP_HOST, SMTP_USER y SMTP_PASS).');
+}
+
+/**
+ * Envío por el Apps Script: POST con JSON. Google responde con una redirección que fetch sigue
+ * automáticamente hasta la respuesta del script ({ ok: true } o { ok: false, error }).
+ */
+async function enviarPorRelay({ para, asunto: tituloCorreo, html, texto }) {
+  const respuesta = await fetch(RELAY.url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ secreto: RELAY.secreto, para, asunto: tituloCorreo, html, texto }),
+    redirect: 'follow',
+    signal: AbortSignal.timeout(15000)
+  });
+  const cuerpo = await respuesta.text();
+  let json = null;
+  try {
+    json = JSON.parse(cuerpo);
+  } catch (e) {
+    throw new Error(`el Apps Script no devolvió JSON (HTTP ${respuesta.status}); revisa que esté implementado como aplicación web con acceso "Cualquier usuario"`);
+  }
+  if (!json.ok) throw new Error(`el Apps Script rechazó el envío: ${json.error || 'sin detalle'}`);
 }
 
 let transporte = null;
@@ -100,6 +136,15 @@ async function enviar({ para, asunto: tituloCorreo, contenido }) {
   const destinatarios = [...new Set([].concat(para).filter(Boolean))];
   if ((!correoActivo && !transporteDePrueba) || destinatarios.length === 0) return false;
   try {
+    if (relayActivo && !transporteDePrueba) {
+      await enviarPorRelay({
+        para: destinatarios.join(','),
+        asunto: asunto(tituloCorreo),
+        html: plantilla(contenido),
+        texto: textoPlano(contenido)
+      });
+      return true;
+    }
     await obtenerTransporte().sendMail({
       from: REMITENTE,
       to: destinatarios.join(', '),
