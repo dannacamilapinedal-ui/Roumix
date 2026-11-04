@@ -1,5 +1,6 @@
 const db = require('../config/db');
 const { crearClienteSupabase, SUPABASE_URL, SUPABASE_ANON_KEY } = require('../config/supabase');
+const { validarCorreoParaRegistro } = require('../services/correoService');
 
 const ROLES = ['estudiante', 'propietario'];
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -76,6 +77,9 @@ async function registro(req, res) {
     throw errorHttp(400, 'Como propietario necesitas un celular para que los estudiantes te contacten por WhatsApp.');
   }
 
+  // Descarta correos que con seguridad no existen (dominio inexistente, temporales, errores de escritura)
+  await validarCorreoParaRegistro(email);
+
   const { data, error } = await crearClienteSupabase().auth.signUp({
     email,
     password,
@@ -102,7 +106,7 @@ async function registro(req, res) {
     return res.status(201).json({
       status: 'success',
       requiereConfirmacion: true,
-      message: 'Cuenta creada. Revisa tu correo y abre el enlace de confirmación antes de iniciar sesión.'
+      message: 'Cuenta creada. Revisa tu correo (también la carpeta de spam) y abre el enlace de confirmación en las próximas 24 horas; si no lo haces, el registro se cancela y tendrás que registrarte de nuevo.'
     });
   }
 

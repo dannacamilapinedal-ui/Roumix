@@ -3,11 +3,12 @@ const router = express.Router();
 const authController = require('../controllers/authController');
 const { requireAuth, requireAuthConfigurada } = require('../middleware/auth');
 const requireCaptcha = require('../middleware/captcha');
+const limiteRegistro = require('../middleware/limiteRegistro');
 
 router.use(requireAuthConfigurada);
 
 // POST /api/auth/registro - Crear cuenta (estudiante o propietario)
-router.post('/registro', requireCaptcha, authController.registro);
+router.post('/registro', limiteRegistro, requireCaptcha, authController.registro);
 
 // POST /api/auth/login - Iniciar sesión con correo y contraseña
 router.post('/login', requireCaptcha, authController.login);

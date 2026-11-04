@@ -95,6 +95,7 @@ su carpeta. Más adelante la galería puede normalizarse en una tabla `imagenes_
 | Archivo | Cambios |
 |---------|---------|
 | `001_esquema_inicial.sql` | Tablas `usuarios` e `inmuebles` e índices iniciales |
+| `005_perfil_al_confirmar_correo.sql` | El perfil en `usuarios` se crea al confirmar el correo (trigger `on_auth_user_confirmed`), no al registrarse; se eliminan perfiles de cuentas sin confirmar |
 | `004_moderacion_reportes_admin.sql` | Rol `admin`, `usuarios.estado` (suspensión) y `acepto_politica_en`; `inmuebles.moderacion`, `moderacion_mensaje`, `revisado_en/por`, `revision_alcance`; tablas `reportes` y `moderacion_historial` con RLS |
 | `003_politicas_storage_fotos.sql` | Función `es_propietario()` y políticas de Storage por carpeta del propietario |
 | `002_perfiles_auth_y_restricciones.sql` | `usuarios.id → auth.users`, propietario real con `ON DELETE CASCADE`, se eliminan `propietario_nombre/telefono`, `updated_at`, trigger de perfil automático, RLS y bucket `inmuebles` |

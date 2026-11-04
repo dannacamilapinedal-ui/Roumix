@@ -95,7 +95,10 @@ CREATE INDEX idx_inmuebles_propietario ON inmuebles(propietario_id);
 
 -- 4. TRIGGERS
 --   trg_usuarios_updated_at / trg_inmuebles_updated_at -> actualizar_updated_at()
---   on_auth_user_created (auth.users) -> crear_perfil_usuario()
+--   on_auth_user_created (auth.users, solo si ya viene confirmada) -> crear_perfil_usuario()
+--   on_auth_user_confirmed (auth.users, al confirmar el correo)   -> crear_perfil_usuario()
+--   Ver migraciones 002 y 005. Las cuentas sin confirmar en 24 h las elimina el backend
+--   (src/services/limpiezaService.js).
 --   Ver database/migrations/002_perfiles_auth_y_restricciones.sql
 
 -- 5. SEGURIDAD

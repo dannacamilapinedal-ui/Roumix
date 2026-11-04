@@ -163,6 +163,9 @@ cuando se despliegue la plataforma.
   propietario había pausado.
 - **Reportar inicia una revisión, no es una condena.** Pausa preventiva con el primer reporte, salvo que la
   publicación haya sido revisada y aprobada en los últimos 30 días (entonces se necesitan 2 personas).
+- **Registro solo con correos reales:** se rechazan dominios inexistentes o sin servidor de correo, correos
+  temporales y errores de escritura frecuentes (p. ej. gmial.com). El perfil de Roumix se crea solo al confirmar
+  el correo, las cuentas sin confirmar se eliminan a las 24 horas y hay un máximo de 5 registros por hora por conexión.
 - **Anti-abuso:** sesión obligatoria, un reporte por persona y publicación, máximo 5 por día, nadie reporta lo propio.
 - **Auditoría:** cada pausa, decisión y suspensión queda en `moderacion_historial` con responsable y justificación.
 - **Insignias reales:** "Correo confirmado" (Supabase Auth) y "Revisada por Roumix" (aprobación registrada con

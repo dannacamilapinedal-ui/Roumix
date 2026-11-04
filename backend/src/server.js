@@ -2,6 +2,7 @@ require('dotenv').config({ quiet: true });
 const app = require('./app');
 const db = require('./config/db');
 const { supabase } = require('./config/supabase');
+const { iniciarLimpiezaPeriodica } = require('./services/limpiezaService');
 
 const PORT = process.env.PORT || 3000;
 
@@ -24,4 +25,7 @@ app.listen(PORT, async () => {
     console.warn('⚠️  Autenticación pendiente: defina SUPABASE_URL y SUPABASE_ANON_KEY en backend/.env');
   }
   console.log(`====================================================`);
+
+  // Elimina cada hora las cuentas que no confirmaron el correo en 24 h
+  iniciarLimpiezaPeriodica();
 });
