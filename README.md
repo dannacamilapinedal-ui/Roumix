@@ -185,26 +185,26 @@ Platform, que exige clave restringida por dominio y facturación).
 
 ## ☁️ Despliegue en Vercel (recomendado)
 
-Vercel entrega las páginas desde su red () y ejecuta toda la API como una sola función
-(, que reutiliza ). La configuración está en .
+Vercel entrega las páginas desde su red (`frontend/`) y ejecuta toda la API como una sola función
+(`api/index.js`, que reutiliza `backend/src/app.js`). La configuración está en `vercel.json`.
 
 1. En [vercel.com](https://vercel.com) → **Add New → Project**, importa este repositorio de GitHub.
-   Deja **Framework Preset: Other** y la carpeta raíz del repositorio (Vercel lee ).
-2. En **Environment Variables** agrega: , , ,
-   , , , , , ,
-   ,  y  (la dirección ).
-3. Agrega la dirección de Vercel en Supabase (**Site URL** y **Redirect URLs** con ) y en Cloudflare
+   Deja **Framework Preset: Other** y la carpeta raíz del repositorio (Vercel lee `vercel.json`).
+2. En **Environment Variables** agrega: `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`,
+   `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`,
+   `CORREO_ADMIN`, `CRON_SECRET` y `APP_URL` (la dirección `https://<proyecto>.vercel.app`).
+3. Agrega la dirección de Vercel en Supabase (**Site URL** y **Redirect URLs** con `/**`) y en Cloudflare
    Turnstile (**Hostnames**).
 
 Diferencias con un servidor tradicional, ya resueltas en el código:
-- **Límite de 4,5 MB por petición:** el navegador reduce las fotos antes de subirlas ( en ).
+- **Límite de 4,5 MB por petición:** el navegador reduce las fotos antes de subirlas (`RoumixFotos` en `api.js`).
 - **Sin procesos permanentes:** la limpieza de cuentas sin confirmar corre una vez al día con un Cron Job
-  (, protegido con ).
+  (`/api/tareas/limpieza`, protegido con `CRON_SECRET`).
 - Sin pantalla de "waking up": las funciones arrancan en alrededor de un segundo.
 
 ## 📧 Correos de notificación
 
-- **Reporte nuevo →** correo a todas las cuentas  (y a ) con el motivo y un enlace al panel.
+- **Reporte nuevo →** correo a todas las cuentas `admin` (y a `CORREO_ADMIN`) con el motivo y un enlace al panel.
 - **Publicación ocultada de forma preventiva →** correo al propietario avisando que está en revisión.
 - **Decisión de la administración →** correo al propietario con la decisión, el mensaje de Roumix y un enlace
   directo a lo que debe hacer (p. ej. corregir la publicación).
