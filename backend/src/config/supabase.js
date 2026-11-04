@@ -1,5 +1,5 @@
 const { createClient } = require('@supabase/supabase-js');
-require('dotenv').config({ quiet: true });
+require('dotenv').config({ quiet: true, path: require('path').join(__dirname, '..', '..', '.env') });
 
 /**
  * Limpia un valor copiado en el panel del hosting: espacios, comillas y el

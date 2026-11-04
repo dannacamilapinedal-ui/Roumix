@@ -6,7 +6,7 @@
  * con Cloudflare usando la clave secreta (que nunca llega al navegador).
  * Si las claves no están configuradas, el CAPTCHA queda desactivado y se avisa en el registro.
  */
-require('dotenv').config({ quiet: true });
+require('dotenv').config({ quiet: true, path: require('path').join(__dirname, '..', '..', '.env') });
 
 const URL_VERIFICACION = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 

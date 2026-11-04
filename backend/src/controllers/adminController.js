@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const notificaciones = require('../services/notificacionesService');
 
 // Todas las rutas de este controlador pasan por requireAuth + requireRol('admin')
 
@@ -237,9 +238,16 @@ async function moderarInmueble(req, res) {
     );
 
     await client.query('COMMIT');
+
+    // Aviso por correo al propietario con la decisión y lo que debe hacer (sin datos del reportante)
+    const avisado = await notificaciones.notificarDecisionPropietario({
+      inmueble, decision: body.decision, mensaje, urlBase: notificaciones.urlBase(req)
+    });
+
     res.json({
       status: 'success',
-      message: `Decisión registrada: ${body.decision}. Reportes resueltos: ${reportesResueltos}.`,
+      correoEnviado: avisado,
+      message: `Decisión registrada: ${body.decision}. Reportes resueltos: ${reportesResueltos}.${avisado ? ' Se avisó al propietario por correo.' : ''}`,
       data: { id, moderacion: config.moderacion }
     });
   } catch (error) {

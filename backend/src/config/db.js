@@ -1,5 +1,5 @@
 const { Pool } = require('pg');
-require('dotenv').config({ quiet: true });
+require('dotenv').config({ quiet: true, path: require('path').join(__dirname, '..', '..', '.env') });
 
 // Se limpian espacios, comillas y el prefijo "DATABASE_URL=" que a veces se pega en el hosting
 let connectionString = String(process.env.DATABASE_URL || '').trim();
@@ -22,7 +22,8 @@ const pool = new Pool({
   ssl: connectionString.includes('supabase.co') || connectionString.includes('supabase.com')
     ? { rejectUnauthorized: false }
     : false,
-  max: 10,
+  // En Vercel cada instancia de la función abre pocas conexiones (el pooler de Supabase las reparte)
+  max: process.env.VERCEL ? 3 : 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000
 });

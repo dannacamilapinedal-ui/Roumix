@@ -10,6 +10,7 @@ const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const mapaRoutes = require('./routes/mapaRoutes');
 const configRoutes = require('./routes/configRoutes');
+const tareasRoutes = require('./routes/tareasRoutes');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -38,6 +39,7 @@ app.use('/api/inmuebles', inmueblesRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/mapa', mapaRoutes);
 app.use('/api/config', configRoutes);
+app.use('/api/tareas', tareasRoutes);
 
 // Rutas de API inexistentes (404)
 app.use('/api', (req, res) => {

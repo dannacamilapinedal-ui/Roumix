@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const notificaciones = require('../services/notificacionesService');
 
 const MOTIVOS = ['fraude', 'informacion_falsa', 'fotos_no_corresponden', 'precio_enganoso', 'contenido_inapropiado', 'otro'];
 const MAX_REPORTES_POR_DIA = 5;
@@ -45,6 +46,7 @@ async function crearReporte(req, res) {
 
   const client = await db.pool.connect();
   let pausada = false;
+  let inmueble = null;
   try {
     await client.query('BEGIN');
 
@@ -58,7 +60,7 @@ async function crearReporte(req, res) {
       [inmuebleId]
     );
     if (rows.length === 0) throw errorHttp(404, 'Esta publicación no existe o ya está en revisión.');
-    const inmueble = rows[0];
+    inmueble = rows[0];
 
     if (inmueble.propietario_id === req.usuario.id) {
       throw errorHttp(403, 'No puedes reportar tu propia publicación.');
@@ -100,6 +102,14 @@ async function crearReporte(req, res) {
   } finally {
     client.release();
   }
+
+  // Avisos por correo (antes de responder: en Vercel la función se detiene al enviar la respuesta).
+  // Un fallo de correo no afecta al reporte, que ya quedó guardado.
+  const urlBase = notificaciones.urlBase(req);
+  await Promise.all([
+    notificaciones.notificarReporteAdministracion({ inmueble, motivo, descripcion, pausada, urlBase }),
+    pausada ? notificaciones.notificarPausaPropietario({ inmueble, urlBase }) : null
+  ]);
 
   // No se revela al reportante si la publicación fue ocultada ni datos de otros reportes
   res.status(201).json({

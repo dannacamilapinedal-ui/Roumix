@@ -183,6 +183,33 @@ través del backend (máximo 1 petición por segundo y caché, según su políti
 facturación. Para un sitio con mucho tráfico conviene contratar un proveedor de teselas (o Google Maps
 Platform, que exige clave restringida por dominio y facturación).
 
+## ☁️ Despliegue en Vercel (recomendado)
+
+Vercel entrega las páginas desde su red () y ejecuta toda la API como una sola función
+(, que reutiliza ). La configuración está en .
+
+1. En [vercel.com](https://vercel.com) → **Add New → Project**, importa este repositorio de GitHub.
+   Deja **Framework Preset: Other** y la carpeta raíz del repositorio (Vercel lee ).
+2. En **Environment Variables** agrega: , , ,
+   , , , , , ,
+   ,  y  (la dirección ).
+3. Agrega la dirección de Vercel en Supabase (**Site URL** y **Redirect URLs** con ) y en Cloudflare
+   Turnstile (**Hostnames**).
+
+Diferencias con un servidor tradicional, ya resueltas en el código:
+- **Límite de 4,5 MB por petición:** el navegador reduce las fotos antes de subirlas ( en ).
+- **Sin procesos permanentes:** la limpieza de cuentas sin confirmar corre una vez al día con un Cron Job
+  (, protegido con ).
+- Sin pantalla de "waking up": las funciones arrancan en alrededor de un segundo.
+
+## 📧 Correos de notificación
+
+- **Reporte nuevo →** correo a todas las cuentas  (y a ) con el motivo y un enlace al panel.
+- **Publicación ocultada de forma preventiva →** correo al propietario avisando que está en revisión.
+- **Decisión de la administración →** correo al propietario con la decisión, el mensaje de Roumix y un enlace
+  directo a lo que debe hacer (p. ej. corregir la publicación).
+- Ningún correo incluye la identidad de quien reportó. Si el envío falla, el reporte o la decisión se guardan igual.
+
 ## ☁️ Despliegue (Render)
 
 Roumix se despliega como un solo servicio web en [Render](https://render.com) usando `render.yaml`:

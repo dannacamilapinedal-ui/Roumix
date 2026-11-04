@@ -50,7 +50,10 @@ const RoumixAPI = {
 
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const err = new Error(json.message || `Error en el servidor (${res.status})`);
+      const porDefecto = res.status === 413
+        ? 'El envío es demasiado pesado. Sube menos fotos a la vez (puedes agregar más después con "Editar").'
+        : `Error en el servidor (${res.status})`;
+      const err = new Error(json.message || porDefecto);
       err.status = res.status;
       throw err;
     }
@@ -185,10 +188,13 @@ const RoumixAPI = {
   /**
    * Arma el multipart con los datos (JSON) y las fotos nuevas
    */
-  _formularioInmueble: function(datos, fotos) {
+  _formularioInmueble: async function(datos, fotos) {
     const form = new FormData();
     form.append('datos', JSON.stringify(datos));
-    (fotos || []).forEach((foto) => form.append('fotos', foto));
+    // Las fotos se reducen en el navegador antes de enviarlas (subida más rápida y dentro
+    // del límite de 4,5 MB por petición del hosting)
+    const comprimidas = await RoumixFotos.comprimirTodas(fotos || []);
+    comprimidas.forEach((foto) => form.append('fotos', foto, foto.name));
     return form;
   },
 
@@ -197,7 +203,7 @@ const RoumixAPI = {
    * a partir de la sesión; las fotos se suben a Supabase Storage.
    */
   crearInmueble: async function(datos, fotos) {
-    const json = await this._request('/inmuebles', { method: 'POST', body: this._formularioInmueble(datos, fotos) });
+    const json = await this._request('/inmuebles', { method: 'POST', body: await this._formularioInmueble(datos, fotos) });
     return this._normalizarInmueble(json.data);
   },
 
@@ -207,7 +213,7 @@ const RoumixAPI = {
   actualizarInmueble: async function(id, datos, fotosNuevas) {
     const json = await this._request(`/inmuebles/${encodeURIComponent(id)}`, {
       method: 'PUT',
-      body: this._formularioInmueble(datos, fotosNuevas)
+      body: await this._formularioInmueble(datos, fotosNuevas)
     });
     return this._normalizarInmueble(json.data);
   },
@@ -289,5 +295,55 @@ const RoumixAPI = {
         telefono: item.propietario_telefono || null
       }
     };
+  }
+};
+
+/**
+ * ============================================================================
+ * Reducción de fotos en el navegador antes de subirlas.
+ * Las fotos de celular suelen pesar 3-6 MB; para una publicación basta con 1600 px
+ * de lado mayor. Se convierten a JPEG manteniendo buena calidad, y si el conjunto
+ * supera el límite de una petición se reduce un poco más.
+ * ============================================================================
+ */
+const RoumixFotos = {
+  LADO_MAXIMO: 1600,
+  LIMITE_TOTAL: 4 * 1024 * 1024, // margen bajo el límite de 4,5 MB por petición
+
+  comprimir: async function(archivo, ladoMaximo, calidad) {
+    if (typeof createImageBitmap !== "function") return archivo;
+    let imagen;
+    try {
+      // "from-image" respeta la orientación de las fotos tomadas con el celular
+      imagen = await createImageBitmap(archivo, { imageOrientation: "from-image" });
+    } catch (error) {
+      return archivo; // si el navegador no puede leerla, se envía tal cual y el servidor la valida
+    }
+    const escala = Math.min(1, ladoMaximo / Math.max(imagen.width, imagen.height));
+    const lienzo = document.createElement("canvas");
+    lienzo.width = Math.round(imagen.width * escala);
+    lienzo.height = Math.round(imagen.height * escala);
+    const ctx = lienzo.getContext("2d");
+    ctx.fillStyle = "#ffffff"; // fondo blanco para PNG con transparencia
+    ctx.fillRect(0, 0, lienzo.width, lienzo.height);
+    ctx.drawImage(imagen, 0, 0, lienzo.width, lienzo.height);
+    if (imagen.close) imagen.close();
+
+    const blob = await new Promise((resolver) => lienzo.toBlob(resolver, "image/jpeg", calidad));
+    if (!blob || (blob.size >= archivo.size && escala === 1 && archivo.type === "image/jpeg")) return archivo;
+    const nombre = archivo.name.replace(/\.[^.]+$/, "") + ".jpg";
+    return new File([blob], nombre, { type: "image/jpeg" });
+  },
+
+  comprimirTodas: async function(archivos) {
+    if (!archivos.length) return [];
+    const intentos = [[this.LADO_MAXIMO, 0.82], [1280, 0.75], [1024, 0.7]];
+    let resultado = archivos;
+    for (const [lado, calidad] of intentos) {
+      resultado = await Promise.all(archivos.map((a) => this.comprimir(a, lado, calidad)));
+      const total = resultado.reduce((suma, f) => suma + f.size, 0);
+      if (total <= this.LIMITE_TOTAL) return resultado;
+    }
+    return resultado; // si aún es grande, el servidor responderá con un mensaje claro
   }
 };
