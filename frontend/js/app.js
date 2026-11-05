@@ -171,43 +171,131 @@ function abrirModalContacto(id) {
   const modal = document.getElementById("modal-contacto");
   if (!modal) return;
 
-  const propNombre = document.getElementById("modal-prop-nombre");
-  const propDueno = document.getElementById("modal-prop-dueno");
-  const textMensaje = document.getElementById("modal-mensaje-wa");
-  const btnWhatsApp = document.getElementById("modal-btn-whatsapp");
+  const cuerpo = modal.querySelector(".modal-body");
+  if (!cuerpo) return;
 
-  if (propNombre) propNombre.textContent = `${inmueble.titulo} — ${inmueble.precioFormato || ('$' + inmueble.precio)}/mes`;
-  const nombrePropietario = inmueble.propietario.nombre;
-  const telefonoPropietario = inmueble.propietario.telefono;
-  if (propDueno) propDueno.textContent = `${nombrePropietario} (publicado por un usuario de Roumix)`;
+  const propietario = inmueble.propietario || {};
+  const telefono = String(propietario.telefono || "").replace(/\D/g, "");
+  const primerNombre = String(propietario.nombre || "").trim().split(/\s+/)[0];
+  const saludo = primerNombre && primerNombre !== "Usuario" ? `Hola ${primerNombre}` : "Hola";
+  const precio = inmueble.precioFormato || formatearPrecioCOP(inmueble.precio);
+  // Los asteriscos marcan negrita en WhatsApp: se quitan del título para no romper el formato
+  const titulo = String(inmueble.titulo || "").replace(/\*/g, "");
+  const usuario = RoumixStorage.getUsuario();
+  const firma = usuario && usuario.nombre ? `\n\nSoy ${String(usuario.nombre).trim().split(/\s+/)[0]}, estudiante. ¡Gracias!` : "\n\n¡Gracias!";
+  const referencia = `Vi tu publicación en Roumix:\n*${titulo}*\n${inmueble.barrio} · ${precio}/mes`;
 
-  const mensajePredeterminado = `Hola ${nombrePropietario}, vi en Roumix tu publicación de "${inmueble.titulo}" en ${inmueble.barrio} por ${inmueble.precioFormato || ('$' + inmueble.precio)}. Soy estudiante universitario y me gustaría consultar disponibilidad y coordinar una visita. ¡Muchas gracias!`;
+  const plantillas = {
+    disponibilidad: { etiqueta: "¿Está disponible?", texto: `${saludo} 👋\n\n${referencia}\n\n¿Todavía está disponible?${firma}` },
+    visita: { etiqueta: "Agendar visita", texto: `${saludo} 👋\n\n${referencia}\n\nMe gustaría conocerlo. ¿Qué día y hora te queda bien para una visita?${firma}` },
+    detalles: { etiqueta: "Qué incluye", texto: `${saludo} 👋\n\n${referencia}\n\n¿Me cuentas qué incluye el arriendo (servicios, internet) y cuál es el depósito?${firma}` }
+  };
 
-  if (textMensaje) textMensaje.value = mensajePredeterminado;
+  const imagen = inmueble.imagen || (inmueble.galeria && inmueble.galeria[0]) || "";
+  const iniciales = propietario.iniciales || "R";
 
-  if (btnWhatsApp) {
-    // Sin teléfono registrado no se inventa uno: se desactiva el botón
-    if (telefonoPropietario) {
-      btnWhatsApp.href = `https://wa.me/${telefonoPropietario}?text=${encodeURIComponent(mensajePredeterminado)}`;
-      btnWhatsApp.removeAttribute("aria-disabled");
-      btnWhatsApp.style.pointerEvents = "";
-      btnWhatsApp.style.opacity = "";
-    } else {
-      btnWhatsApp.removeAttribute("href");
-      btnWhatsApp.setAttribute("aria-disabled", "true");
-      btnWhatsApp.style.pointerEvents = "none";
-      btnWhatsApp.style.opacity = "0.5";
-      if (textMensaje) textMensaje.value = "Este inmueble aún no tiene un teléfono de contacto registrado.";
-    }
+  cuerpo.innerHTML = `
+    <div class="contacto-cabecera">
+      <span class="contacto-sello">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.8.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.5-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6l.4-.5c.2-.2.2-.3.3-.5.1-.2.1-.4 0-.5l-.9-2.2c-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.4s1 2.8 1.2 3c.1.2 2 3.1 4.9 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 1.9-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3zM12 21.8c-1.8 0-3.5-.5-5-1.4l-.4-.2-3.7 1 1-3.6-.2-.4C2.7 15.6 2.2 13.8 2.2 12 2.2 6.6 6.6 2.2 12 2.2S21.8 6.6 21.8 12 17.4 21.8 12 21.8zM12 .2C5.5.2.2 5.5.2 12c0 2.1.5 4.1 1.6 5.9L.1 24l6.3-1.6c1.7.9 3.7 1.4 5.6 1.4 6.5 0 11.8-5.3 11.8-11.8S18.5.2 12 .2z"/></svg>
+        Contacto directo por WhatsApp
+      </span>
+      <h3 id="modal-contact-title" class="modal-title">Escríbele al arrendador</h3>
+    </div>
+
+    <div class="contacto-inmueble">
+      ${imagen ? `<img src="${escaparHTML(imagen)}" alt="" class="contacto-inmueble-foto" loading="lazy">` : ""}
+      <div class="contacto-inmueble-datos">
+        <strong>${escaparHTML(inmueble.titulo)}</strong>
+        <span>${escaparHTML(inmueble.barrio || "Villavicencio")} · ${escaparHTML(inmueble.tipoLabel || "Inmueble")}</span>
+        <span class="contacto-precio">${escaparHTML(precio)}<small>/mes</small></span>
+      </div>
+    </div>
+
+    <div class="contacto-dueno">
+      <span class="contacto-avatar" aria-hidden="true">${escaparHTML(iniciales)}</span>
+      <div>
+        <strong>${escaparHTML(propietario.nombre || "Usuario de Roumix")}</strong>
+        <span>Propietario · Villavicencio, Meta</span>
+      </div>
+    </div>
+
+    ${telefono ? `
+      <p class="contacto-paso">¿Qué quieres preguntar?</p>
+      <div class="contacto-chips" role="radiogroup" aria-label="Tipo de mensaje">
+        ${Object.entries(plantillas).map(([clave, p], i) => `
+          <button type="button" class="contacto-chip${i === 0 ? " activo" : ""}" role="radio" aria-checked="${i === 0}" data-plantilla="${clave}">${p.etiqueta}</button>`).join("")}
+      </div>
+
+      <div class="contacto-burbuja-wrap">
+        <label for="modal-mensaje-wa" class="contacto-paso">Tu mensaje <span>· puedes editarlo</span></label>
+        <div class="contacto-burbuja">
+          <textarea id="modal-mensaje-wa" rows="7" maxlength="600"></textarea>
+          <span class="contacto-contador" id="contacto-contador"></span>
+        </div>
+      </div>
+
+      <a id="modal-btn-whatsapp" href="#" target="_blank" rel="noopener noreferrer" class="btn-whatsapp-action">
+        <svg class="svg-icon-wa" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.8.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.5-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6l.4-.5c.2-.2.2-.3.3-.5.1-.2.1-.4 0-.5l-.9-2.2c-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.4s1 2.8 1.2 3c.1.2 2 3.1 4.9 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 1.9-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3zM12 21.8c-1.8 0-3.5-.5-5-1.4l-.4-.2-3.7 1 1-3.6-.2-.4C2.7 15.6 2.2 13.8 2.2 12 2.2 6.6 6.6 2.2 12 2.2S21.8 6.6 21.8 12 17.4 21.8 12 21.8zM12 .2C5.5.2.2 5.5.2 12c0 2.1.5 4.1 1.6 5.9L.1 24l6.3-1.6c1.7.9 3.7 1.4 5.6 1.4 6.5 0 11.8-5.3 11.8-11.8S18.5.2 12 .2z"/></svg>
+        Enviar por WhatsApp
+      </a>
+      <p class="contacto-nota">Se abrirá WhatsApp con este mensaje listo. Nunca pagues ni envíes dinero antes de visitar el inmueble.</p>
+    ` : `
+      <div class="contacto-sin-telefono">
+        <strong>Este arrendador aún no registró un número de WhatsApp.</strong>
+        <span>Vuelve más tarde o explora otras opciones parecidas.</span>
+      </div>
+    `}
+  `;
+
+  if (telefono) {
+    const areaMensaje = cuerpo.querySelector("#modal-mensaje-wa");
+    const botonWa = cuerpo.querySelector("#modal-btn-whatsapp");
+    const contador = cuerpo.querySelector("#contacto-contador");
+
+    // El enlace siempre lleva lo que el estudiante ve (y editó) en el cuadro
+    const actualizarEnlace = () => {
+      botonWa.href = `https://wa.me/${telefono}?text=${encodeURIComponent(areaMensaje.value.trim())}`;
+      contador.textContent = `${areaMensaje.value.length}/600`;
+      // La burbuja crece con el texto, como en un chat
+      areaMensaje.style.height = "auto";
+      areaMensaje.style.height = `${areaMensaje.scrollHeight}px`;
+    };
+
+    cuerpo.querySelectorAll(".contacto-chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        cuerpo.querySelectorAll(".contacto-chip").forEach((c) => {
+          c.classList.toggle("activo", c === chip);
+          c.setAttribute("aria-checked", String(c === chip));
+        });
+        areaMensaje.value = plantillas[chip.dataset.plantilla].texto;
+        actualizarEnlace();
+      });
+    });
+
+    areaMensaje.value = plantillas.disponibilidad.texto;
+    areaMensaje.addEventListener("input", actualizarEnlace);
+    actualizarEnlace();
   }
 
   modal.classList.add("open");
+  modal.setAttribute("aria-hidden", "false");
+  const cerrar = document.getElementById("btn-cerrar-modal");
+  if (cerrar) cerrar.focus({ preventScroll: true });
 }
 
 function cerrarModalContacto() {
   const modal = document.getElementById("modal-contacto");
-  if (modal) modal.classList.remove("open");
+  if (modal) {
+    modal.classList.remove("open");
+    modal.setAttribute("aria-hidden", "true");
+  }
 }
+
+// Escape cierra la ventana de contacto
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") cerrarModalContacto();
+});
 
 // 5. Renderizado inteligente y homogéneo de la barra de navegación según el rol
 function sincronizarBarraNavegacion() {
