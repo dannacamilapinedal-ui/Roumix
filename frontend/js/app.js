@@ -351,6 +351,32 @@ function sincronizarBarraNavegacion() {
     }
   }
 
+  // En celular el menú se pliega detrás de un botón (☰) para no desbordar la pantalla
+  const headerInner = header.querySelector(".header-inner");
+  if (navContainer && headerInner && !header.querySelector(".nav-toggle")) {
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "nav-toggle";
+    toggle.setAttribute("aria-label", "Abrir menú");
+    toggle.setAttribute("aria-expanded", "false");
+    toggle.innerHTML = '<span></span><span></span><span></span>';
+    headerInner.insertBefore(toggle, headerInner.querySelector(".main-nav"));
+
+    const cerrarMenu = () => {
+      header.classList.remove("menu-abierto");
+      toggle.setAttribute("aria-expanded", "false");
+      toggle.setAttribute("aria-label", "Abrir menú");
+    };
+    toggle.addEventListener("click", () => {
+      const abierto = header.classList.toggle("menu-abierto");
+      toggle.setAttribute("aria-expanded", String(abierto));
+      toggle.setAttribute("aria-label", abierto ? "Cerrar menú" : "Abrir menú");
+    });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") cerrarMenu(); });
+    document.addEventListener("click", (e) => { if (!header.contains(e.target)) cerrarMenu(); });
+    window.matchMedia("(min-width: 769px)").addEventListener("change", cerrarMenu);
+  }
+
   // Los enlaces "Cerrar sesión" fijos del HTML (pie de página) también cierran la sesión real
   document.querySelectorAll('a.footer-link, a#btn-logout').forEach((enlace) => {
     if (enlace.textContent.trim() !== "Cerrar sesión") return;
