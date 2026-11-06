@@ -421,6 +421,30 @@
       // ---------- Contacto y comparación ----------
       document.getElementById("btn-wa-directo").addEventListener("click", () => abrirModalContacto(item.id));
 
+      // Barra fija (solo celular): aparece cuando el botón de contacto sale de la pantalla
+      const barra = document.createElement("div");
+      barra.className = "rx-barra-contacto";
+      barra.innerHTML = `
+        <div class="rx-barra-precio"><strong></strong><small>/mes</small></div>
+        <button type="button" class="rx-barra-boton">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.8.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.5-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6l.4-.5c.2-.2.2-.3.3-.5.1-.2.1-.4 0-.5l-.9-2.2c-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.4s1 2.8 1.2 3c.1.2 2 3.1 4.9 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 1.9-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3zM12 21.8c-1.8 0-3.5-.5-5-1.4l-.4-.2-3.7 1 1-3.6-.2-.4C2.7 15.6 2.2 13.8 2.2 12 2.2 6.6 6.6 2.2 12 2.2S21.8 6.6 21.8 12 17.4 21.8 12 21.8zM12 .2C5.5.2.2 5.5.2 12c0 2.1.5 4.1 1.6 5.9L.1 24l6.3-1.6c1.7.9 3.7 1.4 5.6 1.4 6.5 0 11.8-5.3 11.8-11.8S18.5.2 12 .2z"/></svg>
+          Contactar
+        </button>`;
+      barra.querySelector("strong").textContent = item.precioFormato;
+      barra.querySelector("button").addEventListener("click", () => abrirModalContacto(item.id));
+      document.body.appendChild(barra);
+      // Visible solo cuando el botón original ya quedó arriba al bajar
+      const botonOriginal = document.getElementById("btn-wa-directo");
+      const revisarBarra = () => {
+        const pasado = botonOriginal.getBoundingClientRect().bottom < 0;
+        if (pasado === barra.classList.contains("visible")) return;
+        barra.classList.toggle("visible", pasado);
+        document.body.classList.toggle("rx-con-barra", pasado);
+      };
+      window.addEventListener("scroll", revisarBarra, { passive: true });
+      window.addEventListener("resize", revisarBarra);
+      revisarBarra();
+
       const btnComparar = document.getElementById("btn-comparar-inmueble");
       function actualizarBotonDetalle() {
         const enComparacion = RoumixComparador.contiene(item.id);
@@ -431,10 +455,19 @@
       btnComparar.addEventListener("click", () => {
         if (RoumixComparador.contiene(item.id)) {
           RoumixComparador.quitar(item.id);
+          RoumixAvisos.mostrar("Quitado de la comparación", "info", 2200);
         } else {
           const resultado = RoumixComparador.agregar(item.id);
-          if (!resultado.ok) alert(resultado.mensaje);
+          if (!resultado.ok) {
+            RoumixAvisos.mostrar(resultado.mensaje, "error");
+            return;
+          }
+          RoumixAvisos.mostrar("Agregado a la comparación", "exito", 2200);
+          actualizarBotonComparar();
+          actualizarBotonDetalle();
+          return;
         }
+        actualizarBotonComparar();
         actualizarBotonDetalle();
       });
       actualizarBotonDetalle();

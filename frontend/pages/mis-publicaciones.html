@@ -252,7 +252,7 @@
             item.estado = actualizado.estado;
           }
         } catch (error) {
-          alert(`No se pudo completar la acción: ${error.message}`);
+          RoumixAvisos.mostrar(`No se pudo completar la acción: ${error.message}`, "error", 5000);
           boton.disabled = false;
           return;
         }

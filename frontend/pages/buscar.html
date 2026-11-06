@@ -53,8 +53,10 @@
   <main>
     <section class="hero-search-section">
       <div class="hero-container">
+        <div class="hero-banner">
         <div class="hero-header-row">
           <div class="hero-titles">
+            <span class="hero-eyebrow">Vivienda universitaria · Villavicencio</span>
             <h1 class="hero-title">Vivienda cerca de tu universidad, sin dar vueltas.</h1>
             <p class="hero-subtitle">
               Habitaciones, apartaestudios y apartamentos en Villavicencio, con su zona en el mapa y contacto directo con el propietario.
@@ -109,6 +111,8 @@
           <button type="button" id="btn-ejecutar-busqueda" class="btn-search-action">Buscar</button>
         </div>
 
+        </div><!-- /.hero-banner -->
+
         <!-- Filtros de Categoría / Pills -->
         <div class="category-filters-row">
           <div class="category-pills" role="radiogroup" aria-label="Tipo de vivienda">
@@ -116,6 +120,7 @@
             <button type="button" class="pill-btn" data-tipo="habitacion">Habitación</button>
             <button type="button" class="pill-btn" data-tipo="apartaestudio">Apartaestudio</button>
             <button type="button" class="pill-btn" data-tipo="apartamento">Apartamento</button>
+            <button type="button" class="pill-btn pill-guardados" data-tipo="guardados">❤ Guardados</button>
           </div>
 
           <a href="comparar.html" class="btn-compare" id="btn-abrir-comparador">
@@ -265,6 +270,7 @@
       let inmuebles = [];
       let consultaActual = 0; // descarta respuestas viejas si el usuario cambia filtros rápido
       let temporizadorTexto = null;
+      let soloGuardados = false; // la píldora "❤ Guardados" filtra en el navegador
 
       let mapaInstancia = null;
       let mapaMarcadores = [];
@@ -311,7 +317,7 @@
 
         listaContenedor.removeAttribute("aria-busy");
           listaContenedor.classList.remove("rx-actualizando");
-        inmuebles = resultado;
+        inmuebles = soloGuardados ? resultado.filter(i => RoumixGuardados.contiene(i.id)) : resultado;
         render();
       }
 
@@ -328,6 +334,14 @@
         const uniLabel = filtros.universidad === "todas" ? "Villavicencio" : filtros.universidad;
         contadorResultados.innerHTML = `<strong>${inmuebles.length} resultado${inmuebles.length === 1 ? "" : "s"}</strong> cerca de ${escaparHTML(uniLabel)}`;
 
+        if (inmuebles.length === 0 && soloGuardados) {
+          mostrarAviso("🤍", "Aún no tienes inmuebles guardados",
+            "Toca el corazón de cualquier publicación para tenerla siempre a mano aquí.",
+            { texto: "Ver todas", accion: resetFiltros });
+          actualizarPines([]);
+          return;
+        }
+
         if (inmuebles.length === 0) {
           mostrarAviso("🔍", "No se encontraron inmuebles con estos filtros",
             "Intenta ajustando el presupuesto o seleccionando otra universidad.",
@@ -341,6 +355,7 @@
             <div class="card-image-wrap">
               <img src="${escaparHTML(item.imagen)}" alt="${escaparHTML(item.titulo)}" class="card-img" loading="lazy">
               <span class="status-badge badge-available">DISPONIBLE</span>
+              ${botonGuardar(item)}
             </div>
 
             <div class="card-body">
@@ -387,6 +402,20 @@
 
       // Agregar o quitar de la comparación (delegado en la lista)
       listaContenedor.addEventListener("click", (e) => {
+        const corazon = e.target.closest("button[data-guardar]");
+        if (corazon) {
+          const sigueGuardado = alternarGuardado(corazon);
+          // En la vista de guardados, la tarjeta desaparece con una animación
+          if (soloGuardados && !sigueGuardado) {
+            const tarjeta = corazon.closest(".property-card");
+            tarjeta.classList.add("rx-saliendo");
+            setTimeout(() => {
+              inmuebles = inmuebles.filter(i => i.id !== Number(corazon.dataset.guardar));
+              render();
+            }, 280);
+          }
+          return;
+        }
         const reportar = e.target.closest("button[data-reportar]");
         if (reportar) {
           const item = inmuebles.find(i => i.id === Number(reportar.dataset.reportar));
@@ -399,18 +428,21 @@
 
         if (RoumixComparador.contiene(id)) {
           RoumixComparador.quitar(id);
+          RoumixAvisos.mostrar("Quitado de la comparación", "info", 2200);
         } else {
           const resultado = RoumixComparador.agregar(id);
           if (!resultado.ok) {
-            alert(resultado.mensaje);
+            RoumixAvisos.mostrar(resultado.mensaje, "error");
             return;
           }
+          RoumixAvisos.mostrar("Agregado a la comparación", "exito", 2200);
         }
         boton.outerHTML = botonComparar({ id });
       });
 
       function resetFiltros() {
         filtros = { ...FILTROS_INICIALES };
+        soloGuardados = false;
         inputTexto.value = "";
         selectUni.value = FILTROS_INICIALES.universidad;
         selectPrecio.value = String(FILTROS_INICIALES.precioMax);
@@ -420,6 +452,7 @@
           p.classList.toggle("active", activo);
           p.setAttribute("aria-checked", String(activo));
         });
+        moverPildora();
         cargar();
       }
 
@@ -460,6 +493,8 @@
         cargar();
       });
 
+      const moverPildora = activarPildoraDeslizante(document.querySelector(".category-pills"));
+
       document.querySelectorAll(".pill-btn").forEach(btn => {
         btn.setAttribute("role", "radio");
         btn.setAttribute("aria-checked", String(btn.classList.contains("active")));
@@ -470,7 +505,9 @@
           });
           btn.classList.add("active");
           btn.setAttribute("aria-checked", "true");
-          filtros.tipo = btn.dataset.tipo;
+          soloGuardados = btn.dataset.tipo === "guardados";
+          filtros.tipo = soloGuardados ? "todos" : btn.dataset.tipo;
+          moverPildora();
           cargar();
         });
       });

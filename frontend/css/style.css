@@ -4720,3 +4720,475 @@ button.step-item:hover .step-circle {
     display: none;
   }
 }
+
+/* ==========================================================================
+   INTERACCIÓN: avisos, favoritos, píldora deslizante, barra de contacto,
+   botón de publicar y confeti
+   ========================================================================== */
+
+/* ---------- Avisos flotantes (toasts) ---------- */
+.rx-avisos {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: min(92vw, 420px);
+  pointer-events: none;
+}
+
+.rx-aviso {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: var(--verde-950);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: 0 12px 30px -8px rgba(20, 34, 25, 0.45);
+  cursor: pointer;
+  animation: rxAvisoEntra 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.25);
+}
+
+.rx-aviso-saliendo {
+  animation: rxAvisoSale 0.26s ease forwards;
+}
+
+.rx-aviso-icono {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.rx-aviso-exito .rx-aviso-icono { background: #25d366; color: #0b3a1f; }
+.rx-aviso-error { background: #7a1f1f; }
+.rx-aviso-error .rx-aviso-icono { background: #ffd8d3; color: #7a1f1f; }
+
+@keyframes rxAvisoEntra {
+  from { opacity: 0; transform: translateY(16px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes rxAvisoSale {
+  to { opacity: 0; transform: translateY(10px) scale(0.97); }
+}
+
+/* Con la barra de contacto visible, los avisos suben para no taparla */
+body.rx-con-barra .rx-avisos { bottom: 96px; }
+
+/* ---------- Corazón de guardados ---------- */
+.btn-guardar-corazon {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 4px 12px rgba(20, 34, 25, 0.18);
+  cursor: pointer;
+  transition: transform 0.18s ease, background-color 0.2s ease;
+}
+
+.btn-guardar-corazon svg {
+  width: 19px;
+  height: 19px;
+  fill: transparent;
+  stroke: var(--verde-950);
+  stroke-width: 2;
+  transition: fill 0.2s ease, stroke 0.2s ease;
+}
+
+.btn-guardar-corazon:hover { transform: scale(1.08); }
+.btn-guardar-corazon:active { transform: scale(0.92); }
+
+.btn-guardar-corazon.guardado svg {
+  fill: #e0475b;
+  stroke: #e0475b;
+}
+
+.btn-guardar-corazon:focus-visible {
+  outline: 2px solid var(--acento-naranja);
+  outline-offset: 2px;
+}
+
+.btn-guardar-corazon.rx-latido {
+  animation: rxLatido 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.4);
+}
+
+@keyframes rxLatido {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.35); }
+  55% { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+
+/* Tarjeta que se va al quitarla de guardados */
+.property-card.rx-saliendo {
+  animation: rxTarjetaSale 0.28s ease forwards;
+}
+
+@keyframes rxTarjetaSale {
+  to { opacity: 0; transform: scale(0.96) translateY(-6px); }
+}
+
+/* ---------- Píldora deslizante de los filtros ---------- */
+.rx-pildoras {
+  position: relative;
+  isolation: isolate;
+}
+
+.rx-pildora-indicador {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  border-radius: var(--radio-pill);
+  background: var(--verde-950);
+  box-shadow: 0 6px 14px -6px rgba(20, 34, 25, 0.5);
+  transition: transform 0.38s cubic-bezier(0.3, 1.2, 0.4, 1), width 0.38s cubic-bezier(0.3, 1.2, 0.4, 1), height 0.3s ease, opacity 0.2s ease;
+  pointer-events: none;
+}
+
+/* El fondo lo pone la píldora deslizante; el botón activo queda transparente */
+.rx-pildoras .pill-btn.active {
+  background: transparent;
+  border-color: transparent;
+  color: #fff;
+}
+
+.rx-pildoras .pill-btn {
+  transition: color 0.25s ease, border-color 0.2s ease, transform 0.18s ease;
+}
+
+.pill-guardados:not(.active) { color: #b8334a; }
+
+/* ---------- Barra de contacto fija (celular, página de detalle) ---------- */
+.rx-barra-contacto {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .rx-barra-contacto {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    z-index: 900;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 10px 10px 18px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--borde-arena);
+    box-shadow: 0 14px 34px -10px rgba(20, 34, 25, 0.35);
+    transform: translateY(140%);
+    transition: transform 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.1);
+  }
+
+  .rx-barra-contacto.visible {
+    transform: translateY(0);
+  }
+
+  .rx-barra-precio strong {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--verde-950);
+  }
+
+  .rx-barra-precio small {
+    font-size: 0.78rem;
+    color: var(--tinta-tenue);
+    margin-left: 2px;
+  }
+
+  .rx-barra-boton {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    border: 0;
+    border-radius: var(--radio-pill);
+    background: var(--color-wa-real);
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    box-shadow: 0 6px 16px -6px rgba(37, 211, 102, 0.7);
+  }
+
+  .rx-barra-boton svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+  }
+
+  .rx-barra-boton:active { transform: scale(0.96); }
+
+  /* Espacio para que la barra no tape el pie de página */
+  body.rx-con-barra .app-footer { padding-bottom: 110px; }
+}
+
+/* ---------- Botón Publicar: cargando, éxito y error ---------- */
+.btn-submit-publish {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.btn-submit-publish.rx-cargando-btn {
+  opacity: 0.9;
+  cursor: progress;
+}
+
+.rx-spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2.5px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  animation: rxGirar 0.7s linear infinite;
+}
+
+@keyframes rxGirar {
+  to { transform: rotate(360deg); }
+}
+
+.btn-submit-publish.rx-exito-btn {
+  background: #1f9d55;
+  animation: rxPop 0.4s ease;
+}
+
+.rx-check {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  color: #1f9d55;
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.rx-sacudir {
+  animation: rxSacudir 0.4s ease;
+}
+
+@keyframes rxSacudir {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+/* ---------- Confeti ---------- */
+.rx-confeti {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2100;
+  overflow: hidden;
+}
+
+.rx-confeti i {
+  position: absolute;
+  width: 8px;
+  height: 12px;
+  border-radius: 2px;
+  animation: rxConfeti 1.2s cubic-bezier(0.15, 0.7, 0.4, 1) forwards;
+}
+
+@keyframes rxConfeti {
+  0% { opacity: 1; transform: translate(0, 0) rotate(0); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--dx), calc(var(--dy) + 160px)) rotate(var(--giro)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rx-aviso,
+  .rx-aviso-saliendo,
+  .btn-guardar-corazon.rx-latido,
+  .property-card.rx-saliendo,
+  .btn-submit-publish.rx-exito-btn,
+  .rx-sacudir {
+    animation: none;
+  }
+
+  .rx-pildora-indicador,
+  .rx-barra-contacto {
+    transition: none;
+  }
+
+  .rx-spinner {
+    animation-duration: 1.6s;
+  }
+}
+
+/* ==========================================================================
+   BUSCAR: portada tipo banner y mejor uso del ancho de pantalla
+   ========================================================================== */
+.hero-search-section {
+  padding: 24px 24px 8px;
+}
+
+.hero-container,
+.results-map-container {
+  max-width: 1480px;
+}
+
+.hero-banner {
+  position: relative;
+  border-radius: 28px;
+  padding: 52px 52px 40px;
+  color: #fff;
+  background:
+    linear-gradient(100deg, rgba(20, 34, 25, 0.96) 0%, rgba(20, 34, 25, 0.86) 42%, rgba(20, 34, 25, 0.45) 100%),
+    url("https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=1800&q=70") center 60% / cover no-repeat,
+    var(--verde-950);
+  box-shadow: 0 24px 50px -28px rgba(20, 34, 25, 0.6);
+  margin-bottom: 22px;
+  animation: rxBannerEntra 0.6s ease both;
+}
+
+@keyframes rxBannerEntra {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+.hero-banner .hero-header-row {
+  align-items: flex-end;
+  margin-bottom: 30px;
+}
+
+.hero-eyebrow {
+  display: inline-block;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #f0c08a;
+  margin-bottom: 14px;
+}
+
+.hero-banner .hero-title {
+  color: #fff;
+  font-size: clamp(2rem, 1.4rem + 2.4vw, 3.4rem);
+}
+
+.hero-banner .hero-subtitle {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Cifras en tarjetas de vidrio */
+.hero-banner .hero-stats {
+  gap: 12px;
+  padding-top: 0;
+}
+
+.hero-banner .stat-box {
+  min-width: 128px;
+  padding: 16px 20px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.hero-banner .stat-number {
+  color: #fff;
+}
+
+.hero-banner .stat-label {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.hero-banner .search-bar-card {
+  border-color: transparent;
+  box-shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.55);
+}
+
+.hero-search-section .category-filters-row {
+  margin-top: 0;
+}
+
+/* El mapa ocupa casi toda la altura de la pantalla y acompaña al bajar */
+.map-column .map-view-box {
+  height: clamp(420px, calc(100vh - 230px), 760px);
+}
+
+@media (max-width: 1024px) {
+  .map-column .map-view-box {
+    height: 380px;
+  }
+}
+
+@media (max-width: 768px) {
+  .hero-search-section {
+    padding: 14px 12px 4px;
+  }
+
+  .hero-banner {
+    border-radius: 22px;
+    padding: 28px 18px 18px;
+    background:
+      linear-gradient(180deg, rgba(20, 34, 25, 0.95) 0%, rgba(20, 34, 25, 0.88) 60%, rgba(20, 34, 25, 0.75) 100%),
+      url("https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=900&q=65") center / cover no-repeat,
+      var(--verde-950);
+  }
+
+  .hero-banner .hero-header-row {
+    align-items: stretch;
+    margin-bottom: 20px;
+  }
+
+  .hero-banner .hero-stats {
+    width: 100%;
+  }
+
+  .hero-banner .stat-box {
+    flex: 1;
+    min-width: 0;
+    padding: 12px 14px;
+  }
+
+  .hero-banner .stat-number {
+    font-size: 1.8rem;
+  }
+
+  .hero-search-section .category-filters-row {
+    padding: 0 4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-banner {
+    animation: none;
+  }
+}

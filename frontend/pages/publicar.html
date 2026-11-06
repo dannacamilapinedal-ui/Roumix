@@ -671,7 +671,8 @@
         const nuevas = fotos.filter(f => f.tipo === "nueva").map(f => f.archivo);
         const textoBoton = btnGuardar.textContent;
         btnGuardar.disabled = true;
-        btnGuardar.textContent = nuevas.length ? "Subiendo fotos…" : "Guardando…";
+        btnGuardar.classList.add("rx-cargando-btn");
+        btnGuardar.innerHTML = `<span class="rx-spinner" aria-hidden="true"></span>${nuevas.length ? "Subiendo fotos…" : "Guardando…"}`;
         mostrarMensaje("");
 
         try {
@@ -685,13 +686,21 @@
         } catch (error) {
           mostrarMensaje(`No se pudo guardar: ${error.message}`, "error");
           btnGuardar.disabled = false;
+          btnGuardar.classList.remove("rx-cargando-btn");
           btnGuardar.textContent = textoBoton;
+          btnGuardar.classList.remove("rx-sacudir");
+          void btnGuardar.offsetWidth;
+          btnGuardar.classList.add("rx-sacudir");
           return;
         }
 
         // Solo se confirma cuando el servidor respondió con éxito
+        btnGuardar.classList.remove("rx-cargando-btn");
+        btnGuardar.classList.add("rx-exito-btn");
+        btnGuardar.innerHTML = `<span class="rx-check" aria-hidden="true">✓</span>${idEditar ? "¡Cambios guardados!" : "¡Publicado!"}`;
         mostrarMensaje(idEditar ? "Cambios guardados." : "¡Tu inmueble quedó publicado!", "exito");
-        window.location.href = "mis-publicaciones.html";
+        if (!idEditar) lanzarConfeti(btnGuardar);
+        setTimeout(() => { window.location.href = "mis-publicaciones.html"; }, 1300);
       });
 
       renderFotos();

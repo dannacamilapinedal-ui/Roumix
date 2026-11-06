@@ -280,6 +280,12 @@ function abrirModalContacto(id) {
 
   modal.classList.add("open");
   modal.setAttribute("aria-hidden", "false");
+  // La altura del mensaje solo se puede medir cuando la ventana ya es visible
+  const areaVisible = cuerpo.querySelector("#modal-mensaje-wa");
+  if (areaVisible) {
+    areaVisible.style.height = "auto";
+    areaVisible.style.height = `${areaVisible.scrollHeight}px`;
+  }
   const cerrar = document.getElementById("btn-cerrar-modal");
   if (cerrar) cerrar.focus({ preventScroll: true });
 }
@@ -529,13 +535,14 @@ async function protegerPagina(rolesPermitidos) {
       return null;
     }
     document.body.style.visibility = "";
-    alert(`No se pudo verificar tu sesión: ${error.message}`);
+    RoumixAvisos.mostrar(`No se pudo verificar tu sesión: ${error.message}`, "error", 5000);
     return null;
   }
 
   if (!rolesPermitidos.includes(usuario.rol)) {
-    alert(rolesPermitidos.includes("admin") ? "Esta sección es solo para el equipo de Roumix." : "Esta sección es solo para propietarios.");
-    window.location.replace(`${enCarpetaPages ? "" : "pages/"}buscar.html`);
+    document.body.style.visibility = "";
+    RoumixAvisos.mostrar(rolesPermitidos.includes("admin") ? "Esta sección es solo para el equipo de Roumix." : "Esta sección es solo para propietarios.", "error");
+    setTimeout(() => window.location.replace(`${enCarpetaPages ? "" : "pages/"}buscar.html`), 1600);
     return null;
   }
 
@@ -669,3 +676,142 @@ document.addEventListener("DOMContentLoaded", () => RoumixUI.iniciar());
 window.addEventListener("pageshow", (e) => {
   if (e.persisted) document.documentElement.classList.remove("rx-mostrar", "rx-cargando");
 });
+
+// 8. Avisos flotantes (toasts): reemplazan los alert() del navegador.
+// Uso: RoumixAvisos.mostrar("Texto", "exito" | "error" | "info")
+const RoumixAvisos = {
+  _zona: null,
+
+  _obtenerZona() {
+    if (this._zona && document.body.contains(this._zona)) return this._zona;
+    this._zona = document.createElement("div");
+    this._zona.className = "rx-avisos";
+    this._zona.setAttribute("role", "status");
+    this._zona.setAttribute("aria-live", "polite");
+    document.body.appendChild(this._zona);
+    return this._zona;
+  },
+
+  mostrar(texto, tipo = "info", duracion = 3200) {
+    const iconos = { exito: "✓", error: "!", info: "i" };
+    const aviso = document.createElement("div");
+    aviso.className = `rx-aviso rx-aviso-${tipo}`;
+    aviso.innerHTML = `<span class="rx-aviso-icono" aria-hidden="true">${iconos[tipo] || "i"}</span><span class="rx-aviso-texto"></span>`;
+    aviso.querySelector(".rx-aviso-texto").textContent = texto;
+    this._obtenerZona().appendChild(aviso);
+
+    const cerrar = () => {
+      aviso.classList.add("rx-aviso-saliendo");
+      setTimeout(() => aviso.remove(), 260);
+    };
+    const temporizador = setTimeout(cerrar, duracion);
+    aviso.addEventListener("click", () => { clearTimeout(temporizador); cerrar(); });
+  }
+};
+
+// 9. Inmuebles guardados con ❤ (solo en este navegador; no se envían al servidor)
+const RoumixGuardados = {
+  CLAVE: "roumix_guardados",
+
+  lista() {
+    try {
+      const ids = JSON.parse(localStorage.getItem(this.CLAVE) || "[]");
+      return Array.isArray(ids) ? ids.map(Number) : [];
+    } catch (e) {
+      return [];
+    }
+  },
+
+  contiene(id) {
+    return this.lista().includes(Number(id));
+  },
+
+  // Devuelve true si quedó guardado, false si se quitó
+  alternar(id) {
+    const ids = this.lista();
+    const posicion = ids.indexOf(Number(id));
+    if (posicion >= 0) ids.splice(posicion, 1);
+    else ids.push(Number(id));
+    try { localStorage.setItem(this.CLAVE, JSON.stringify(ids)); } catch (e) { /* almacenamiento bloqueado */ }
+    return posicion < 0;
+  }
+};
+
+// Botón ❤ que va sobre la foto de cada tarjeta
+function botonGuardar(item) {
+  const guardado = RoumixGuardados.contiene(item.id);
+  return `
+    <button type="button" class="btn-guardar-corazon${guardado ? " guardado" : ""}" data-guardar="${item.id}"
+            aria-pressed="${guardado}" aria-label="${guardado ? "Quitar de guardados" : "Guardar inmueble"}">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.4C1 8.3 3.1 4.5 6.9 4.5c2.1 0 3.6 1.1 5.1 3 1.5-1.9 3-3 5.1-3 3.8 0 5.9 3.8 4.5 7.1C19.5 16.4 12 21 12 21z"/></svg>
+    </button>`;
+}
+
+// Alterna el ❤ con animación y aviso. Devuelve el nuevo estado.
+function alternarGuardado(boton) {
+  const guardado = RoumixGuardados.alternar(boton.dataset.guardar);
+  boton.classList.toggle("guardado", guardado);
+  boton.setAttribute("aria-pressed", String(guardado));
+  boton.setAttribute("aria-label", guardado ? "Quitar de guardados" : "Guardar inmueble");
+  boton.classList.remove("rx-latido");
+  void boton.offsetWidth; // reinicia la animación
+  if (guardado) boton.classList.add("rx-latido");
+  RoumixAvisos.mostrar(guardado ? "Guardado en tus favoritos" : "Quitado de tus favoritos", guardado ? "exito" : "info", 2200);
+  return guardado;
+}
+
+// 10. Píldora que se desliza hasta la opción activa de un grupo de botones
+function activarPildoraDeslizante(contenedor, selectorActivo = ".active") {
+  if (!contenedor) return () => {};
+  contenedor.classList.add("rx-pildoras");
+  let indicador = contenedor.querySelector(".rx-pildora-indicador");
+  if (!indicador) {
+    indicador = document.createElement("span");
+    indicador.className = "rx-pildora-indicador";
+    indicador.setAttribute("aria-hidden", "true");
+    contenedor.prepend(indicador);
+  }
+
+  const mover = (animar = true) => {
+    const activo = contenedor.querySelector(selectorActivo);
+    if (!activo) { indicador.style.opacity = "0"; return; }
+    if (!animar) indicador.style.transition = "none";
+    indicador.style.opacity = "1";
+    indicador.style.width = `${activo.offsetWidth}px`;
+    indicador.style.height = `${activo.offsetHeight}px`;
+    indicador.style.transform = `translate(${activo.offsetLeft}px, ${activo.offsetTop}px)`;
+    if (!animar) requestAnimationFrame(() => { indicador.style.transition = ""; });
+  };
+
+  mover(false);
+  if ("ResizeObserver" in window) new ResizeObserver(() => mover(false)).observe(contenedor);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => mover(false));
+  return mover;
+}
+
+// 11. Confeti breve para celebrar (no se muestra si el usuario prefiere menos movimiento)
+function lanzarConfeti(origen) {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const caja = origen ? origen.getBoundingClientRect() : { left: innerWidth / 2, top: innerHeight / 2, width: 0, height: 0 };
+  const x = caja.left + caja.width / 2;
+  const y = caja.top + caja.height / 2;
+  const colores = ["#c47c2b", "#25d366", "#d6ebd3", "#315c44", "#f5f0e6", "#e8a95b"];
+  const capa = document.createElement("div");
+  capa.className = "rx-confeti";
+  capa.setAttribute("aria-hidden", "true");
+  for (let i = 0; i < 42; i++) {
+    const pieza = document.createElement("i");
+    const angulo = Math.random() * Math.PI * 2;
+    const distancia = 70 + Math.random() * 140;
+    pieza.style.left = `${x}px`;
+    pieza.style.top = `${y}px`;
+    pieza.style.background = colores[i % colores.length];
+    pieza.style.setProperty("--dx", `${Math.cos(angulo) * distancia}px`);
+    pieza.style.setProperty("--dy", `${Math.sin(angulo) * distancia - 60}px`);
+    pieza.style.setProperty("--giro", `${Math.random() * 720 - 360}deg`);
+    pieza.style.animationDelay = `${Math.random() * 80}ms`;
+    capa.appendChild(pieza);
+  }
+  document.body.appendChild(capa);
+  setTimeout(() => capa.remove(), 1400);
+}
