@@ -401,6 +401,34 @@
       }
 
       // Agregar o quitar de la comparación (delegado en la lista)
+      // Al pasar por una tarjeta, su pin del mapa salta y se resalta
+      let pinResaltado = null;
+      function resaltarPin(id) {
+        if (pinResaltado && pinResaltado.rxId === id) return;
+        if (pinResaltado) {
+          const el = pinResaltado.getElement()?.querySelector(".map-pin-price");
+          if (el) el.classList.remove("active", "rx-pin-salta");
+          pinResaltado.setZIndexOffset(0);
+          pinResaltado = null;
+        }
+        if (id === null) return;
+        const marcador = mapaMarcadores.find(m => m.rxId === id);
+        const el = marcador?.getElement()?.querySelector(".map-pin-price");
+        if (!el) return;
+        el.classList.add("active", "rx-pin-salta");
+        marcador.setZIndexOffset(1000);
+        pinResaltado = marcador;
+      }
+      listaContenedor.addEventListener("mouseover", (e) => {
+        const tarjeta = e.target.closest(".property-card");
+        resaltarPin(tarjeta ? Number(tarjeta.dataset.id) : null);
+      });
+      listaContenedor.addEventListener("mouseleave", () => resaltarPin(null));
+      listaContenedor.addEventListener("focusin", (e) => {
+        const tarjeta = e.target.closest(".property-card");
+        if (tarjeta) resaltarPin(Number(tarjeta.dataset.id));
+      });
+
       listaContenedor.addEventListener("click", (e) => {
         const corazon = e.target.closest("button[data-guardar]");
         if (corazon) {
@@ -568,8 +596,11 @@
             if (card) {
               document.querySelectorAll(".property-card").forEach(c => c.classList.remove("highlighted"));
               card.classList.add("highlighted");
+              // En celular el mapa queda abajo: no se salta a la tarjeta para no perder el mapa
+              if (window.matchMedia("(min-width: 1025px)").matches) card.scrollIntoView({ behavior: "smooth", block: "center" });
             }
           });
+          marker.rxId = item.id;
           mapaMarcadores.push(marker);
           puntos.push([item.lat, item.lng]);
         });

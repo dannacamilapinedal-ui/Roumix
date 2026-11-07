@@ -349,14 +349,73 @@
       const MINIATURAS_VISIBLES = 4;
       let fotoActual = 0;
 
-      function mostrarPrincipal(indice) {
+      // Controles del carrusel: flechas, puntitos y contador sobre la foto principal
+      const columnaPrincipal = document.querySelector(".gallery-main-col");
+      const controles = document.createElement("div");
+      controles.className = "galeria-controles";
+      if (fotos.length > 1) {
+        controles.innerHTML = `
+          <button type="button" class="galeria-flecha galeria-flecha-izq" aria-label="Foto anterior">‹</button>
+          <button type="button" class="galeria-flecha galeria-flecha-der" aria-label="Foto siguiente">›</button>
+          <span class="galeria-contador" aria-live="polite"></span>
+          <div class="galeria-puntos">${fotos.map((_, i) => `<span data-punto="${i}"></span>`).join("")}</div>`;
+        columnaPrincipal.appendChild(controles);
+        controles.querySelector(".galeria-flecha-izq").addEventListener("click", (e) => { e.stopPropagation(); irAFoto(fotoActual - 1); });
+        controles.querySelector(".galeria-flecha-der").addEventListener("click", (e) => { e.stopPropagation(); irAFoto(fotoActual + 1); });
+      }
+
+      function mostrarPrincipal(indice, direccion = 0) {
         fotoActual = indice;
         imgPrincipal.src = fotos[indice];
         imgPrincipal.alt = `${item.titulo} — foto ${indice + 1} de ${fotos.length}`;
         miniaturas.querySelectorAll(".gallery-thumb-item").forEach(m => {
           m.classList.toggle("activa", Number(m.dataset.indice) === indice);
         });
+        const contador = controles.querySelector(".galeria-contador");
+        if (contador) contador.textContent = `${indice + 1} / ${fotos.length}`;
+        controles.querySelectorAll("[data-punto]").forEach(p => p.classList.toggle("activo", Number(p.dataset.punto) === indice));
+        if (direccion) {
+          imgPrincipal.classList.remove("rx-entra-der", "rx-entra-izq");
+          void imgPrincipal.offsetWidth;
+          imgPrincipal.classList.add(direccion > 0 ? "rx-entra-der" : "rx-entra-izq");
+        }
       }
+
+      function irAFoto(indice) {
+        if (fotos.length < 2) return;
+        const destino = (indice + fotos.length) % fotos.length;
+        mostrarPrincipal(destino, indice > fotoActual ? 1 : -1);
+      }
+
+      // Deslizar con el dedo (o arrastrar con el mouse) para cambiar de foto
+      let inicioX = null;
+      let inicioY = 0;
+      let deslizo = false;
+      const botonFoto = document.getElementById("btn-foto-principal");
+      botonFoto.addEventListener("pointerdown", (e) => {
+        if (fotos.length < 2) return;
+        inicioX = e.clientX;
+        inicioY = e.clientY;
+        deslizo = false;
+      });
+      botonFoto.addEventListener("pointermove", (e) => {
+        if (inicioX === null) return;
+        const dx = e.clientX - inicioX;
+        if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(e.clientY - inicioY)) {
+          deslizo = true;
+          imgPrincipal.style.transform = `translateX(${dx * 0.35}px)`;
+        }
+      });
+      const terminarDeslizamiento = (e) => {
+        if (inicioX === null) return;
+        const dx = e.clientX - inicioX;
+        inicioX = null;
+        imgPrincipal.style.transform = "";
+        if (deslizo && Math.abs(dx) > 45) irAFoto(fotoActual + (dx < 0 ? 1 : -1));
+      };
+      botonFoto.addEventListener("pointerup", terminarDeslizamiento);
+      botonFoto.addEventListener("pointercancel", () => { inicioX = null; imgPrincipal.style.transform = ""; });
+      botonFoto.addEventListener("pointerleave", terminarDeslizamiento);
 
       galeria.classList.toggle("una-foto", fotos.length <= 1);
       fotos.slice(1, 1 + MINIATURAS_VISIBLES).forEach((url, i) => {
@@ -407,7 +466,25 @@
         visor.showModal();
       }
 
-      document.getElementById("btn-foto-principal").addEventListener("click", () => abrirVisor(fotoActual));
+      document.getElementById("btn-foto-principal").addEventListener("click", (e) => {
+        // Un deslizamiento no debe abrir el visor
+        if (deslizo) { deslizo = false; e.preventDefault(); return; }
+        abrirVisor(fotoActual);
+      });
+      // Teclado en la foto principal
+      document.getElementById("btn-foto-principal").addEventListener("keydown", (e) => {
+        if (e.key === "ArrowLeft") irAFoto(fotoActual - 1);
+        if (e.key === "ArrowRight") irAFoto(fotoActual + 1);
+      });
+      // Deslizar también dentro del visor
+      let visorInicioX = null;
+      visorImg.addEventListener("pointerdown", (e) => { visorInicioX = e.clientX; });
+      visorImg.addEventListener("pointerup", (e) => {
+        if (visorInicioX === null) return;
+        const dx = e.clientX - visorInicioX;
+        visorInicioX = null;
+        if (Math.abs(dx) > 45) mostrarEnVisor(fotoActual + (dx < 0 ? 1 : -1));
+      });
       document.getElementById("visor-cerrar").addEventListener("click", () => visor.close());
       document.getElementById("visor-anterior").addEventListener("click", () => mostrarEnVisor(fotoActual - 1));
       document.getElementById("visor-siguiente").addEventListener("click", () => mostrarEnVisor(fotoActual + 1));
