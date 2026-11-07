@@ -27,6 +27,14 @@
   --tinta-fuerte: #142219;
   --tinta-media: #546250;
   --tinta-tenue: #7b8878;
+  --texto-verde-oscuro: #1e392a;
+  --texto-verde-medio: #315c44;
+
+  /* Ilustraciones de estados vacíos */
+  --rx-ilu-circulo: #ece4d3;
+  --rx-ilu-casa: #ffffff;
+  --rx-ilu-trazo: #1e392a;
+  --rx-ilu-fondo: #ffffff;
 
   /* Acentos Cálidos (Botón buscar, logo, WhatsApp) */
   --acento-naranja: #c47c2b;
@@ -251,7 +259,7 @@ main {
   font-weight: 800;
   line-height: 1.1;
   letter-spacing: -0.025em;
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
   margin-bottom: 12px;
 }
 
@@ -277,7 +285,7 @@ main {
 .stat-number {
   font-size: 2.4rem;
   font-weight: 800;
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
   line-height: 1;
   letter-spacing: -0.03em;
 }
@@ -415,7 +423,7 @@ main {
 }
 
 .btn-compare:hover {
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
   text-decoration: underline;
 }
 
@@ -563,7 +571,7 @@ main {
   font-size: 1.6rem;
   font-weight: 800;
   letter-spacing: -0.02em;
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
 }
 
 .property-price small {
@@ -575,7 +583,7 @@ main {
 .property-title {
   font-size: 1.15rem;
   font-weight: 700;
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
   line-height: 1.3;
   margin-bottom: 4px;
 }
@@ -638,7 +646,7 @@ main {
 /* BOTÓN "SABER MÁS" */
 .btn-learn-more {
   background: transparent;
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
   border: 1px solid var(--verde-950);
   font-size: 0.86rem;
   font-weight: 700;
@@ -705,7 +713,7 @@ main {
 .map-title {
   font-size: 1.05rem;
   font-weight: 700;
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
 }
 
 .map-view-box {
@@ -888,7 +896,7 @@ main {
 .detail-headline {
   font-size: clamp(2rem, 1.7rem + 1.2vw, 2.7rem);
   font-weight: 800;
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
   line-height: 1.15;
   margin-bottom: 8px;
   letter-spacing: -0.02em;
@@ -909,7 +917,7 @@ main {
 .section-subheading {
   font-size: 1.25rem;
   font-weight: 800;
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
   margin-bottom: 14px;
 }
 
@@ -939,7 +947,7 @@ main {
 .feature-box-title {
   font-size: 0.86rem;
   font-weight: 800;
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
   margin-bottom: 4px;
 }
 
@@ -961,7 +969,7 @@ main {
 .floating-price-amount {
   font-size: 2.2rem;
   font-weight: 800;
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
   letter-spacing: -0.02em;
 }
 
@@ -974,7 +982,7 @@ main {
 .floating-price-sub {
   font-size: 0.85rem;
   font-weight: 700;
-  color: var(--verde-600);
+  color: var(--texto-verde-medio);
   margin-bottom: 18px;
 }
 
@@ -1027,7 +1035,7 @@ main {
   justify-content: center;
   gap: 8px;
   background: transparent;
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
   border: 1px solid var(--verde-950);
   font-size: 0.94rem;
   font-weight: 700;
@@ -1071,7 +1079,7 @@ main {
 
 .owner-details-text strong {
   font-size: 0.95rem;
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
 }
 
 .owner-details-text span {
@@ -1103,14 +1111,14 @@ main {
 }
 
 .btn-back-link:hover {
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
   text-decoration: underline;
 }
 
 .compare-title {
   font-size: clamp(2rem, 1.7rem + 1.2vw, 2.7rem);
   font-weight: 800;
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
   margin-bottom: 6px;
 }
 
@@ -1144,7 +1152,7 @@ main {
 
 .compare-table th {
   background-color: var(--superficie);
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
   font-weight: 800;
   border-bottom: 2px solid var(--borde-arena);
 }
@@ -1171,7 +1179,7 @@ main {
 .compare-thumb-info strong {
   display: block;
   font-size: 0.95rem;
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
   margin-bottom: 2px;
 }
 
@@ -1256,7 +1264,7 @@ main {
 .my-publications-title {
   font-size: 2.1rem;
   font-weight: 800;
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
   letter-spacing: -0.02em;
   margin-bottom: 4px;
 }
@@ -1349,7 +1357,7 @@ main {
 .my-prop-price {
   font-size: 1.5rem;
   font-weight: 800;
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
 }
 
 .my-prop-price small {
@@ -1361,7 +1369,7 @@ main {
 .my-prop-title {
   font-size: 1.15rem;
   font-weight: 700;
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
   margin-top: 2px;
   margin-bottom: 4px;
 }
@@ -1390,7 +1398,7 @@ main {
 
 .my-prop-status-label {
   font-size: 0.84rem;
-  color: var(--verde-600);
+  color: var(--texto-verde-medio);
   font-weight: 700;
   display: inline-flex;
   align-items: center;
@@ -1408,7 +1416,7 @@ main {
   padding: 7px 18px;
   border-radius: var(--radio-pill);
   border: 1px solid var(--verde-950);
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
   transition: all 0.16s ease;
   display: inline-flex;
   align-items: center;
@@ -1666,7 +1674,7 @@ main {
 
 .auth-footer-link:hover {
   text-decoration: underline;
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
 }
 
 
@@ -1686,7 +1694,7 @@ main {
 .publish-main-title {
   font-size: clamp(2rem, 1.6rem + 1.8vw, 2.8rem);
   font-weight: 800;
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
   letter-spacing: -0.02em;
   margin-bottom: 8px;
 }
@@ -1734,7 +1742,7 @@ main {
 }
 
 .step-item.active .step-text {
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
   font-weight: 700;
 }
 
@@ -1763,7 +1771,7 @@ main {
 .form-block-title {
   font-size: 1.35rem;
   font-weight: 700;
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
   margin-bottom: 24px;
 }
 
@@ -1900,14 +1908,14 @@ main {
 
 .advice-icon {
   font-size: 1.2rem;
-  color: var(--verde-600);
+  color: var(--texto-verde-medio);
   flex-shrink: 0;
 }
 
 .advice-title {
   font-size: 0.92rem;
   font-weight: 700;
-  color: var(--verde-800);
+  color: var(--texto-verde-oscuro);
   margin-bottom: 4px;
 }
 
@@ -1941,14 +1949,14 @@ main {
 .info-card h2 {
   font-size: 1.7rem;
   font-weight: 800;
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
   margin-bottom: 16px;
 }
 
 .info-card h3 {
   font-size: 1.2rem;
   font-weight: 700;
-  color: var(--verde-900);
+  color: var(--texto-verde-oscuro);
   margin: 22px 0 12px;
 }
 
@@ -1997,7 +2005,7 @@ main {
   position: absolute;
   left: 0;
   top: 0;
-  color: var(--verde-600);
+  color: var(--texto-verde-medio);
   font-weight: 800;
 }
 
@@ -2016,7 +2024,7 @@ main {
 .faq-item summary {
   padding: 16px 20px;
   font-weight: 700;
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
   cursor: pointer;
   background: var(--fondo-crema-alt);
 }
@@ -2110,7 +2118,7 @@ main {
 .modal-title {
   font-size: 1.35rem;
   font-weight: 800;
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
 }
 
 .modal-property-subtitle {
@@ -2239,7 +2247,7 @@ main {
 .contacto-inmueble-datos .contacto-precio {
   font-size: 1rem;
   font-weight: 800;
-  color: var(--verde-700);
+  color: var(--texto-verde-oscuro);
   margin-top: 2px;
 }
 
@@ -2294,7 +2302,7 @@ main {
   transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
-.contacto-chip:hover { border-color: var(--verde-500); color: var(--verde-700); }
+.contacto-chip:hover { border-color: var(--verde-500); color: var(--texto-verde-oscuro); }
 
 .contacto-chip.activo {
   background: var(--verde-800);
@@ -2559,7 +2567,7 @@ main {
   gap: 8px;
   background: var(--superficie);
   border: 1px dashed var(--verde-500);
-  color: var(--verde-800);
+  color: var(--texto-verde-oscuro);
   font-size: 0.9rem;
   font-weight: 700;
   padding: 10px 20px;
@@ -2689,7 +2697,7 @@ main {
 
 .btn-comparar-toggle {
   border: 1px solid var(--borde-arena);
-  color: var(--verde-800);
+  color: var(--texto-verde-oscuro);
   font-weight: 700;
   padding: 6px 12px;
   border-radius: var(--radio-pill);
@@ -2761,7 +2769,7 @@ main {
   content: " · más económico";
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--verde-500);
+  color: var(--texto-verde-medio);
 }
 
 .compare-barra {
@@ -3076,7 +3084,7 @@ a.insignia:focus-visible {
 
 .reporte-inmueble {
   font-weight: 700;
-  color: var(--verde-800);
+  color: var(--texto-verde-oscuro);
   margin-bottom: 8px;
 }
 
@@ -3253,7 +3261,7 @@ a.insignia:focus-visible {
 }
 
 .map-popup-card strong {
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
   font-size: 0.9rem;
   line-height: 1.25;
 }
@@ -3264,7 +3272,7 @@ a.insignia:focus-visible {
 }
 
 .map-popup-card .map-popup-precio {
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
   font-weight: 800;
   font-size: 0.88rem;
 }
@@ -3310,19 +3318,19 @@ a.insignia:focus-visible {
 
 .auth-check a,
 .auth-privacy-notice a {
-  color: var(--verde-800);
+  color: var(--texto-verde-oscuro);
   font-weight: 700;
 }
 
 .politica h1 {
   font-size: 1.8rem;
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
   margin-bottom: 8px;
 }
 
 .politica h2 {
   font-size: 1.1rem;
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
   margin: 26px 0 8px;
 }
 
@@ -3359,7 +3367,7 @@ a.insignia:focus-visible {
 
 .admin-encabezado h1 {
   font-size: 1.8rem;
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
 }
 
 .admin-encabezado p {
@@ -3389,7 +3397,7 @@ a.insignia:focus-visible {
 }
 
 .admin-tab.activa {
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
   border-bottom-color: var(--acento-naranja);
 }
 
@@ -3430,7 +3438,7 @@ button.admin-metrica:hover {
 .admin-metrica-valor {
   font-size: 1.8rem;
   font-weight: 800;
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
 }
 
 .admin-metrica-titulo {
@@ -3443,7 +3451,7 @@ button.admin-metrica:hover {
 }
 
 .admin-metrica-ok .admin-metrica-valor {
-  color: var(--verde-500);
+  color: var(--texto-verde-medio);
 }
 
 .admin-filtros {
@@ -3491,7 +3499,7 @@ button.admin-metrica:hover {
 }
 
 .admin-tabla th {
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
   font-weight: 800;
   background: var(--fondo-crema-alt);
 }
@@ -3560,7 +3568,7 @@ button.admin-metrica:hover {
   background: none;
   border: none;
   padding: 0;
-  color: var(--verde-800);
+  color: var(--texto-verde-oscuro);
   font-weight: 700;
   text-align: left;
   cursor: pointer;
@@ -3577,14 +3585,14 @@ button.admin-metrica:hover {
 
 .admin-dialogo h2 {
   font-size: 1.3rem;
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
   margin-bottom: 8px;
   padding-right: 40px;
 }
 
 .admin-dialogo h3 {
   font-size: 1rem;
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
   margin: 20px 0 8px;
 }
 
@@ -4002,7 +4010,7 @@ button.admin-metrica:hover {
   padding: 4px 0 0;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--verde-800);
+  color: var(--texto-verde-oscuro);
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -4038,7 +4046,7 @@ button.admin-metrica:hover {
 
 .restablecer-tarjeta h1 {
   font-size: 1.5rem;
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
   margin-bottom: 8px;
 }
 
@@ -4088,7 +4096,7 @@ html.rx-cargando body::after {
   font-size: 2.6rem;
   font-weight: 800;
   letter-spacing: -0.03em;
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
   transform: translate(-50%, -50%) scale(0.92);
   opacity: 0;
   visibility: hidden;
@@ -4456,7 +4464,7 @@ button.step-item {
 button.step-item:hover,
 button.step-item:focus-visible {
   background: rgba(20, 34, 25, 0.06);
-  color: var(--verde-950);
+  color: var(--tinta-fuerte);
 }
 
 .step-circle {
@@ -4473,7 +4481,7 @@ button.step-item:hover .step-circle {
 }
 
 .step-item.completado .step-text {
-  color: var(--verde-800);
+  color: var(--texto-verde-oscuro);
 }
 
 /* Al saltar a una sección, el título no queda oculto bajo la barra superior */
@@ -4915,7 +4923,7 @@ body.rx-con-barra .rx-avisos { bottom: 96px; }
   .rx-barra-precio strong {
     font-size: 1.15rem;
     font-weight: 800;
-    color: var(--verde-950);
+    color: var(--tinta-fuerte);
   }
 
   .rx-barra-precio small {
@@ -5361,3 +5369,383 @@ body.rx-con-barra .rx-avisos { bottom: 96px; }
 .gallery-sub-grid:has(> :nth-child(3):last-child) > :nth-child(3) { grid-column: span 2; }
 .gallery-sub-grid:has(> :nth-child(2):last-child) { grid-template-columns: 1fr; }
 .gallery-sub-grid:has(> :only-child) { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+
+/* ==========================================================================
+   ESTADOS VACÍOS ILUSTRADOS
+   ========================================================================== */
+.rx-vacio {
+  background: var(--superficie);
+  border: 1px solid var(--borde-arena);
+  border-radius: var(--radio-lg);
+  padding: 40px 24px;
+  text-align: center;
+  animation: rxPop 0.4s ease;
+}
+
+.rx-vacio-ilustracion {
+  width: 120px;
+  height: 120px;
+  display: block;
+  margin: 0 auto 16px;
+  animation: rxFlotar 3.2s ease-in-out infinite;
+}
+
+@keyframes rxFlotar {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.rx-vacio h2,
+.rx-vacio h3 {
+  color: var(--tinta-fuerte);
+  font-size: 1.2rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.rx-vacio p {
+  color: var(--tinta-media);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  max-width: 420px;
+  margin: 0 auto 18px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rx-vacio,
+  .rx-vacio-ilustracion {
+    animation: none;
+  }
+}
+
+/* ==========================================================================
+   MODO OSCURO (solo se activa con el botón ☀/☾ de la barra superior)
+   Paleta en grises neutros con un único verde de marca para acciones.
+   ========================================================================== */
+html[data-tema="oscuro"] {
+  color-scheme: dark;
+
+  /* Un solo verde para botones, píldoras activas y acentos */
+  --verde-950: #2f7a52;
+  --verde-900: #2f7a52;
+  --verde-800: #2f7a52;
+  --verde-700: #2f7a52;
+  --verde-600: #3b8d61;
+  --verde-500: #4aa173;
+
+  --verde-pastilla: #1f2b24;
+  --verde-pastilla-borde: #2f4a3a;
+  --verde-badge-bg: #1f2b24;
+  --verde-badge-text: #8fd8ac;
+
+  /* Grises neutros */
+  --fondo-crema: #121212;
+  --fondo-crema-alt: #191919;
+  --superficie: #1e1e1e;
+  --borde-arena: #2f2f2f;
+  --borde-suave: #282828;
+
+  --tinta-fuerte: #f1f1ee;
+  --tinta-media: #b7b7b1;
+  --tinta-tenue: #8b8b86;
+  --texto-verde-oscuro: #8fd8ac;
+  --texto-verde-medio: #8fd8ac;
+
+  --sombra-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
+  --sombra-md: 0 6px 18px -4px rgba(0, 0, 0, 0.6);
+  --sombra-lg: 0 16px 34px -8px rgba(0, 0, 0, 0.7);
+
+  --rx-ilu-circulo: #262626;
+  --rx-ilu-casa: #2c2c2c;
+  --rx-ilu-trazo: #e6e6e1;
+  --rx-ilu-fondo: #1e1e1e;
+}
+
+html[data-tema="oscuro"] body {
+  background-color: var(--fondo-crema);
+  color: var(--tinta-fuerte);
+}
+
+/* Barra superior y pie: gris casi negro, no verde */
+html[data-tema="oscuro"] .main-header,
+html[data-tema="oscuro"] .app-footer {
+  background-color: #0b0b0b;
+}
+
+html[data-tema="oscuro"] .main-header {
+  border-bottom-color: #222;
+}
+
+/* Portada de Buscar: velo gris en vez de verde */
+html[data-tema="oscuro"] .hero-banner {
+  background:
+    linear-gradient(100deg, rgba(10, 10, 10, 0.95) 0%, rgba(10, 10, 10, 0.82) 45%, rgba(10, 10, 10, 0.4) 100%),
+    url("https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=1800&q=70") center 60% / cover no-repeat,
+    #0b0b0b;
+}
+
+/* Campos de formulario */
+html[data-tema="oscuro"] input,
+html[data-tema="oscuro"] select,
+html[data-tema="oscuro"] textarea,
+html[data-tema="oscuro"] .form-control,
+html[data-tema="oscuro"] .sort-select {
+  background-color: var(--fondo-crema-alt);
+  color: var(--tinta-fuerte);
+  border-color: var(--borde-arena);
+}
+
+html[data-tema="oscuro"] input::placeholder,
+html[data-tema="oscuro"] textarea::placeholder {
+  color: var(--tinta-tenue);
+}
+
+/* Recuadros que eran de color claro */
+html[data-tema="oscuro"] .advice-card,
+html[data-tema="oscuro"] .aviso-moderacion,
+html[data-tema="oscuro"] .compare-aviso-alerta,
+html[data-tema="oscuro"] .politica .politica-aviso {
+  background: #26211a;
+  color: #ead7b5;
+  border-color: #3d3426;
+}
+
+html[data-tema="oscuro"] .pub-mensaje-error,
+html[data-tema="oscuro"] .auth-captcha.captcha-error {
+  background: #331c1c;
+  color: #ffc9c4;
+}
+
+html[data-tema="oscuro"] .pub-mensaje-exito {
+  background: #1d2b23;
+  color: #bfe8c6;
+}
+
+html[data-tema="oscuro"] .detail-badge,
+html[data-tema="oscuro"] .badge-draft,
+html[data-tema="oscuro"] .owner-avatar-circle,
+html[data-tema="oscuro"] .btn-compare-quitar,
+html[data-tema="oscuro"] .tag-pill {
+  background: #262626;
+  color: var(--tinta-media);
+}
+
+html[data-tema="oscuro"] .map-view-box,
+html[data-tema="oscuro"] .mapa-selector,
+html[data-tema="oscuro"] .mapa-detalle {
+  background: #1a1a1a;
+}
+
+html[data-tema="oscuro"] .leaflet-tile-pane {
+  filter: brightness(0.8) saturate(0.8);
+}
+
+/* Ventana de contacto: colores del modo oscuro de WhatsApp */
+html[data-tema="oscuro"] .contacto-sello,
+html[data-tema="oscuro"] .modal-badge-whatsapp {
+  background: #1d2b23;
+  color: #8fe3ae;
+}
+
+html[data-tema="oscuro"] .contacto-burbuja-wrap {
+  background: #0b141a;
+}
+
+html[data-tema="oscuro"] .contacto-burbuja {
+  background: #005c4b;
+}
+
+html[data-tema="oscuro"] .contacto-burbuja textarea {
+  color: #e9edef;
+}
+
+html[data-tema="oscuro"] .contacto-contador {
+  color: #8696a0;
+}
+
+html[data-tema="oscuro"] .contacto-avatar {
+  background: #2c2c2c;
+  color: #f1f1ee;
+}
+
+html[data-tema="oscuro"] .btn-guardar-corazon,
+html[data-tema="oscuro"] .galeria-flecha {
+  background: rgba(30, 30, 30, 0.92);
+  color: #f1f1ee;
+}
+
+html[data-tema="oscuro"] .btn-guardar-corazon svg {
+  stroke: #f1f1ee;
+}
+
+html[data-tema="oscuro"] .rx-barra-contacto {
+  background: rgba(30, 30, 30, 0.95);
+}
+
+html[data-tema="oscuro"] .nav-link.active {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+html[data-tema="oscuro"] .modal-backdrop {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+html[data-tema="oscuro"] .rx-aviso {
+  background: #2a2a2a;
+}
+
+html[data-tema="oscuro"] img {
+  filter: brightness(0.95);
+}
+
+/* ---------- Botón para cambiar de tema ---------- */
+.rx-tema-toggle {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  cursor: pointer;
+  overflow: hidden;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.rx-tema-toggle:hover {
+  background: rgba(255, 255, 255, 0.14);
+  transform: rotate(-12deg);
+}
+
+.rx-tema-toggle:focus-visible {
+  outline: 2px solid var(--acento-naranja);
+  outline-offset: 2px;
+}
+
+.rx-tema-toggle svg {
+  width: 18px;
+  height: 18px;
+  grid-area: 1 / 1;
+  transition: transform 0.4s cubic-bezier(0.3, 1.3, 0.5, 1), opacity 0.25s ease;
+}
+
+/* En claro se ve la luna (pasar a oscuro); en oscuro, el sol */
+.rx-tema-toggle .icono-sol { transform: translateY(26px) rotate(90deg); opacity: 0; }
+html[data-tema="oscuro"] .rx-tema-toggle .icono-sol { transform: none; opacity: 1; }
+html[data-tema="oscuro"] .rx-tema-toggle .icono-luna { transform: translateY(-26px) rotate(-90deg); opacity: 0; }
+
+/* En la pantalla de ingreso el botón va a la derecha del logo centrado */
+.login-header .header-inner {
+  position: relative;
+}
+
+.login-header .rx-tema-toggle {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  margin-top: -19px;
+}
+
+/* Celular: el botón queda junto al ☰ */
+@media (max-width: 768px) {
+  .main-header .header-inner > .rx-tema-toggle {
+    order: 2;
+    margin-left: auto;
+    margin-right: 8px;
+  }
+
+  .main-header .header-inner > .rx-tema-toggle ~ .nav-toggle {
+    margin-left: 0;
+  }
+}
+
+/* Transición suave de colores al cambiar de tema */
+html.rx-cambiando-tema,
+html.rx-cambiando-tema * {
+  transition: background-color 0.35s ease, color 0.35s ease, border-color 0.35s ease !important;
+}
+
+/* Modo oscuro: superficies de marca que deben ser gris oscuro, no verde */
+html[data-tema="oscuro"] .auth-brand-side {
+  background-color: #0b0b0b;
+}
+
+html[data-tema="oscuro"] .auth-fondo-capa {
+  background: linear-gradient(to top, #0b0b0b 0%, rgba(10, 10, 10, 0.3) 50%, rgba(10, 10, 10, 0.65) 100%);
+}
+
+html[data-tema="oscuro"] .team-table th,
+html[data-tema="oscuro"] .admin-cerrar {
+  background: #262626;
+}
+
+html[data-tema="oscuro"] .map-pin-university,
+html[data-tema="oscuro"] .university-dot {
+  background: #1b1b1b;
+}
+
+html[data-tema="oscuro"] .rx-skeleton {
+  background: linear-gradient(90deg, #222 25%, #2c2c2c 37%, #222 63%);
+  background-size: 400% 100%;
+}
+
+/* Modo oscuro más sobrio: colores apagados para que no se sienta saturado */
+html[data-tema="oscuro"] {
+  --verde-950: #3a5747;
+  --verde-900: #3a5747;
+  --verde-800: #3a5747;
+  --verde-700: #3a5747;
+  --verde-600: #466654;
+  --verde-500: #577a66;
+
+  --verde-pastilla: #202523;
+  --verde-pastilla-borde: #2e3632;
+  --verde-badge-bg: #202523;
+  --verde-badge-text: #a9c4b4;
+  --texto-verde-oscuro: #a9c4b4;
+  --texto-verde-medio: #a9c4b4;
+
+  --acento-naranja: #b98a5a;
+  --acento-naranja-hover: #a77b4e;
+  --color-wa-real: #2e8b57;
+
+  --tinta-fuerte: #e8e8e4;
+  --tinta-media: #a9a9a4;
+}
+
+html[data-tema="oscuro"] .insignia-revisada {
+  border-color: #2e3632;
+}
+
+html[data-tema="oscuro"] .pill-guardados:not(.active) {
+  color: #cf8a95;
+}
+
+html[data-tema="oscuro"] .btn-guardar-corazon.guardado svg {
+  fill: #c96b78;
+  stroke: #c96b78;
+}
+
+html[data-tema="oscuro"] .hero-eyebrow {
+  color: #d2b48f;
+}
+
+html[data-tema="oscuro"] .btn-whatsapp-action,
+html[data-tema="oscuro"] .rx-barra-boton {
+  box-shadow: none;
+}
+
+html[data-tema="oscuro"] .leaflet-tile-pane {
+  filter: brightness(0.72) saturate(0.45) contrast(1.05);
+}
+
+html[data-tema="oscuro"] img {
+  filter: brightness(0.9) saturate(0.85);
+}
+
+html[data-tema="oscuro"] .rx-aviso-exito .rx-aviso-icono {
+  background: #3a5747;
+  color: #e8e8e4;
+}

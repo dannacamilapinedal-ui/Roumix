@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Gestiona tus alojamientos y habitaciones publicados en Roumix Villavicencio.">
   <title>Mis Publicaciones — Roumix</title>
+  <script>try{if(localStorage.getItem("roumix_tema")==="oscuro"){document.documentElement.dataset.tema="oscuro";}}catch(e){}</script>
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
   <meta name="theme-color" content="#142219">
   
@@ -126,7 +127,7 @@
         misInmuebles = await RoumixAPI.getMisInmuebles();
       } catch (error) {
         contenedor.innerHTML = `
-          <div role="alert" style="background:#fff; border:1px solid var(--borde-arena); border-radius:18px; padding:48px 24px; text-align:center;">
+          <div role="alert" class="rx-vacio">
             <p style="color:var(--tinta-media); font-size:1.05rem;"></p>
           </div>
         `;
@@ -136,8 +137,10 @@
 
       function mostrarVacio() {
         contenedor.innerHTML = `
-          <div style="background:#fff; border:1px solid var(--borde-arena); border-radius:18px; padding:48px 24px; text-align:center;">
-            <p style="color:var(--tinta-media); font-size:1.05rem; margin-bottom:18px;">Aún no tienes inmuebles publicados en tu cuenta.</p>
+          <div class="rx-vacio" role="status">
+            ${ilustracionVacia("publicar")}
+            <h3>Aún no tienes publicaciones</h3>
+            <p>Publica tu habitación o apartamento y empieza a recibir mensajes de estudiantes por WhatsApp.</p>
             <a href="publicar.html" class="btn-publish-new-property">
               <svg class="svg-plus-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="12" y1="5" x2="12" y2="19"></line>

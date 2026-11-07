@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Compara opciones de alojamiento estudiantil en Villavicencio - Roumix.">
   <title>Compara tus opciones de alojamiento — Roumix</title>
+  <script>try{if(localStorage.getItem("roumix_tema")==="oscuro"){document.documentElement.dataset.tema="oscuro";}}catch(e){}</script>
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
   <meta name="theme-color" content="#142219">
   
@@ -182,8 +183,8 @@
       function mostrarEstado(icono, titulo, texto, enlace) {
         acciones.replaceChildren();
         contenedor.innerHTML = `
-          <div class="compare-estado" role="status">
-            <span class="compare-estado-icono" aria-hidden="true">${icono}</span>
+          <div class="compare-estado rx-vacio" role="status">
+            ${ilustracionVacia(icono)}
             <h2></h2>
             <p></p>
             ${enlace ? '<a href="buscar.html" class="btn-search-action">Buscar inmuebles</a>' : ""}
@@ -260,7 +261,7 @@
         avisoQuitados.hidden = true;
 
         if (ids.length === 0) {
-          mostrarEstado("⚖️", "Aún no has elegido inmuebles para comparar",
+          mostrarEstado("comparar", "Aún no has elegido inmuebles para comparar",
             `En la búsqueda o en el detalle usa "+ Comparar" para elegir hasta ${RoumixComparador.MAX} inmuebles.`, true);
           return;
         }
@@ -273,7 +274,7 @@
           // Datos actuales desde la API: solo vuelven los que siguen disponibles
           inmuebles = await RoumixAPI.getInmueblesPorIds(ids);
         } catch (error) {
-          mostrarEstado("⚠️", "No pudimos cargar la comparación", error.message, false);
+          mostrarEstado("error", "No pudimos cargar la comparación", error.message, false);
           const reintentar = document.createElement("button");
           reintentar.type = "button";
           reintentar.className = "btn-search-action";
@@ -295,7 +296,7 @@
         }
 
         if (inmuebles.length === 0) {
-          mostrarEstado("🏚️", "Los inmuebles que elegiste ya no están disponibles",
+          mostrarEstado("buscar", "Los inmuebles que elegiste ya no están disponibles",
             "Vuelve a la búsqueda para elegir otras opciones.", true);
           return;
         }

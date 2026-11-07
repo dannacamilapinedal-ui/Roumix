@@ -815,3 +815,118 @@ function lanzarConfeti(origen) {
   document.body.appendChild(capa);
   setTimeout(() => capa.remove(), 1400);
 }
+
+// 12. Números que cuentan desde 0 hasta su valor (cifras de la portada)
+function animarNumero(elemento, valorFinal, duracion = 900) {
+  if (!elemento) return;
+  const final = Number(valorFinal);
+  if (!Number.isFinite(final) || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    elemento.textContent = String(valorFinal);
+    return;
+  }
+  const inicio = performance.now();
+  const paso = (ahora) => {
+    const avance = Math.min(1, (ahora - inicio) / duracion);
+    const suavizado = 1 - Math.pow(1 - avance, 3); // frena al final
+    elemento.textContent = String(Math.round(final * suavizado));
+    if (avance < 1) requestAnimationFrame(paso);
+    else elemento.textContent = String(final);
+  };
+  requestAnimationFrame(paso);
+  // Respaldo: si la pestaña no dibuja (segundo plano), el valor final queda igual
+  setTimeout(() => { elemento.textContent = String(final); }, duracion + 300);
+}
+
+// 13. Ilustraciones para estados vacíos (SVG con los colores de Roumix)
+function ilustracionVacia(tipo) {
+  const casa = `
+    <path d="M38 66 L60 48 L82 66 V92 H38 Z" fill="var(--rx-ilu-casa)" stroke="var(--rx-ilu-trazo)" stroke-width="3" stroke-linejoin="round"/>
+    <rect x="53" y="74" width="14" height="18" rx="2" fill="var(--rx-ilu-trazo)"/>
+    <path d="M34 68 L60 46 L86 68" fill="none" stroke="var(--rx-ilu-trazo)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`;
+  const extras = {
+    buscar: `
+      <circle cx="86" cy="82" r="15" fill="var(--rx-ilu-fondo)" stroke="var(--acento-naranja)" stroke-width="5"/>
+      <path d="M97 93 L108 104" stroke="var(--acento-naranja)" stroke-width="6" stroke-linecap="round"/>`,
+    guardados: `
+      <path d="M88 104s-15-9-19-18c-3-7 1-14 8-14 4 0 7 2 11 6 4-4 7-6 11-6 7 0 11 7 8 14-4 9-19 18-19 18z" fill="#e0475b" stroke="var(--rx-ilu-fondo)" stroke-width="3"/>`,
+    publicar: `
+      <circle cx="88" cy="88" r="15" fill="var(--acento-naranja)" stroke="var(--rx-ilu-fondo)" stroke-width="3"/>
+      <path d="M88 81 V95 M81 88 H95" stroke="#fff" stroke-width="4" stroke-linecap="round"/>`,
+    comparar: `
+      <rect x="74" y="72" width="30" height="34" rx="6" fill="var(--rx-ilu-fondo)" stroke="var(--acento-naranja)" stroke-width="4"/>
+      <path d="M81 84 H97 M81 93 H92" stroke="var(--acento-naranja)" stroke-width="4" stroke-linecap="round"/>`,
+    error: `
+      <circle cx="88" cy="88" r="15" fill="#c0392b" stroke="var(--rx-ilu-fondo)" stroke-width="3"/>
+      <path d="M88 80 V90" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="88" cy="96" r="2.4" fill="#fff"/>`
+  };
+  return `
+    <svg class="rx-vacio-ilustracion" viewBox="0 0 120 120" aria-hidden="true">
+      <circle cx="60" cy="60" r="56" fill="var(--rx-ilu-circulo)"/>
+      <circle cx="26" cy="34" r="4" fill="var(--acento-naranja)" opacity="0.5"/>
+      <circle cx="96" cy="28" r="3" fill="var(--rx-ilu-trazo)" opacity="0.35"/>
+      ${casa}
+      ${extras[tipo] || ""}
+    </svg>`;
+}
+
+// 14. Tema claro / oscuro con un botón (☾ / ☀). Por defecto, claro.
+// La elección se recuerda en este navegador. Un script pequeño en <head> la aplica
+// antes de dibujar la página para que no parpadee.
+const RoumixTema = {
+  CLAVE: "roumix_tema",
+
+  actual() {
+    return document.documentElement.dataset.tema === "oscuro" ? "oscuro" : "claro";
+  },
+
+  aplicar(tema, animar) {
+    const raiz = document.documentElement;
+    if (animar && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      raiz.classList.add("rx-cambiando-tema");
+      setTimeout(() => raiz.classList.remove("rx-cambiando-tema"), 400);
+    }
+    if (tema === "oscuro") raiz.dataset.tema = "oscuro";
+    else delete raiz.dataset.tema;
+    try { localStorage.setItem(this.CLAVE, tema); } catch (e) { /* almacenamiento bloqueado */ }
+
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", tema === "oscuro" ? "#0b0b0b" : "#142219");
+
+    document.querySelectorAll(".rx-tema-toggle").forEach((boton) => {
+      const oscuro = tema === "oscuro";
+      boton.setAttribute("aria-pressed", String(oscuro));
+      boton.setAttribute("aria-label", oscuro ? "Cambiar a modo claro" : "Cambiar a modo oscuro");
+      boton.title = oscuro ? "Modo claro" : "Modo oscuro";
+    });
+  },
+
+  instalar() {
+    const contenedor = document.querySelector(".main-header .header-inner");
+    if (!contenedor || contenedor.querySelector(".rx-tema-toggle")) return;
+    const boton = document.createElement("button");
+    boton.type = "button";
+    boton.className = "rx-tema-toggle";
+    boton.innerHTML = `
+      <svg class="icono-luna" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="icono-sol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8 6 18M18 6l1.8-1.8"/></svg>`;
+    boton.addEventListener("click", () => {
+      this.aplicar(this.actual() === "oscuro" ? "claro" : "oscuro", true);
+    });
+    // Computador: junto a "Cerrar sesión". Celular: al lado del ☰ (fuera del menú plegable)
+    const derecha = contenedor.querySelector(".header-right");
+    const esCelular = window.matchMedia("(max-width: 768px)");
+    const ubicar = () => {
+      if (derecha && !esCelular.matches) {
+        derecha.appendChild(boton);
+      } else {
+        contenedor.insertBefore(boton, contenedor.querySelector(".nav-toggle") || null);
+      }
+    };
+    ubicar();
+    esCelular.addEventListener("change", ubicar);
+    this.aplicar(this.actual(), false);
+  }
+};
+
+document.addEventListener("DOMContentLoaded", () => RoumixTema.instalar());

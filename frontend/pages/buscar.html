@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Roumix - Encuentra habitaciones, apartaestudios y apartamentos para estudiantes en Villavicencio cerca de tu universidad.">
   <title>Buscar Vivienda — Roumix</title>
+  <script>try{if(localStorage.getItem("roumix_tema")==="oscuro"){document.documentElement.dataset.tema="oscuro";}}catch(e){}</script>
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
   <meta name="theme-color" content="#142219">
   
@@ -68,7 +69,7 @@
               <span class="stat-label">INMUEBLES</span>
             </div>
             <div class="stat-box">
-              <span class="stat-number">5</span>
+              <span class="stat-number" data-contar="5">5</span>
               <span class="stat-label">UNIVERSIDADES</span>
             </div>
           </div>
@@ -278,10 +279,10 @@
 
       function mostrarAviso(icono, titulo, texto, boton) {
         listaContenedor.innerHTML = `
-          <div role="status" style="background:#fff; border:1px solid #ded7c5; border-radius:18px; padding:44px 24px; text-align:center;">
-            <span style="font-size:2.6rem; display:block; margin-bottom:12px;" aria-hidden="true">${icono}</span>
-            <h3 style="color:#142219; font-size:1.25rem; margin-bottom:8px;"></h3>
-            <p style="color:#546250; font-size:0.95rem; margin-bottom:18px;"></p>
+          <div role="status" class="rx-vacio">
+            ${ilustracionVacia(icono)}
+            <h3></h3>
+            <p></p>
             ${boton ? `<button type="button" class="btn-search-action" id="btn-aviso-accion">${boton.texto}</button>` : ""}
           </div>`;
         listaContenedor.querySelector("h3").textContent = titulo;
@@ -309,7 +310,7 @@
           listaContenedor.removeAttribute("aria-busy");
           listaContenedor.classList.remove("rx-actualizando");
           contadorResultados.innerHTML = "<strong>Sin conexión</strong>";
-          mostrarAviso("⚠️", "No pudimos cargar los inmuebles", error.message, { texto: "Reintentar", accion: cargar });
+          mostrarAviso("error", "No pudimos cargar los inmuebles", error.message, { texto: "Reintentar", accion: cargar });
           actualizarPines([]);
           return;
         }
@@ -335,7 +336,7 @@
         contadorResultados.innerHTML = `<strong>${inmuebles.length} resultado${inmuebles.length === 1 ? "" : "s"}</strong> cerca de ${escaparHTML(uniLabel)}`;
 
         if (inmuebles.length === 0 && soloGuardados) {
-          mostrarAviso("🤍", "Aún no tienes inmuebles guardados",
+          mostrarAviso("guardados", "Aún no tienes inmuebles guardados",
             "Toca el corazón de cualquier publicación para tenerla siempre a mano aquí.",
             { texto: "Ver todas", accion: resetFiltros });
           actualizarPines([]);
@@ -343,7 +344,7 @@
         }
 
         if (inmuebles.length === 0) {
-          mostrarAviso("🔍", "No se encontraron inmuebles con estos filtros",
+          mostrarAviso("buscar", "No se encontraron inmuebles con estos filtros",
             "Intenta ajustando el presupuesto o seleccionando otra universidad.",
             { texto: "Restablecer filtros", accion: resetFiltros });
           actualizarPines([]);
@@ -521,6 +522,7 @@
         cargar();
       });
 
+      document.querySelectorAll("[data-contar]").forEach(el => animarNumero(el, el.dataset.contar));
       const moverPildora = activarPildoraDeslizante(document.querySelector(".category-pills"));
 
       document.querySelectorAll(".pill-btn").forEach(btn => {
@@ -542,7 +544,7 @@
 
       // Total de inmuebles disponibles (sin filtros) para la cifra del encabezado
       RoumixAPI.getInmuebles()
-        .then(lista => { if (statTotal) statTotal.textContent = lista.length; })
+        .then(lista => animarNumero(statTotal, lista.length))
         .catch(() => { if (statTotal) statTotal.textContent = "–"; });
 
       function initMapa() {
