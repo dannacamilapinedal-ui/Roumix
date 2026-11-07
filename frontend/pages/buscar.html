@@ -36,14 +36,13 @@
       <nav class="main-nav" aria-label="Navegación principal">
         <ul class="nav-links">
           <li><a href="buscar.html" class="nav-link">Buscar</a></li>
-          <li><a href="como-funciona.html" class="nav-link">Cómo funciona</a></li>
           <li><a href="comparar.html" class="nav-link">Comparar</a></li>
         </ul>
       </nav>
 
       <div class="header-right">
         <span class="user-role-badge">Estudiante</span>
-        <a href="../index.html" class="btn-logout-pill" id="btn-logout">Cerrar sesión</a>
+        <a href="../ingresar.html" class="btn-logout-pill" id="btn-logout">Cerrar sesión</a>
       </div>
     </div>
   </header>
@@ -230,8 +229,7 @@
         <ul>
           <li><a href="buscar.html" class="footer-link">Buscar vivienda</a></li>
           <li><a href="comparar.html" class="footer-link">Comparar opciones</a></li>
-          <li><a href="como-funciona.html" class="footer-link">Cómo funciona</a></li>
-          <li><a href="../index.html" class="footer-link">Cerrar sesión</a></li>
+          <li><a href="../ingresar.html" class="footer-link">Cerrar sesión</a></li>
         </ul>
       </div>
 
@@ -258,6 +256,8 @@
 
   <script>
     document.addEventListener("DOMContentLoaded", async () => {
+      // Todas las secciones requieren cuenta
+      if (!(await protegerPagina(["estudiante", "propietario", "admin"]))) return;
       const listaContenedor = document.getElementById("lista-inmuebles");
       const contadorResultados = document.getElementById("contador-resultados");
       const statTotal = document.getElementById("stats-total-inmuebles");
@@ -268,6 +268,12 @@
 
       const FILTROS_INICIALES = { q: "", universidad: "Santo Tomás", precioMax: 700000, tipo: "todos", orden: "precio-asc" };
       let filtros = { ...FILTROS_INICIALES };
+      // Desde la landing: buscar.html?universidad=Unillanos abre ya filtrado
+      const uniPedida = new URLSearchParams(window.location.search).get("universidad");
+      if (uniPedida && [...selectUni.options].some(o => o.value === uniPedida)) {
+        filtros.universidad = uniPedida;
+        selectUni.value = uniPedida;
+      }
       let inmuebles = [];
       let consultaActual = 0; // descarta respuestas viejas si el usuario cambia filtros rápido
       let temporizadorTexto = null;

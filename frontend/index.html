@@ -3,454 +3,492 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Roumix - Inicia sesión o regístrate para acceder a opciones de vivienda universitaria en Villavicencio.">
-  <title>Roumix — Iniciar Sesión / Registro</title>
+  <meta name="description" content="Roumix: habitaciones, apartaestudios y apartamentos para estudiantes cerca de tu universidad en Villavicencio. Mira la zona en el mapa, compara y escríbele directo al propietario.">
+  <title>Roumix — Vivienda universitaria en Villavicencio</title>
+  <!-- Los enlaces de los correos de Supabase (confirmar cuenta, recuperar contraseña) llegan a la
+       dirección principal: se envían a la pantalla de acceso, que es la que los procesa -->
+  <script>if(/access_token|type=|error_description/.test(location.hash)){location.replace("ingresar.html"+location.search+location.hash);}</script>
   <script>try{if(localStorage.getItem("roumix_tema")==="oscuro"){document.documentElement.dataset.tema="oscuro";}}catch(e){}</script>
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
   <meta name="theme-color" content="#142219">
-  
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+
   <link rel="stylesheet" href="css/style.css">
-  <!-- Pantalla de carga: solo se muestra si la página tarda más de 0,3 s (ver app.js) -->
-  <script>(function(d){d.classList.add("rx-cargando");setTimeout(function(){if(d.classList.contains("rx-cargando"))d.classList.add("rx-mostrar")},300);setTimeout(function(){d.classList.remove("rx-mostrar","rx-cargando")},6000)})(document.documentElement)</script>
+  <link rel="stylesheet" href="css/landing.css">
 </head>
 
-<body class="page-login">
-  <!-- ======================================================== -->
-  <!-- BARRA DE ACCESO LIMPIA (SOLO LOGO, SIN DISTRACCIONES)    -->
-  <!-- ======================================================== -->
-  <header class="main-header login-header entrada-arriba">
+<body class="lx-pagina">
+  <!-- Íconos de línea de Roumix (trazo 1.8, esquinas redondeadas) -->
+  <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+    <defs>
+      <symbol id="i-birrete" viewBox="0 0 24 24"><path d="M2.5 9 12 4.5 21.5 9 12 13.5z"/><path d="M6.5 11.2v4.6c0 1.6 2.5 3.2 5.5 3.2s5.5-1.6 5.5-3.2v-4.6"/><path d="M21.5 9v5"/></symbol>
+      <symbol id="i-buscar" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></symbol>
+      <symbol id="i-mapa" viewBox="0 0 24 24"><path d="M3 6.5 8.5 4l7 2.5L21 4v13.5L15.5 20l-7-2.5L3 20z"/><path d="M8.5 4v13.5M15.5 6.5V20"/></symbol>
+      <symbol id="i-chat" viewBox="0 0 24 24"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4a8.5 8.5 0 1 1 15.6-4.6z"/><path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01"/></symbol>
+      <symbol id="i-casa" viewBox="0 0 24 24"><path d="m3 11 9-7 9 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5.5h4V20"/></symbol>
+      <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/></symbol>
+      <symbol id="i-balanza" viewBox="0 0 24 24"><path d="M12 4v16M7 20h10M5 7.5h14"/><path d="m5 7.5-2.5 6a2.5 2.5 0 0 0 5 0z"/><path d="m19 7.5-2.5 6a2.5 2.5 0 0 0 5 0z"/></symbol>
+      <symbol id="i-corazon" viewBox="0 0 24 24"><path d="M12 20s-7.2-4.5-9-9.2C1.8 7.6 3.8 4.5 7 4.5c2 0 3.6 1.1 5 3 1.4-1.9 3-3 5-3 3.2 0 5.2 3.1 4 6.3-1.8 4.7-9 9.2-9 9.2z"/></symbol>
+      <symbol id="i-reloj" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+      <symbol id="i-diana" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="0.8"/></symbol>
+      <symbol id="i-celular" viewBox="0 0 24 24"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18h3"/></symbol>
+      <symbol id="i-ajustes" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 12h3M11 12h9M4 17h11M19 17h1"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="17" r="2"/></symbol>
+      <symbol id="i-correo" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.5 7 8.5 6 8.5-6"/></symbol>
+      <symbol id="i-escudo" viewBox="0 0 24 24"><path d="M12 3 19.5 6v5.5c0 4.6-3.1 7.8-7.5 9.5-4.4-1.7-7.5-4.9-7.5-9.5V6z"/><path d="m8.8 12 2.2 2.2 4.3-4.4"/></symbol>
+      <symbol id="i-bandera" viewBox="0 0 24 24"><path d="M5 21V4"/><path d="M5 4.5h11.5l-2 4 2 4H5"/></symbol>
+      <symbol id="i-zona" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" stroke-dasharray="2.2 2.8"/><circle cx="12" cy="12" r="2.6"/></symbol>
+      <symbol id="i-flecha" viewBox="0 0 24 24"><path d="M5 12h14M13.5 6.5 19 12l-5.5 5.5"/></symbol>
+      <symbol id="i-usuario" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.8"/><path d="M4.5 20c.9-3.6 3.9-5.8 7.5-5.8s6.6 2.2 7.5 5.8"/></symbol>
+    </defs>
+  </svg>
+
+  <!-- Barra superior (app.js la completa según la sesión) -->
+  <header class="main-header">
     <div class="header-inner">
       <div class="header-left">
-        <a href="index.html" class="logo">
+        <a href="/" class="logo" aria-label="Roumix, inicio">
           <span class="logo-text">roumix</span><span class="logo-dot">.</span>
         </a>
+      </div>
+      <nav class="main-nav" aria-label="Navegación principal">
+        <ul class="nav-links"></ul>
+      </nav>
+      <div class="header-right">
+        <a href="ingresar.html" class="btn-logout-pill">Iniciar sesión</a>
+        <a href="ingresar.html?registro=estudiante" class="btn-crear-cuenta">Crear cuenta</a>
       </div>
     </div>
   </header>
 
-  <!-- ======================================================== -->
-  <!-- CONTENIDO: SPLIT SCREEN LOGIN & REGISTRO (BOCETO 1)      -->
-  <!-- ======================================================== -->
   <main>
-    <div class="auth-split-screen">
-      <!-- Lado Izquierdo: fondo fotográfico animado y pasos interactivos -->
-      <div class="auth-brand-side auth-animado">
-        <div class="auth-fondos" aria-hidden="true">
-          <div class="auth-fondo activo" data-paso="1" style="background-image: url('https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1600&q=70');"></div>
-          <div class="auth-fondo" data-paso="2" style="background-image: url('https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=1600&q=70');"></div>
-          <div class="auth-fondo" data-paso="3" style="background-image: url('https://images.unsplash.com/photo-1617098474202-0d0d7f60c56b?auto=format&fit=crop&w=1600&q=70');"></div>
-          <div class="auth-fondo-capa"></div>
-        </div>
+    <!-- ===================== 1. PORTADA ===================== -->
+    <section class="lx-hero" id="inicio">
+      <div class="lx-hero-brillo lx-brillo-1" aria-hidden="true"></div>
+      <div class="lx-hero-brillo lx-brillo-2" aria-hidden="true"></div>
+      <div class="lx-hero-rejilla" aria-hidden="true"></div>
 
-        <div class="auth-brand-content">
-          <div class="auth-brand-logo entrada-lateral" style="animation-delay: 0.1s;">
-            <span>roumix</span><span class="dot-orange">.</span>
-          </div>
+      <div class="lx-contenedor lx-hero-grid">
+        <div class="lx-hero-texto">
+          <span class="lx-chip lx-entra" style="--i:0">
+            <span class="lx-chip-punto" aria-hidden="true"></span>
+            Vivienda universitaria en Villavicencio
+          </span>
 
-          <h1 class="auth-brand-title entrada-lateral" style="animation-delay: 0.2s;">
-            Crea tu cuenta y encuentra vivienda cerca de tu universidad.
+          <h1 class="lx-hero-titulo lx-entra" style="--i:1">
+            Encuentra dónde vivir
+            <span class="lx-rotador" aria-live="polite">
+              <span class="lx-rotador-texto" id="lx-rotador">cerca de tu U</span>
+            </span>
           </h1>
 
-          <ol class="auth-pasos entrada-lateral" style="animation-delay: 0.3s;" aria-label="Cómo funciona Roumix">
-            <li>
-              <button type="button" class="auth-paso activo" data-paso="1" aria-expanded="true" aria-controls="paso-desc-1">
-                <span class="auth-paso-numero">1</span>
-                <span class="auth-paso-titulo">Explora y compara</span>
-              </button>
-              <p class="auth-paso-desc" id="paso-desc-1">Busca por universidad, precio y tipo, mira la zona en el mapa y compara hasta 3 inmuebles lado a lado.</p>
-            </li>
-            <li>
-              <button type="button" class="auth-paso" data-paso="2" aria-expanded="false" aria-controls="paso-desc-2">
-                <span class="auth-paso-numero">2</span>
-                <span class="auth-paso-titulo">Contacto directo</span>
-              </button>
-              <p class="auth-paso-desc" id="paso-desc-2">Escribe al propietario por WhatsApp desde la publicación, sin intermediarios.</p>
-            </li>
-            <li>
-              <button type="button" class="auth-paso" data-paso="3" aria-expanded="false" aria-controls="paso-desc-3">
-                <span class="auth-paso-numero">3</span>
-                <span class="auth-paso-titulo">Publica y gestiona</span>
-              </button>
-              <p class="auth-paso-desc" id="paso-desc-3">Si eres propietario, publica con fotos y ubicación, y pausa o edita tus inmuebles cuando quieras.</p>
-            </li>
-          </ol>
-        </div>
-      </div>
+          <p class="lx-hero-sub lx-entra" style="--i:2">
+            Habitaciones, apartaestudios y apartamentos cerca de la Santo Tomás, Unillanos, la Cooperativa y Uniminuto.
+            Mira la zona en el mapa, compara opciones y escríbele directo al propietario por WhatsApp.
+          </p>
 
-      <!-- Lado Derecho: Formulario en Fondo Crema -->
-      <div class="auth-form-side entrada-arriba" style="animation-delay: 0.2s;">
-        <div class="auth-form-wrapper">
-          <!-- Toggle Tabs: Iniciar sesión / Registrarme (Exacto al boceto 1) -->
-          <div class="auth-toggle-tabs" role="tablist">
-            <span class="auth-toggle-indicador" aria-hidden="true"></span>
-            <button type="button" class="auth-tab-btn active" id="tab-login">Iniciar sesión</button>
-            <button type="button" class="auth-tab-btn" id="tab-register">Registrarme</button>
+          <!-- Búsqueda rápida: con sesión abre Buscar; sin sesión, crear cuenta -->
+          <form class="lx-busqueda lx-entra" style="--i:3" id="lx-form-busqueda">
+            <label class="sr-only" for="lx-universidad">Tu universidad</label>
+            <svg class="lx-icono lx-busqueda-icono" aria-hidden="true"><use href="#i-birrete"/></svg>
+            <select id="lx-universidad" name="universidad">
+              <option value="Santo Tomás">Universidad Santo Tomás</option>
+              <option value="Unillanos">Universidad de los Llanos</option>
+              <option value="Cooperativa">Universidad Cooperativa</option>
+              <option value="Uniminuto">Uniminuto</option>
+              <option value="Antonio Nariño">Universidad Antonio Nariño</option>
+              <option value="todas">Todas las universidades</option>
+            </select>
+            <button type="submit" class="lx-btn lx-btn-naranja">
+              <span data-texto-visitante="Empezar gratis" data-texto-usuario="Ver opciones">Empezar gratis</span>
+              <svg class="lx-icono" aria-hidden="true"><use href="#i-flecha"/></svg>
+            </button>
+          </form>
+
+          <div class="lx-hero-acciones lx-entra" style="--i:4">
+            <a href="ingresar.html?registro=propietario" class="lx-enlace-claro">¿Tienes un inmueble? <strong>Publícalo en Roumix</strong></a>
+            <span class="lx-hero-nota" data-solo-visitante>Crear tu cuenta toma menos de un minuto.</span>
+          </div>
+        </div>
+
+        <!-- Composición interactiva: mapa estilizado, pines, tarjeta y chat -->
+        <div class="lx-hero-visual lx-entra" style="--i:2" id="lx-visual" aria-hidden="true">
+          <div class="lx-capa lx-mapa-falso" data-prof="10">
+            <svg viewBox="0 0 400 400" class="lx-mapa-calles">
+              <path d="M-20 120 C 80 100, 160 160, 420 110" />
+              <path d="M-20 260 C 120 230, 220 300, 420 240" />
+              <path d="M90 -20 C 110 120, 70 260, 120 420" />
+              <path d="M270 -20 C 250 140, 300 280, 260 420" />
+              <path d="M-20 40 L 420 380" class="lx-calle-principal" />
+            </svg>
+            <span class="lx-pin-campus" style="left:58%; top:44%"><svg class="lx-icono" aria-hidden="true"><use href="#i-birrete"/></svg> Santo Tomás</span>
+            <span class="lx-pin-precio" style="left:22%; top:26%; --d:0.2s">$420k</span>
+            <span class="lx-pin-precio" style="left:72%; top:24%; --d:0.6s">$650k</span>
+            <span class="lx-pin-precio" style="left:34%; top:66%; --d:1s">$380k</span>
+            <span class="lx-pin-precio" style="left:80%; top:70%; --d:1.4s">$500k</span>
+            <span class="lx-radar" style="left:58%; top:44%"></span>
           </div>
 
-          <form id="form-auth" class="auth-form-card" novalidate>
-            <!-- Campo Nombre (solo en registro) -->
-            <div class="auth-field-group" id="field-nombre" style="display: none;">
-              <label for="auth-nombre" class="auth-label">Nombre completo</label>
-              <input 
-                type="text" 
-                id="auth-nombre" 
-                class="auth-input" 
-                placeholder="Tu nombre completo"
-                autocomplete="name"
-                maxlength="120"
-              >
-            </div>
-
-            <!-- Correo -->
-            <div class="auth-field-group">
-              <label for="auth-email" class="auth-label">Correo</label>
-              <input 
-                type="email" 
-                id="auth-email" 
-                class="auth-input" 
-                placeholder="nombre@ustavillavicencio.edu.co"
-                autocomplete="email"
-                maxlength="150"
-                required
-              >
-            </div>
-
-            <!-- Contraseña -->
-            <div class="auth-field-group" id="field-password">
-              <label for="auth-password" class="auth-label">Contraseña</label>
-              <div class="password-input-wrap">
-                <input 
-                  type="password" 
-                  id="auth-password" 
-                  class="auth-input" 
-                  placeholder="••••••••••••" 
-                  autocomplete="current-password"
-                  maxlength="72"
-                  required
-                >
-                <button type="button" class="btn-toggle-pwd" id="btn-show-pwd" aria-label="Mostrar u ocultar contraseña">
-                  <svg class="svg-eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                    <circle cx="12" cy="12" r="3"></circle>
-                  </svg>
-                </button>
-              </div>
-              <button type="button" class="auth-link-olvide" id="link-olvide">¿Olvidaste tu contraseña?</button>
-            </div>
-
-            <!-- Selector de rol (solo en registro: al iniciar sesión el rol sale del perfil guardado) -->
-            <div class="auth-role-group" id="field-rol" style="display: none;">
-              <label class="auth-label">Me registro como</label>
-              <div class="role-selector-pill">
-                <button type="button" class="role-btn active" data-role="estudiante" aria-pressed="true">Estudiante</button>
-                <button type="button" class="role-btn" data-role="propietario" aria-pressed="false">Propietario</button>
+          <div class="lx-capa lx-tarjeta-flotante" data-prof="26" id="lx-tarjeta-real">
+            <div class="lx-tarjeta-foto"></div>
+            <div class="lx-tarjeta-info">
+              <strong>Habitación cerca a la U</strong>
+              <span>La Grama · 9 min a pie</span>
+              <div class="lx-tarjeta-fila">
+                <b>$420.000</b><small>/mes</small>
+                <svg class="lx-icono lx-corazon" aria-hidden="true"><use href="#i-corazon"/></svg>
               </div>
             </div>
+          </div>
 
-            <!-- Celular (solo en registro; obligatorio para propietarios) -->
-            <div class="auth-field-group" id="field-telefono" style="display: none;">
-              <label for="auth-telefono" class="auth-label" id="label-telefono">Celular / WhatsApp (opcional)</label>
-              <input
-                type="tel"
-                id="auth-telefono"
-                class="auth-input"
-                placeholder="3101234567"
-                autocomplete="tel"
-                maxlength="20"
-              >
+          <div class="lx-capa lx-chat" data-prof="40">
+            <span class="lx-chat-avatar">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.8.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.5-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6l.4-.5c.2-.2.2-.3.3-.5.1-.2.1-.4 0-.5l-.9-2.2c-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.4s1 2.8 1.2 3c.1.2 2 3.1 4.9 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 1.9-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3zM12 21.8c-1.8 0-3.5-.5-5-1.4l-.4-.2-3.7 1 1-3.6-.2-.4C2.7 15.6 2.2 13.8 2.2 12 2.2 6.6 6.6 2.2 12 2.2S21.8 6.6 21.8 12 17.4 21.8 12 21.8zM12 .2C5.5.2.2 5.5.2 12c0 2.1.5 4.1 1.6 5.9L.1 24l6.3-1.6c1.7.9 3.7 1.4 5.6 1.4 6.5 0 11.8-5.3 11.8-11.8S18.5.2 12 .2z"/></svg>
+            </span>
+            <div>
+              <small>WhatsApp</small>
+              <p>Hola, ¿todavía está disponible?</p>
             </div>
+          </div>
 
-            <!-- Consentimiento (solo en registro): Ley 1581 de 2012 -->
-            <div class="auth-consentimiento" id="field-politica" style="display: none;">
-              <label class="auth-check">
-                <input type="checkbox" id="auth-politica">
-                <span>He leído y acepto la <a href="pages/privacidad.html" target="_blank" rel="noopener">política de tratamiento de datos personales</a> de Roumix.</span>
-              </label>
-            </div>
-
-            <!-- Verificación de seguridad (CAPTCHA) -->
-            <div class="auth-captcha" id="captcha-acceso" aria-label="Verificación de seguridad"></div>
-
-            <!-- Mensajes de error o confirmación -->
-            <p id="auth-mensaje" role="alert" aria-live="polite" style="display: none; margin: 0; padding: 10px 14px; border-radius: 12px; font-size: 0.9rem;"></p>
-
-            <!-- Botón Entrar / Crear cuenta -->
-            <button type="submit" id="btn-submit-auth" class="btn-auth-primary">
-              Entrar
-            </button>
-
-            <!-- Volver desde "recuperar contraseña" -->
-            <button type="button" class="auth-link-olvide auth-link-volver" id="link-volver" hidden>← Volver a iniciar sesión</button>
-
-            <!-- Enlaces al pie -->
-            <div class="auth-footer-links entrada-arriba" style="animation-delay: 0.5s;">
-              <a href="pages/buscar.html" class="auth-footer-link">Explorar sin iniciar sesión</a>
-              <span class="auth-privacy-notice">Tu contraseña la protege Supabase Auth; Roumix nunca la guarda. <a href="pages/privacidad.html">Política de datos</a></span>
-            </div>
-          </form>
+          <div class="lx-capa lx-insignia" data-prof="18">
+            <svg class="lx-icono" aria-hidden="true"><use href="#i-escudo"/></svg> Revisada por Roumix
+          </div>
         </div>
       </div>
+
+      <a href="#como-funciona" class="lx-bajar" aria-label="Ver más"><span></span></a>
+    </section>
+
+    <!-- ===================== 2. CIFRAS ===================== -->
+    <section class="lx-cifras" aria-label="Roumix en cifras">
+      <div class="lx-contenedor lx-cifras-grid">
+        <div class="lx-cifra lx-revelar">
+          <span class="lx-cifra-num" id="lx-cifra-inmuebles" data-contar-final="">–</span>
+          <span class="lx-cifra-txt">inmuebles disponibles hoy</span>
+        </div>
+        <div class="lx-cifra lx-revelar" style="--r:1">
+          <span class="lx-cifra-num" data-contar-final="5">0</span>
+          <span class="lx-cifra-txt">universidades en el mapa</span>
+        </div>
+        <div class="lx-cifra lx-revelar" style="--r:2">
+          <span class="lx-cifra-num">$<span data-contar-final="0">0</span></span>
+          <span class="lx-cifra-txt">te cobra Roumix por contactar</span>
+        </div>
+        <div class="lx-cifra lx-revelar" style="--r:3">
+          <span class="lx-cifra-num"><span data-contar-final="100">0</span>%</span>
+          <span class="lx-cifra-txt">contacto directo, sin intermediarios</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Universidades en movimiento -->
+    <div class="lx-marquesina" aria-hidden="true">
+      <div class="lx-marquesina-pista">
+        <span>Universidad Santo Tomás</span><i></i>
+        <span>Universidad de los Llanos</span><i></i>
+        <span>Universidad Cooperativa de Colombia</span><i></i>
+        <span>Uniminuto</span><i></i>
+        <span>Universidad Antonio Nariño</span><i></i>
+        <span>Universidad Santo Tomás</span><i></i>
+        <span>Universidad de los Llanos</span><i></i>
+        <span>Universidad Cooperativa de Colombia</span><i></i>
+        <span>Uniminuto</span><i></i>
+        <span>Universidad Antonio Nariño</span><i></i>
+      </div>
     </div>
+
+    <!-- ===================== 3. CÓMO FUNCIONA ===================== -->
+    <section class="lx-seccion" id="como-funciona">
+      <div class="lx-contenedor">
+        <header class="lx-encabezado lx-revelar">
+          <span class="lx-eyebrow">Cómo funciona</span>
+          <h2>De buscar a mudarte, en tres pasos</h2>
+          <p>Sin filas, sin intermediarios y sin pagar por adelantado a desconocidos.</p>
+        </header>
+
+        <div class="lx-pasos" id="lx-pasos">
+          <div class="lx-pasos-linea" aria-hidden="true"><span id="lx-pasos-progreso"></span></div>
+
+          <article class="lx-paso lx-revelar lx-inclinable">
+            <span class="lx-paso-num">01</span>
+            <div class="lx-icono-caja" aria-hidden="true"><svg class="lx-icono"><use href="#i-buscar"/></svg></div>
+            <h3>Busca cerca de tu U</h3>
+            <p>Filtra por universidad, presupuesto y tipo de vivienda. Cada opción muestra a cuánto queda caminando.</p>
+          </article>
+
+          <article class="lx-paso lx-revelar lx-inclinable" style="--r:1">
+            <span class="lx-paso-num">02</span>
+            <div class="lx-icono-caja" aria-hidden="true"><svg class="lx-icono"><use href="#i-mapa"/></svg></div>
+            <h3>Compara y mira la zona</h3>
+            <p>Revisa fotos, precio y condiciones. Compara hasta tres opciones lado a lado y ubica el barrio en el mapa.</p>
+          </article>
+
+          <article class="lx-paso lx-revelar lx-inclinable" style="--r:2">
+            <span class="lx-paso-num">03</span>
+            <div class="lx-icono-caja" aria-hidden="true"><svg class="lx-icono"><use href="#i-chat"/></svg></div>
+            <h3>Escribe por WhatsApp</h3>
+            <p>Un mensaje listo para enviar al propietario. Coordinas la visita directamente con él.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== 4. EXPLORA POR UNIVERSIDAD ===================== -->
+    <section class="lx-seccion lx-seccion-alterna" id="explora">
+      <div class="lx-contenedor lx-explora-grid">
+        <div class="lx-explora-texto lx-revelar">
+          <span class="lx-eyebrow">Explora</span>
+          <h2>¿A qué universidad vas?</h2>
+          <p>Toca tu universidad y mira en el mapa las opciones que hay cerca de ella ahora mismo.</p>
+
+          <div class="lx-unis" role="radiogroup" aria-label="Universidad" id="lx-unis">
+            <button type="button" class="lx-uni active" role="radio" aria-checked="true" data-uni="Santo Tomás">Santo Tomás</button>
+            <button type="button" class="lx-uni" role="radio" aria-checked="false" data-uni="Unillanos">Unillanos</button>
+            <button type="button" class="lx-uni" role="radio" aria-checked="false" data-uni="Cooperativa">Cooperativa</button>
+            <button type="button" class="lx-uni" role="radio" aria-checked="false" data-uni="Uniminuto">Uniminuto</button>
+          </div>
+
+          <div class="lx-explora-resultado" aria-live="polite">
+            <strong id="lx-explora-cantidad">…</strong>
+            <span id="lx-explora-texto">buscando opciones…</span>
+          </div>
+
+          <a href="ingresar.html?registro=estudiante" class="lx-btn lx-btn-verde" id="lx-explora-boton">
+            <span>Crear cuenta para verlas</span>
+            <svg class="lx-icono" aria-hidden="true"><use href="#i-flecha"/></svg>
+          </a>
+        </div>
+
+        <div class="lx-explora-mapa lx-revelar" style="--r:1">
+          <div id="lx-mapa" class="lx-mapa" role="img" aria-label="Mapa de Villavicencio con universidades e inmuebles"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== 5. ESTUDIANTES / PROPIETARIOS ===================== -->
+    <section class="lx-seccion" id="para-quien">
+      <div class="lx-contenedor">
+        <header class="lx-encabezado lx-revelar">
+          <span class="lx-eyebrow">Para todos</span>
+          <h2>Pensado para estudiantes y propietarios</h2>
+        </header>
+
+        <div class="lx-selector-perfil lx-revelar" role="tablist" aria-label="Tipo de usuario" id="lx-perfiles">
+          <button type="button" class="lx-perfil-btn active" role="tab" aria-selected="true" aria-controls="lx-panel-estudiante" id="lx-tab-estudiante">
+            <svg class="lx-icono" aria-hidden="true"><use href="#i-birrete"/></svg> Soy estudiante
+          </button>
+          <button type="button" class="lx-perfil-btn" role="tab" aria-selected="false" aria-controls="lx-panel-propietario" id="lx-tab-propietario">
+            <svg class="lx-icono" aria-hidden="true"><use href="#i-casa"/></svg> Soy propietario
+          </button>
+        </div>
+
+        <div class="lx-panel active" role="tabpanel" id="lx-panel-estudiante" aria-labelledby="lx-tab-estudiante">
+          <ul class="lx-beneficios">
+            <li><span class="lx-icono-caja"><svg class="lx-icono"><use href="#i-pin"/></svg></span><div><strong>Cerca de tu sede</strong><p>Distancia y tiempo a pie hasta tu universidad en cada publicación.</p></div></li>
+            <li><span class="lx-icono-caja"><svg class="lx-icono"><use href="#i-balanza"/></svg></span><div><strong>Compara sin enredos</strong><p>Hasta tres opciones lado a lado: precio, depósito, contrato y servicios.</p></div></li>
+            <li><span class="lx-icono-caja"><svg class="lx-icono"><use href="#i-corazon"/></svg></span><div><strong>Guarda tus favoritos</strong><p>Marca las que te gustan y vuelve a ellas cuando quieras.</p></div></li>
+            <li><span class="lx-icono-caja"><svg class="lx-icono"><use href="#i-chat"/></svg></span><div><strong>Habla directo</strong><p>Escribe al propietario por WhatsApp con un mensaje listo, sin intermediarios.</p></div></li>
+          </ul>
+          <a href="ingresar.html?registro=estudiante" class="lx-btn lx-btn-verde">
+            <span>Crear cuenta de estudiante</span>
+            <svg class="lx-icono" aria-hidden="true"><use href="#i-flecha"/></svg>
+          </a>
+        </div>
+
+        <div class="lx-panel" role="tabpanel" id="lx-panel-propietario" aria-labelledby="lx-tab-propietario" hidden>
+          <ul class="lx-beneficios">
+            <li><span class="lx-icono-caja"><svg class="lx-icono"><use href="#i-reloj"/></svg></span><div><strong>Publica en minutos</strong><p>Cuatro pasos: datos, ubicación, precio y fotos. Nosotros las optimizamos.</p></div></li>
+            <li><span class="lx-icono-caja"><svg class="lx-icono"><use href="#i-diana"/></svg></span><div><strong>Llega a quien buscas</strong><p>Tu inmueble aparece a estudiantes que buscan cerca de su universidad.</p></div></li>
+            <li><span class="lx-icono-caja"><svg class="lx-icono"><use href="#i-celular"/></svg></span><div><strong>Mensajes a tu WhatsApp</strong><p>Los interesados te escriben directo, con el inmueble ya identificado.</p></div></li>
+            <li><span class="lx-icono-caja"><svg class="lx-icono"><use href="#i-ajustes"/></svg></span><div><strong>Tú tienes el control</strong><p>Edita, pausa o marca como arrendado desde "Mis publicaciones".</p></div></li>
+          </ul>
+          <a href="ingresar.html?registro=propietario" class="lx-btn lx-btn-verde">
+            <span>Crear cuenta de propietario</span>
+            <svg class="lx-icono" aria-hidden="true"><use href="#i-flecha"/></svg>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== 6. CONFIANZA ===================== -->
+    <section class="lx-seccion lx-seccion-alterna" id="confianza">
+      <div class="lx-contenedor">
+        <header class="lx-encabezado lx-revelar">
+          <span class="lx-eyebrow">Confianza</span>
+          <h2>Cuidamos a quien busca y a quien publica</h2>
+        </header>
+
+        <div class="lx-confianza-grid">
+          <article class="lx-confianza lx-revelar lx-inclinable">
+            <div class="lx-icono-caja lx-icono-caja-oscura" aria-hidden="true"><svg class="lx-icono"><use href="#i-correo"/></svg></div>
+            <h3>Correo confirmado</h3>
+            <p>Solo se registran correos reales y cada cuenta confirma su correo antes de usar Roumix.</p>
+          </article>
+          <article class="lx-confianza lx-revelar lx-inclinable" style="--r:1">
+            <div class="lx-icono-caja lx-icono-caja-oscura" aria-hidden="true"><svg class="lx-icono"><use href="#i-escudo"/></svg></div>
+            <h3>Revisada por Roumix</h3>
+            <p>El equipo revisa publicaciones y muestra qué se comprobó en cada una.</p>
+          </article>
+          <article class="lx-confianza lx-revelar lx-inclinable" style="--r:2">
+            <div class="lx-icono-caja lx-icono-caja-oscura" aria-hidden="true"><svg class="lx-icono"><use href="#i-bandera"/></svg></div>
+            <h3>Reportes atendidos</h3>
+            <p>Si algo no cuadra, se puede reportar. Las publicaciones sospechosas se pausan mientras se revisan.</p>
+          </article>
+          <article class="lx-confianza lx-revelar lx-inclinable" style="--r:3">
+            <div class="lx-icono-caja lx-icono-caja-oscura" aria-hidden="true"><svg class="lx-icono"><use href="#i-zona"/></svg></div>
+            <h3>Dirección protegida</h3>
+            <p>El mapa muestra solo una zona aproximada. La dirección exacta se acuerda con el propietario.</p>
+          </article>
+        </div>
+
+        <!-- Qué significa cada insignia (antes estaba en "Cómo funciona") -->
+        <div class="lx-insignias lx-revelar" id="insignias">
+          <div class="lx-insignias-intro">
+            <h3>Qué comprobamos y qué no</h3>
+            <p>Cada insignia corresponde a una comprobación real. Ninguna garantiza al 100&nbsp;% que no exista fraude: verifica siempre el inmueble en persona.</p>
+          </div>
+          <div class="lx-insignias-grid">
+            <div class="lx-insignia-explica">
+              <span class="insignia insignia-correo">✉ Correo confirmado</span>
+              <p><strong>Significa:</strong> el propietario abrió el enlace de confirmación enviado a su correo.</p>
+              <p><strong>No significa:</strong> que sea el dueño del inmueble ni que la información sea cierta.</p>
+            </div>
+            <div class="lx-insignia-explica">
+              <span class="insignia insignia-revisada">✓ Revisada por Roumix</span>
+              <p><strong>Significa:</strong> alguien del equipo revisó la publicación y dejó registrado qué comprobó (fotos, descripción, precio y ubicación).</p>
+              <p><strong>No significa:</strong> una inspección presencial ni una garantía legal.</p>
+            </div>
+          </div>
+          <ul class="lx-consejos">
+            <li><svg class="lx-icono" aria-hidden="true"><use href="#i-casa"/></svg> Visita el inmueble antes de pagar cualquier depósito.</li>
+            <li><svg class="lx-icono" aria-hidden="true"><use href="#i-bandera"/></svg> Desconfía de precios muy bajos o de quien te presione para pagar rápido.</li>
+            <li><svg class="lx-icono" aria-hidden="true"><use href="#i-escudo"/></svg> Firma un contrato y pide recibos de todos los pagos.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== 7. PREGUNTAS ===================== -->
+    <section class="lx-seccion" id="preguntas">
+      <div class="lx-contenedor lx-contenedor-angosto">
+        <header class="lx-encabezado lx-revelar">
+          <span class="lx-eyebrow">Preguntas frecuentes</span>
+          <h2>Lo que más nos preguntan</h2>
+        </header>
+
+        <div class="lx-faq">
+          <details class="lx-revelar">
+            <summary>¿Roumix le cobra algo a los estudiantes?</summary>
+            <p>Para estudiantes, no: crear tu cuenta, buscar, comparar y contactar al propietario no tiene costo. Roumix no cobra reservas ni comisiones: nunca pagues antes de visitar el inmueble.</p>
+          </details>
+          <details class="lx-revelar">
+            <summary>¿Por qué necesito una cuenta?</summary>
+            <p>Así cuidamos que quienes buscan y publican sean personas reales con un correo confirmado. Crearla es gratis y toma menos de un minuto.</p>
+          </details>
+          <details class="lx-revelar">
+            <summary>¿Cómo contacto al propietario?</summary>
+            <p>Desde cada publicación tocas "Contactar" y se abre WhatsApp con un mensaje listo que puedes editar antes de enviarlo.</p>
+          </details>
+          <details class="lx-revelar">
+            <summary>¿Por qué el mapa no muestra la dirección exacta?</summary>
+            <p>Para proteger a los propietarios, el mapa muestra un círculo con la zona aproximada. La dirección se comparte cuando coordinas la visita.</p>
+          </details>
+          <details class="lx-revelar">
+            <summary>¿Cómo publico mi inmueble?</summary>
+            <p>Crea una cuenta como propietario, completa los cuatro pasos (datos, ubicación, precio y fotos) y tu publicación quedará visible para los estudiantes.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== EQUIPO ===================== -->
+    <section class="lx-seccion lx-seccion-equipo" id="equipo">
+      <div class="lx-contenedor">
+        <header class="lx-encabezado lx-revelar">
+          <span class="lx-eyebrow">Equipo</span>
+          <h2>Quiénes hacemos Roumix</h2>
+          <p>Proyecto de la asignatura Construcción de Software · Ingeniería de Sistemas, semestre 4.</p>
+        </header>
+        <div class="lx-equipo-grid">
+          <article class="lx-persona lx-revelar lx-inclinable">
+            <span class="lx-persona-avatar" aria-hidden="true">DP</span>
+            <div>
+              <h3>Danna Camila Pineda López</h3>
+              <p>Diseño de interfaces, experiencia de usuario y estructuración de la solución.</p>
+            </div>
+          </article>
+          <article class="lx-persona lx-revelar lx-inclinable" style="--r:1">
+            <span class="lx-persona-avatar" aria-hidden="true">CP</span>
+            <div>
+              <h3>Christian Felipe Pérez Hincapié</h3>
+              <p>Desarrollo frontend, lógica interactiva, persistencia y documentación.</p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== 8. LLAMADO FINAL ===================== -->
+    <section class="lx-final">
+      <div class="lx-contenedor">
+        <div class="lx-final-caja lx-revelar">
+          <div class="lx-final-formas" aria-hidden="true"><i></i><i></i><i></i></div>
+          <h2>Tu próximo hogar está más cerca de lo que crees</h2>
+          <p>Crea tu cuenta gratis y empieza a buscar cerca de tu universidad.</p>
+          <div class="lx-final-acciones">
+            <a href="ingresar.html?registro=estudiante" class="lx-btn lx-btn-naranja">
+              <svg class="lx-icono" aria-hidden="true"><use href="#i-usuario"/></svg>
+              <span>Crear cuenta gratis</span>
+            </a>
+            <a href="ingresar.html" class="lx-btn lx-btn-contorno">Ya tengo cuenta</a>
+          </div>
+        </div>
+      </div>
+    </section>
   </main>
 
-  <script src="js/app.js"></script>
+  <!-- Pie de página -->
+  <footer class="app-footer">
+    <div class="footer-container">
+      <div class="footer-col">
+        <div class="footer-logo">
+          <span>roumix</span><span class="dot-orange">.</span>
+        </div>
+        <p class="footer-desc">
+          Plataforma de vivienda universitaria para la comunidad estudiantil de Villavicencio.
+        </p>
+      </div>
+      <div class="footer-col">
+        <h4>Tu cuenta</h4>
+        <ul>
+          <li><a href="ingresar.html" class="footer-link">Iniciar sesión</a></li>
+          <li><a href="ingresar.html?registro=estudiante" class="footer-link">Crear cuenta de estudiante</a></li>
+          <li><a href="ingresar.html?registro=propietario" class="footer-link">Publicar un inmueble</a></li>
+          <li><a href="pages/privacidad.html" class="footer-link">Política de datos</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Contacto Académico</h4>
+        <address>
+          Universidad Santo Tomás, Villavicencio<br>
+          Facultad de Ingeniería de Sistemas<br>
+          <a href="mailto:roumix04@gmail.com" class="footer-link"><strong>roumix04@gmail.com</strong></a>
+        </address>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <small>© 2026 Roumix · Construcción de Software · Villavicencio, Colombia</small>
+    </div>
+  </footer>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="js/api.js"></script>
-  <script src="js/captcha.js"></script>
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const btnTabLogin = document.getElementById("tab-login");
-      const btnTabRegister = document.getElementById("tab-register");
-      const fieldNombre = document.getElementById("field-nombre");
-      const fieldRol = document.getElementById("field-rol");
-      const fieldTelefono = document.getElementById("field-telefono");
-      const fieldPolitica = document.getElementById("field-politica");
-      const checkPolitica = document.getElementById("auth-politica");
-      const labelTelefono = document.getElementById("label-telefono");
-      const btnSubmit = document.getElementById("btn-submit-auth");
-      const formAuth = document.getElementById("form-auth");
-      const roleBtns = document.querySelectorAll(".role-btn");
-      const btnShowPwd = document.getElementById("btn-show-pwd");
-      const inputPwd = document.getElementById("auth-password");
-      const mensaje = document.getElementById("auth-mensaje");
-      const fieldPassword = document.getElementById("field-password");
-      const linkOlvide = document.getElementById("link-olvide");
-      const linkVolver = document.getElementById("link-volver");
-      const tabs = document.querySelector(".auth-toggle-tabs");
-      let captcha = { activo: false, obtener: () => "", reiniciar: () => {} };
-
-      let modo = "login";
-      let rol = "estudiante";
-
-      // Página a la que volver después de iniciar sesión (solo páginas propias de Roumix)
-      const params = new URLSearchParams(window.location.search);
-      const redirigir = params.get("redirigir");
-      const destino = redirigir && /^[a-z-]+\.html$/.test(redirigir) ? `pages/${redirigir}` : "pages/buscar.html";
-
-      function mostrarMensaje(texto, tipo) {
-        mensaje.textContent = texto;
-        mensaje.style.display = texto ? "block" : "none";
-        mensaje.style.background = tipo === "exito" ? "#e8f5e9" : "#fdecea";
-        mensaje.style.color = tipo === "exito" ? "#1b5e20" : "#8a1c1c";
-      }
-
-      if (window.location.hash.includes("type=recovery")) {
-        window.location.replace("pages/restablecer.html" + window.location.hash);
-        return;
-      }
-
-      // Si ya hay sesión, no tiene sentido volver a iniciarla
-      if (RoumixStorage.getUsuario()) {
-        window.location.replace(destino);
-        return;
-      }
-
-      // Llegada desde el enlace de confirmación del correo (Supabase agrega datos en el #hash)
-      if (window.location.hash.includes("type=signup")) {
-        history.replaceState(null, "", window.location.pathname + window.location.search);
-        mostrarMensaje("¡Correo confirmado! Ya puedes iniciar sesión.", "exito");
-      } else if (window.location.hash.includes("error_description")) {
-        const hash = new URLSearchParams(window.location.hash.slice(1));
-        history.replaceState(null, "", window.location.pathname + window.location.search);
-        mostrarMensaje(`No se pudo confirmar el correo: ${hash.get("error_description")}`, "error");
-      } else if (redirigir) {
-        mostrarMensaje("Inicia sesión para continuar.", "error");
-      }
-
-      // CAPTCHA: se dibuja si el servidor lo tiene configurado
-      RoumixCaptcha.montar(document.getElementById("captcha-acceso")).then((c) => { captcha = c; });
-
-      // Modo "recuperar contraseña": solo correo + CAPTCHA
-      function modoRecuperar(activar) {
-        modo = activar ? "recuperar" : "login";
-        fieldPassword.style.display = activar ? "none" : "";
-        tabs.style.display = activar ? "none" : "";
-        linkVolver.hidden = !activar;
-        btnSubmit.textContent = activar ? "Enviar enlace de recuperación" : "Entrar";
-        mostrarMensaje(activar ? "Escribe el correo de tu cuenta y te enviaremos un enlace para crear una contraseña nueva." : "", "exito");
-        document.getElementById("auth-email").focus();
-      }
-      linkOlvide.addEventListener("click", () => modoRecuperar(true));
-      linkVolver.addEventListener("click", () => modoRecuperar(false));
-
-      function actualizarTelefono() {
-        labelTelefono.textContent = rol === "propietario" ? "Celular / WhatsApp (obligatorio)" : "Celular / WhatsApp (opcional)";
-      }
-
-      btnTabLogin.addEventListener("click", () => {
-        btnTabLogin.classList.add("active");
-        btnTabRegister.classList.remove("active");
-        fieldNombre.style.display = "none";
-        fieldRol.style.display = "none";
-        fieldTelefono.style.display = "none";
-        fieldPolitica.style.display = "none";
-        inputPwd.autocomplete = "current-password";
-        linkOlvide.style.display = "";
-        btnSubmit.textContent = "Entrar";
-        modo = "login";
-        mostrarMensaje("");
-      });
-
-      btnTabRegister.addEventListener("click", () => {
-        btnTabRegister.classList.add("active");
-        btnTabLogin.classList.remove("active");
-        fieldNombre.style.display = "flex";
-        fieldRol.style.display = "";
-        fieldTelefono.style.display = "flex";
-        fieldPolitica.style.display = "";
-        inputPwd.autocomplete = "new-password";
-        linkOlvide.style.display = "none";
-        btnSubmit.textContent = "Crear cuenta";
-        modo = "register";
-        mostrarMensaje("");
-      });
-
-      roleBtns.forEach(btn => {
-        btn.addEventListener("click", () => {
-          roleBtns.forEach(b => {
-            b.classList.remove("active");
-            b.setAttribute("aria-pressed", "false");
-          });
-          btn.classList.add("active");
-          btn.setAttribute("aria-pressed", "true");
-          rol = btn.dataset.role;
-          actualizarTelefono();
-        });
-      });
-
-      btnShowPwd.addEventListener("click", () => {
-        if (inputPwd.type === "password") {
-          inputPwd.type = "text";
-        } else {
-          inputPwd.type = "password";
-        }
-      });
-
-      formAuth.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const email = document.getElementById("auth-email").value.trim();
-        const password = inputPwd.value;
-        const nombre = document.getElementById("auth-nombre").value.trim();
-        const telefono = document.getElementById("auth-telefono").value.trim();
-
-        if (modo === "recuperar") {
-          if (!email) return mostrarMensaje("Escribe el correo de tu cuenta.", "error");
-        } else if (!email || !password) {
-          mostrarMensaje("Escribe tu correo y tu contraseña.", "error");
-          return;
-        }
-
-        const captchaToken = captcha.obtener();
-        if (captcha.activo && !captchaToken) {
-          mostrarMensaje("Completa la verificación de seguridad.", "error");
-          return;
-        }
-        if (modo === "register") {
-          if (nombre.length < 2) {
-            mostrarMensaje("Escribe tu nombre completo.", "error");
-            return;
-          }
-          if (password.length < 8) {
-            mostrarMensaje("La contraseña debe tener al menos 8 caracteres.", "error");
-            return;
-          }
-          if (!checkPolitica.checked) {
-            mostrarMensaje("Para crear la cuenta debes aceptar la política de tratamiento de datos personales.", "error");
-            return;
-          }
-          if (rol === "propietario" && !telefono) {
-            mostrarMensaje("Como propietario necesitas un celular para que te contacten por WhatsApp.", "error");
-            return;
-          }
-        }
-
-        const textoBoton = btnSubmit.textContent;
-        btnSubmit.disabled = true;
-        btnSubmit.textContent = { login: "Entrando…", register: "Creando cuenta…", recuperar: "Enviando…" }[modo];
-        mostrarMensaje("");
-
-        try {
-          if (modo === "recuperar") {
-            const respuesta = await RoumixAPI.recuperarContrasena(email, captchaToken);
-            mostrarMensaje(respuesta, "exito");
-            btnSubmit.disabled = false;
-            btnSubmit.textContent = textoBoton;
-            captcha.reiniciar();
-            return;
-          }
-
-          if (modo === "login") {
-            await RoumixAPI.login(email, password, captchaToken);
-            window.location.href = destino;
-            return;
-          }
-
-          const respuesta = await RoumixAPI.registrar({ nombre, email, password, rol, telefono, aceptoPolitica: checkPolitica.checked, captchaToken });
-          if (respuesta.requiereConfirmacion) {
-            formAuth.reset();
-            btnTabLogin.click();
-            mostrarMensaje(respuesta.message, "exito");
-          } else {
-            window.location.href = destino;
-            return;
-          }
-        } catch (error) {
-          mostrarMensaje(error.message, "error");
-        }
-        // Cada token del CAPTCHA sirve una sola vez
-        captcha.reiniciar();
-
-        btnSubmit.disabled = false;
-        btnSubmit.textContent = textoBoton;
-      });
-    });
-
-    // Pasos animados del lado izquierdo: avanzan solos cada 5 s y se pueden elegir con clic.
-    // Se detienen al pasar el mouse o con el foco, y si el usuario prefiere menos movimiento.
-    (function() {
-      const pasos = document.querySelectorAll(".auth-paso");
-      const fondos = document.querySelectorAll(".auth-fondo");
-      const lado = document.querySelector(".auth-animado");
-      const reducirMovimiento = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      let actual = 1;
-      let intervalo = null;
-
-      function mostrar(numero) {
-        actual = numero;
-        pasos.forEach(boton => {
-          const activo = Number(boton.dataset.paso) === numero;
-          boton.classList.toggle("activo", activo);
-          boton.setAttribute("aria-expanded", String(activo));
-        });
-        fondos.forEach(fondo => fondo.classList.toggle("activo", Number(fondo.dataset.paso) === numero));
-      }
-
-      function iniciar() {
-        if (reducirMovimiento) return;
-        clearInterval(intervalo);
-        intervalo = setInterval(() => mostrar(actual >= pasos.length ? 1 : actual + 1), 5000);
-      }
-
-      function detener() {
-        clearInterval(intervalo);
-      }
-
-      pasos.forEach(boton => boton.addEventListener("click", () => {
-        mostrar(Number(boton.dataset.paso));
-        iniciar();
-      }));
-      lado.addEventListener("mouseenter", detener);
-      lado.addEventListener("mouseleave", iniciar);
-      lado.addEventListener("focusin", detener);
-      lado.addEventListener("focusout", iniciar);
-      document.addEventListener("visibilitychange", () => (document.hidden ? detener() : iniciar()));
-
-      mostrar(1);
-      iniciar();
-    })();
-  </script>
+  <script src="js/app.js"></script>
+  <script src="js/mapa.js"></script>
+  <script src="js/landing.js"></script>
 </body>
 </html>

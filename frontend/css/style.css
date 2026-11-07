@@ -5749,3 +5749,88 @@ html[data-tema="oscuro"] .rx-aviso-exito .rx-aviso-icono {
   background: #3a5747;
   color: #e8e8e4;
 }
+
+/* ---------- Visitantes: solo "Iniciar sesión", "Crear cuenta" y el tema ---------- */
+.btn-crear-cuenta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 18px;
+  border-radius: var(--radio-pill);
+  background: var(--acento-naranja);
+  color: #fff;
+  font-size: 0.86rem;
+  font-weight: 700;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.btn-crear-cuenta:hover {
+  background: var(--acento-naranja-hover);
+  transform: translateY(-1px);
+}
+
+.main-header.sin-menu .main-nav {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .main-header.sin-menu .header-right {
+    display: flex;
+    order: 2;
+    width: auto;
+    margin: 0 0 0 auto;
+    padding: 0;
+    border: 0;
+    gap: 8px;
+    animation: none;
+  }
+
+  .main-header.sin-menu .header-inner > .rx-tema-toggle {
+    order: 3;
+    margin: 0 0 0 8px;
+  }
+
+  .main-header.sin-menu .btn-logout-pill,
+  .main-header.sin-menu .btn-crear-cuenta {
+    padding: 7px 12px;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .main-header.sin-menu .btn-logout-pill {
+    display: none;
+  }
+}
+
+.txt-corto { display: none; }
+
+@media (max-width: 768px) {
+  .main-header.sin-menu .txt-largo { display: none; }
+  .main-header.sin-menu .txt-corto { display: inline; }
+  .main-header.sin-menu .header-right { gap: 6px; }
+  .main-header.sin-menu .btn-logout-pill,
+  .main-header.sin-menu .btn-crear-cuenta { padding: 7px 11px; font-size: 0.78rem; }
+  .main-header.sin-menu .rx-tema-toggle { width: 34px; height: 34px; }
+}
+
+@media (max-width: 360px) {
+  .main-header.sin-menu .btn-logout-pill { display: inline-flex; }
+}
+
+/* Pantallas medianas (tableta / portátil pequeño): la barra cabe en una línea */
+.nav-link,
+.btn-logout-pill,
+.user-role-badge,
+.btn-crear-cuenta {
+  white-space: nowrap;
+}
+
+@media (min-width: 769px) and (max-width: 1100px) {
+  .main-header { padding-left: 18px; padding-right: 18px; }
+  .header-inner { gap: 12px; }
+  .nav-links { gap: 2px; }
+  .nav-link { padding: 8px 10px; font-size: 0.86rem; }
+  .header-right { gap: 8px; }
+  .user-role-badge { display: none; }
+}

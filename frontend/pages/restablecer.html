@@ -25,7 +25,7 @@
   <header class="main-header login-header entrada-arriba">
     <div class="header-inner">
       <div class="header-left">
-        <a href="../index.html" class="logo">
+        <a href="/" class="logo">
           <span class="logo-text">roumix</span><span class="logo-dot">.</span>
         </a>
       </div>
@@ -58,7 +58,7 @@
         <button type="submit" class="btn-auth-primary" id="btn-restablecer">Guardar contraseña</button>
       </form>
 
-      <a href="../index.html" class="auth-footer-link restablecer-volver" id="link-acceso">← Volver a iniciar sesión</a>
+      <a href="../ingresar.html" class="auth-footer-link restablecer-volver" id="link-acceso">← Volver a iniciar sesión</a>
     </section>
   </main>
 
@@ -114,7 +114,7 @@
           RoumixStorage.limpiarSesion();
           form.hidden = true;
           mostrar(`${respuesta} Te llevaremos al inicio de sesión…`, "exito");
-          setTimeout(() => window.location.replace("../index.html"), 3500);
+          setTimeout(() => window.location.replace("../ingresar.html"), 3500);
         } catch (error) {
           mostrar(error.status === 401
             ? 'El enlace expiró o ya se usó. Pide uno nuevo desde "¿Olvidaste tu contraseña?" en la página de inicio.'

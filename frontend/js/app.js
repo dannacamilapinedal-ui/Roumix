@@ -70,7 +70,7 @@ const RoumixStorage = {
     }
     this.limpiarSesion();
     const enCarpetaPages = window.location.pathname.includes("/pages/");
-    window.location.href = enCarpetaPages ? "../index.html" : "index.html";
+    window.location.href = enCarpetaPages ? "../ingresar.html" : "ingresar.html";
   }
 };
 
@@ -308,8 +308,8 @@ function sincronizarBarraNavegacion() {
   const header = document.querySelector(".main-header");
   if (!header) return;
 
-  // Si estamos en la página de login (index.html o iniciarsesion.html), no renderizamos menú de usuario
-  const esPaginaLogin = window.location.pathname.endsWith("index.html") || 
+  // Si estamos en la página de acceso (ingresar.html o iniciarsesion.html), no renderizamos menú de usuario
+  const esPaginaLogin = window.location.pathname.endsWith("ingresar.html") || 
                         window.location.pathname.endsWith("iniciarsesion.html") || 
                         window.location.pathname.endsWith("/");
   if (document.body.classList.contains("page-login") || (esPaginaLogin && document.getElementById("form-auth"))) {
@@ -323,13 +323,18 @@ function sincronizarBarraNavegacion() {
   // El rol guardado solo decide qué enlaces se muestran; el servidor vuelve a validarlo
   const usuario = RoumixStorage.getUsuario();
   const esPropietario = usuario && usuario.rol === "propietario";
-  const paginaActual = window.location.pathname.split("/").pop() || "buscar.html";
+  const paginaActual = window.location.pathname.split("/").pop() || "index.html";
 
   // Obtenemos los contenedores de nav
   const navContainer = header.querySelector(".nav-links");
   const rightContainer = header.querySelector(".header-right");
 
-  if (navContainer) {
+  // Sin sesión no hay enlaces internos: todas las secciones requieren cuenta
+  if (navContainer && !usuario) {
+    navContainer.innerHTML = "";
+    header.classList.add("sin-menu");
+  } else if (navContainer) {
+    header.classList.remove("sin-menu");
     // Un solo enlace "Buscar" (antes "Inicio" y "Buscar" llevaban al mismo lugar)
     const enlace = (pagina, texto) =>
       `<li><a href="${prefixPages}${pagina}" class="nav-link ${paginaActual === pagina ? 'active' : ''}"${paginaActual === pagina ? ' aria-current="page"' : ''}>${texto}</a></li>`;
@@ -338,7 +343,6 @@ function sincronizarBarraNavegacion() {
       enlaces.push(enlace("publicar.html", "Publicar"), enlace("mis-publicaciones.html", "Mis publicaciones"));
     }
     if (usuario && usuario.rol === "admin") enlaces.push(enlace("admin.html", "Administración"));
-    enlaces.push(enlace("como-funciona.html", "Cómo funciona"));
     navContainer.innerHTML = enlaces.join("");
   }
 
@@ -347,19 +351,20 @@ function sincronizarBarraNavegacion() {
       const rolTexto = { propietario: "Propietario", admin: "Administración" }[usuario.rol] || "Estudiante";
       rightContainer.innerHTML = `
         <span class="user-role-badge">${rolTexto}</span>
-        <a href="${prefixRoot}index.html" class="btn-logout-pill" onclick="RoumixStorage.cerrarSesion(); return false;">Cerrar sesión</a>
+        <a href="${prefixRoot}ingresar.html" class="btn-logout-pill" onclick="RoumixStorage.cerrarSesion(); return false;">Cerrar sesión</a>
       `;
       rightContainer.querySelector(".user-role-badge").title = usuario.nombre;
     } else {
       rightContainer.innerHTML = `
-        <a href="${prefixRoot}index.html" class="btn-logout-pill">Iniciar sesión</a>
+        <a href="${prefixRoot}ingresar.html" class="btn-logout-pill"><span class="txt-largo">Iniciar sesión</span><span class="txt-corto">Ingresar</span></a>
+        <a href="${prefixRoot}ingresar.html?registro=estudiante" class="btn-crear-cuenta">Crear cuenta</a>
       `;
     }
   }
 
   // En celular el menú se pliega detrás de un botón (☰) para no desbordar la pantalla
   const headerInner = header.querySelector(".header-inner");
-  if (navContainer && headerInner && !header.querySelector(".nav-toggle")) {
+  if (navContainer && usuario && headerInner && !header.querySelector(".nav-toggle")) {
     const toggle = document.createElement("button");
     toggle.type = "button";
     toggle.className = "nav-toggle";
@@ -383,6 +388,9 @@ function sincronizarBarraNavegacion() {
     window.matchMedia("(min-width: 769px)").addEventListener("change", cerrarMenu);
   }
 
+  // Al confirmar la sesión la barra se redibuja: el botón de tema (☾/☀) se vuelve a poner
+  if (typeof RoumixTema !== "undefined") RoumixTema.instalar();
+
   // Los enlaces "Cerrar sesión" fijos del HTML (pie de página) también cierran la sesión real
   document.querySelectorAll('a.footer-link, a#btn-logout').forEach((enlace) => {
     if (enlace.textContent.trim() !== "Cerrar sesión") return;
@@ -405,11 +413,11 @@ function insigniasConfianza(item, prefijoPaginas) {
   const prefijo = prefijoPaginas ?? "";
   const insignias = [];
   if (item.propietario_correo_confirmado) {
-    insignias.push(`<a class="insignia insignia-correo" href="${prefijo}como-funciona.html#insignias" title="El propietario confirmó su correo. No demuestra que sea el dueño del inmueble.">✉ Correo confirmado</a>`);
+    insignias.push(`<a class="insignia insignia-correo" href="/#insignias" title="El propietario confirmó su correo. No demuestra que sea el dueño del inmueble.">✉ Correo confirmado</a>`);
   }
   if (item.revisado_en) {
     const fecha = new Date(item.revisado_en).toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "numeric" });
-    insignias.push(`<a class="insignia insignia-revisada" href="${prefijo}como-funciona.html#insignias" title="Revisada por Roumix el ${fecha}: ${escaparHTML(item.revision_alcance || "")}">✓ Revisada por Roumix</a>`);
+    insignias.push(`<a class="insignia insignia-revisada" href="/#insignias" title="Revisada por Roumix el ${fecha}: ${escaparHTML(item.revision_alcance || "")}">✓ Revisada por Roumix</a>`);
   }
   return insignias.join("");
 }
@@ -435,7 +443,7 @@ function abrirModalReporte(id, titulo) {
   if (!RoumixStorage.getToken()) {
     const pagina = window.location.pathname.split("/").pop() + window.location.search;
     if (confirm("Para reportar una publicación debes iniciar sesión. ¿Ir a iniciar sesión?")) {
-      window.location.href = `${enCarpetaPages ? "../" : ""}index.html?redirigir=${encodeURIComponent(pagina.split("?")[0])}`;
+      window.location.href = `${enCarpetaPages ? "../" : ""}ingresar.html?redirigir=${encodeURIComponent(pagina.split("?")[0])}`;
     }
     return;
   }
@@ -521,7 +529,7 @@ async function protegerPagina(rolesPermitidos) {
   document.body.style.visibility = "hidden";
 
   if (!RoumixStorage.getToken()) {
-    window.location.replace(`${prefixRoot}index.html?redirigir=${encodeURIComponent(paginaActual)}`);
+    window.location.replace(`${prefixRoot}ingresar.html?redirigir=${encodeURIComponent(paginaActual + window.location.search)}`);
     return null;
   }
 
@@ -531,7 +539,7 @@ async function protegerPagina(rolesPermitidos) {
   } catch (error) {
     if (error.status === 401 || error.status === 403) {
       RoumixStorage.limpiarSesion();
-      window.location.replace(`${prefixRoot}index.html?redirigir=${encodeURIComponent(paginaActual)}`);
+      window.location.replace(`${prefixRoot}ingresar.html?redirigir=${encodeURIComponent(paginaActual + window.location.search)}`);
       return null;
     }
     document.body.style.visibility = "";
@@ -917,7 +925,9 @@ const RoumixTema = {
     const derecha = contenedor.querySelector(".header-right");
     const esCelular = window.matchMedia("(max-width: 768px)");
     const ubicar = () => {
-      if (derecha && !esCelular.matches) {
+      // Sin menú plegable (visitantes) el botón siempre va junto a los de la derecha
+      const sinMenu = contenedor.closest(".main-header").classList.contains("sin-menu");
+      if (derecha && (!esCelular.matches || sinMenu)) {
         derecha.appendChild(boton);
       } else {
         contenedor.insertBefore(boton, contenedor.querySelector(".nav-toggle") || null);
