@@ -47,4 +47,26 @@ function crearClienteSupabase(token) {
 // Cliente usado para validar tokens (getUser no guarda estado).
 const supabase = authConfigurada ? crearClienteSupabase() : null;
 
-module.exports = { supabase, crearClienteSupabase, authConfigurada, SUPABASE_URL, SUPABASE_ANON_KEY };
+/**
+ * Clave de servicio (service_role): solo vive en el servidor y NUNCA se envía al navegador.
+ * Con ella Roumix genera los enlaces de confirmación y recuperación sin que Supabase envíe
+ * el correo; así los correos salen desde la cuenta de Roumix y no se aplica el límite de
+ * correos por hora del servicio de correo de Supabase.
+ */
+const SUPABASE_SERVICE_ROLE_KEY = limpiar('SUPABASE_SERVICE_ROLE_KEY', process.env.SUPABASE_SERVICE_ROLE_KEY);
+const claveServicioValida = Boolean(SUPABASE_SERVICE_ROLE_KEY) && !/\s/.test(SUPABASE_SERVICE_ROLE_KEY)
+  && SUPABASE_SERVICE_ROLE_KEY !== SUPABASE_ANON_KEY;
+if (SUPABASE_SERVICE_ROLE_KEY && !claveServicioValida) {
+  console.error('❌ SUPABASE_SERVICE_ROLE_KEY no es válida (tiene espacios o es igual a la clave anon). Se usan los correos de Supabase.');
+}
+
+function crearClienteAdmin() {
+  if (!authConfigurada || !claveServicioValida) return null;
+  return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+  });
+}
+
+const adminDisponible = authConfigurada && claveServicioValida;
+
+module.exports = { supabase, crearClienteSupabase, crearClienteAdmin, adminDisponible, authConfigurada, SUPABASE_URL, SUPABASE_ANON_KEY };

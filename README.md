@@ -59,6 +59,7 @@ Copie `backend/.env.example` como `backend/.env` y complete los valores
 | `DATABASE_URL` | Cadena de conexión de PostgreSQL (Transaction pooler) |
 | `SUPABASE_URL` | `https://<ref-del-proyecto>.supabase.co` |
 | `SUPABASE_ANON_KEY` | Clave pública *anon* / *publishable* |
+| `SUPABASE_SERVICE_ROLE_KEY` | **Secreta.** Permite que los correos de cuenta salgan desde el correo de Roumix (ver «Correos») |
 | `PORT` | Puerto del servidor (por defecto 3000) |
 | `CORS_ORIGIN` | Solo en producción: orígenes permitidos |
 | `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | CAPTCHA de Cloudflare Turnstile (si faltan, el CAPTCHA queda desactivado) |
@@ -209,6 +210,11 @@ Diferencias con un servidor tradicional, ya resueltas en el código:
 - **Decisión de la administración →** correo al propietario con la decisión, el mensaje de Roumix y un enlace
   directo a lo que debe hacer (p. ej. corregir la publicación).
 - Ningún correo incluye la identidad de quien reportó. Si el envío falla, el reporte o la decisión se guardan igual.
+- **Confirmación de cuenta y recuperación de contraseña →** también salen desde el correo de Roumix cuando
+  existe `SUPABASE_SERVICE_ROLE_KEY`: Supabase solo genera el enlace (`auth.admin.generateLink`) y Roumix
+  envía el correo con su plantilla. Así no aplica el límite de pocos correos por hora del servicio de correo
+  de Supabase y muchas personas pueden registrarse al tiempo. Si el correo de confirmación no sale, la cuenta
+  recién creada se borra para que la persona pueda intentarlo de nuevo.
 
 **Cómo se envían:** el plan gratuito de Render bloquea los puertos SMTP, así que en Render se usa un
 Google Apps Script en la cuenta roumix04@gmail.com (llamado por HTTPS con `CORREO_RELAY_URL` y

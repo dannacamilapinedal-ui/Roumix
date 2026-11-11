@@ -1,10 +1,11 @@
 /**
- * Límite de cuentas nuevas por conexión (IP): máximo 5 intentos de registro por hora.
+ * Límite de cuentas nuevas por conexión (IP): máximo 15 intentos de registro por hora
+ * (varias personas pueden compartir la misma red, por ejemplo el wifi de una universidad).
  * Complementa al CAPTCHA para evitar que alguien cree cuentas en masa.
  * Se guarda en memoria: se reinicia cuando el servidor se reinicia, lo cual es suficiente
  * para frenar abusos sin necesitar otra base de datos.
  */
-const MAX_POR_HORA = 5;
+const MAX_POR_HORA = 15;
 const VENTANA_MS = 60 * 60 * 1000;
 const intentos = new Map(); // ip -> [marcas de tiempo]
 

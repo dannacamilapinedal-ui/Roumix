@@ -1,6 +1,11 @@
 const db = require('../config/db');
-const { crearClienteSupabase, SUPABASE_URL, SUPABASE_ANON_KEY } = require('../config/supabase');
+const { crearClienteSupabase, crearClienteAdmin, adminDisponible, SUPABASE_URL, SUPABASE_ANON_KEY } = require('../config/supabase');
 const { validarCorreoParaRegistro } = require('../services/correoService');
+const notificaciones = require('../services/notificacionesService');
+
+// Los correos de cuenta salen desde Roumix (sin el límite por hora del correo de Supabase)
+// cuando hay clave de servicio y un medio de envío configurado; si no, los envía Supabase.
+const correosPropios = () => adminDisponible && notificaciones.correoActivo;
 
 const ROLES = ['estudiante', 'propietario'];
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -80,10 +85,16 @@ async function registro(req, res) {
   // Descarta correos que con seguridad no existen (dominio inexistente, temporales, errores de escritura)
   await validarCorreoParaRegistro(email);
 
+  const metadatos = { nombre, rol, telefono, universidad: texto(body.universidad) || null, acepto_politica: true };
+
+  if (correosPropios()) {
+    return registroConCorreoRoumix(req, res, { nombre, email, password, metadatos });
+  }
+
   const { data, error } = await crearClienteSupabase().auth.signUp({
     email,
     password,
-    options: { data: { nombre, rol, telefono, universidad: texto(body.universidad) || null, acepto_politica: true } }
+    options: { data: metadatos }
   });
 
   verificarClave(error);
@@ -103,11 +114,7 @@ async function registro(req, res) {
   }
 
   if (!data.session) {
-    return res.status(201).json({
-      status: 'success',
-      requiereConfirmacion: true,
-      message: 'Cuenta creada. Revisa tu correo (también la carpeta de spam) y abre el enlace de confirmación en las próximas 24 horas; si no lo haces, el registro se cancela y tendrás que registrarte de nuevo.'
-    });
+    return res.status(201).json({ status: 'success', requiereConfirmacion: true, message: MENSAJE_CONFIRMACION });
   }
 
   const perfil = await obtenerPerfil(data.user.id);
@@ -118,6 +125,47 @@ async function registro(req, res) {
     sesion: datosSesion(data.session),
     usuario: perfil
   });
+}
+
+const MENSAJE_CONFIRMACION = 'Cuenta creada. Revisa tu correo (también la carpeta de spam) y abre el enlace de confirmación en las próximas 24 horas; si no lo haces, el registro se cancela y tendrás que registrarte de nuevo.';
+
+/**
+ * Registro con el correo de Roumix: Supabase crea la cuenta (sin confirmar) y devuelve el
+ * enlace de confirmación sin enviar nada; Roumix lo envía con su propia cuenta de correo.
+ * Si el correo no sale, la cuenta se borra para que la persona pueda intentarlo de nuevo.
+ */
+async function registroConCorreoRoumix(req, res, { nombre, email, password, metadatos }) {
+  const admin = crearClienteAdmin();
+  const { data, error } = await admin.auth.admin.generateLink({
+    type: 'signup',
+    email,
+    password,
+    options: { data: metadatos, redirectTo: `${urlAplicacion(req)}/ingresar.html` }
+  });
+
+  if (error) {
+    if (error.code === 'email_exists' || error.code === 'user_already_exists' || /already (been )?registered|already exists/i.test(error.message)) {
+      throw errorHttp(409, 'Ya existe una cuenta con ese correo. Inicia sesión.');
+    }
+    if (error.code === 'weak_password') throw errorHttp(400, 'La contraseña es demasiado débil. Usa letras y números.');
+    if (error.status === 401 || error.status === 403 || /invalid api key|jwt/i.test(error.message)) {
+      console.error('❌ SUPABASE_SERVICE_ROLE_KEY no es válida:', error.message);
+      throw errorHttp(503, 'El servidor de autenticación no está bien configurado. Inténtalo más tarde.');
+    }
+    throw errorHttp(error.status && error.status < 500 ? error.status : 502, `No se pudo crear la cuenta: ${error.message}`);
+  }
+
+  const enlace = data && data.properties && data.properties.action_link;
+  const enviado = enlace
+    ? await notificaciones.enviarConfirmacionCuenta({ email, nombre, enlace })
+    : false;
+
+  if (!enviado) {
+    if (data && data.user) await admin.auth.admin.deleteUser(data.user.id).catch(() => {});
+    throw errorHttp(502, 'No pudimos enviar el correo de confirmación. Inténtalo de nuevo en unos minutos.');
+  }
+
+  res.status(201).json({ status: 'success', requiereConfirmacion: true, message: MENSAJE_CONFIRMACION });
 }
 
 /**
@@ -219,6 +267,28 @@ async function recuperar(req, res) {
   const email = texto((req.body || {}).email).toLowerCase();
   if (!EMAIL_REGEX.test(email) || email.length > 150) throw errorHttp(400, 'Escribe un correo electrónico válido.');
 
+  const respuestaIgual = {
+    status: 'success',
+    message: 'Si el correo está registrado en Roumix, te enviamos un enlace para crear una contraseña nueva. Revisa también la carpeta de spam.'
+  };
+
+  // Con el correo de Roumix: se genera el enlace y Roumix lo envía (si la cuenta no existe, no se envía nada)
+  if (correosPropios()) {
+    const { data, error } = await crearClienteAdmin().auth.admin.generateLink({
+      type: 'recovery',
+      email,
+      options: { redirectTo: `${urlAplicacion(req)}/pages/restablecer.html` }
+    });
+    const enlace = data && data.properties && data.properties.action_link;
+    if (enlace) {
+      const enviado = await notificaciones.enviarRecuperacion({ email, enlace });
+      if (!enviado) throw errorHttp(502, 'No pudimos enviar el correo en este momento. Inténtalo de nuevo en unos minutos.');
+    } else if (error) {
+      console.error('⚠️ Recuperación de contraseña:', error.message);
+    }
+    return res.status(200).json(respuestaIgual);
+  }
+
   const { error } = await crearClienteSupabase().auth.resetPasswordForEmail(email, {
     redirectTo: `${urlAplicacion(req)}/pages/restablecer.html`
   });
@@ -230,10 +300,7 @@ async function recuperar(req, res) {
     console.error('⚠️ Recuperación de contraseña:', error.message);
   }
 
-  res.status(200).json({
-    status: 'success',
-    message: 'Si el correo está registrado en Roumix, te enviamos un enlace para crear una contraseña nueva. Revisa también la carpeta de spam.'
-  });
+  res.status(200).json(respuestaIgual);
 }
 
 /**

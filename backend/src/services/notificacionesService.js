@@ -283,6 +283,47 @@ async function notificarDecisionPropietario({ inmueble, decision, mensaje, urlBa
 }
 
 /**
+ * Correo de confirmación de cuenta (lo envía Roumix, no Supabase).
+ * Devuelve true si salió; quien lo llama decide qué hacer si falla.
+ */
+async function enviarConfirmacionCuenta({ email, nombre, enlace }) {
+  const primerNombre = String(nombre || '').trim().split(/\s+/)[0];
+  return enviar({
+    para: email,
+    asunto: 'Confirma tu cuenta de Roumix',
+    contenido: {
+      titulo: primerNombre ? `¡Hola, ${primerNombre}! Confirma tu cuenta` : 'Confirma tu cuenta',
+      parrafos: [
+        'Gracias por registrarte en <strong>Roumix</strong>, la plataforma de vivienda universitaria de Villavicencio.',
+        'Para activar tu cuenta, confirma que este correo es tuyo con el botón de abajo.',
+        'El enlace vence en <strong>24 horas</strong>. Si no lo abres a tiempo, el registro se cancela y tendrás que registrarte de nuevo.'
+      ],
+      boton: { texto: 'Confirmar mi correo', url: enlace },
+      nota: 'Si no creaste una cuenta en Roumix, ignora este mensaje: sin la confirmación, la cuenta no se activa.'
+    }
+  });
+}
+
+/**
+ * Correo para crear una contraseña nueva (lo envía Roumix, no Supabase).
+ */
+async function enviarRecuperacion({ email, enlace }) {
+  return enviar({
+    para: email,
+    asunto: 'Crea una contraseña nueva para Roumix',
+    contenido: {
+      titulo: 'Crea una contraseña nueva',
+      parrafos: [
+        'Recibimos una solicitud para cambiar la contraseña de tu cuenta de Roumix.',
+        'Usa el botón de abajo para crear una contraseña nueva. El enlace funciona una sola vez y vence en poco tiempo.'
+      ],
+      boton: { texto: 'Crear contraseña nueva', url: enlace },
+      nota: 'Si no pediste este cambio, ignora este mensaje: tu contraseña actual sigue funcionando.'
+    }
+  });
+}
+
+/**
  * Dirección pública de la aplicación para los enlaces de los correos.
  */
 function urlBase(req) {
@@ -295,6 +336,8 @@ module.exports = {
   notificarReporteAdministracion,
   notificarPausaPropietario,
   notificarDecisionPropietario,
+  enviarConfirmacionCuenta,
+  enviarRecuperacion,
   urlBase,
   usarTransporte,
   escapar
