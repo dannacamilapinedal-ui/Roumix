@@ -161,6 +161,12 @@ document.addEventListener("DOMContentLoaded", () => {
     tarjeta.querySelector(".lx-tarjeta-info > span").textContent =
       [item.barrio, item.tiempoPie].filter(Boolean).join(" · ");
     tarjeta.querySelector("b").textContent = item.precioFormato;
+
+    // El pin destacado del mapa y el tiempo caminando corresponden a esa misma vivienda
+    const pin = document.getElementById("lx-pin-destacado");
+    if (pin) pin.lastChild.textContent = ` $${Math.round(Number(item.precio) / 1000)}k`;
+    const tiempo = document.querySelector(".lx-mapa-tiempo span");
+    if (tiempo && item.tiempoPie) tiempo.textContent = item.tiempoPie;
   }
 
   // ---------- 7. Explora por universidad (mapa real) ----------

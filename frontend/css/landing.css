@@ -1104,18 +1104,7 @@
 /* ==========================================================================
    MODO OSCURO
    ========================================================================== */
-html[data-tema="oscuro"] .lx-hero {
-  background: #0b0b0b;
-}
 
-html[data-tema="oscuro"] .lx-brillo-1 { background: rgba(58, 87, 71, 0.45); }
-html[data-tema="oscuro"] .lx-brillo-2 { background: rgba(185, 138, 90, 0.18); }
-html[data-tema="oscuro"] .lx-mapa-falso { background: linear-gradient(160deg, #1c1c1c, #151515); }
-html[data-tema="oscuro"] .lx-pagina .main-header:not(.lx-cabecera-baja) { background-color: rgba(11, 11, 11, 0.6); }
-html[data-tema="oscuro"] .lx-final-caja { background: radial-gradient(circle at 20% 0%, #2a3a31 0%, #141414 60%), #141414; }
-html[data-tema="oscuro"] .lx-mapa { background: #1a1a1a; }
-html[data-tema="oscuro"] .lx-chip-punto { background: #8fd8ac; }
-html[data-tema="oscuro"] .lx-pin-precio { background: var(--acento-naranja); }
 
 /* ==========================================================================
    TABLETA Y CELULAR
@@ -1244,16 +1233,6 @@ html[data-tema="oscuro"] .lx-pin-precio { background: var(--acento-naranja); }
 }
 
 /* Búsqueda de la portada en modo oscuro: una sola superficie */
-html[data-tema="oscuro"] .lx-busqueda {
-  background: #1e1e1e;
-  border: 1px solid #2f2f2f;
-}
-
-html[data-tema="oscuro"] .lx-busqueda select {
-  background-color: transparent;
-  border: 0;
-  color: var(--tinta-fuerte);
-}
 
 /* ==========================================================================
    ÍCONOS DE LÍNEA (reemplazan los emojis)
@@ -1418,11 +1397,6 @@ html[data-tema="oscuro"] .lx-busqueda select {
 }
 
 /* Modo oscuro: cajas de íconos neutras */
-html[data-tema="oscuro"] .lx-icono-caja:not(.lx-icono-caja-oscura) {
-  background: #232323;
-  border-color: #313131;
-  box-shadow: none;
-}
 
 @media (max-width: 768px) {
   .lx-hero-acciones {
@@ -1580,3 +1554,489 @@ html[data-tema="oscuro"] .lx-icono-caja:not(.lx-icono-caja-oscura) {
 
 /* Las anclas no quedan tapadas por la barra superior */
 .lx-pagina section[id], .lx-insignias { scroll-margin-top: 80px; }
+
+/* ==========================================================================
+   v2 · PROPORCIONES EN COMPUTADOR
+   ========================================================================== */
+.lx-contenedor {
+  max-width: 1320px;
+}
+
+/* La barra superior se alinea con el contenido de la landing */
+.lx-pagina .header-inner {
+  max-width: 1272px;
+}
+
+.lx-hero {
+  padding: 132px 0 104px;
+  min-height: min(100vh, 900px);
+}
+
+@media (min-width: 1025px) {
+  .lx-hero-grid {
+    grid-template-columns: minmax(0, 1.02fr) minmax(0, 1fr);
+    gap: 64px;
+  }
+}
+
+.lx-hero-titulo {
+  font-size: clamp(2.4rem, 1.3rem + 2.7vw, 3.9rem);
+  margin-bottom: 20px;
+}
+
+.lx-hero-sub {
+  max-width: 540px;
+  font-size: 1.08rem;
+}
+
+.lx-encabezado {
+  max-width: 760px;
+}
+
+.lx-encabezado h2,
+.lx-explora-texto h2,
+.lx-final-caja h2 {
+  text-wrap: balance;
+}
+
+.lx-encabezado p {
+  text-wrap: pretty;
+}
+
+/* ==========================================================================
+   v2 · MAPA ILUSTRADO DE LA PORTADA
+   ========================================================================== */
+.lx-hero-visual {
+  height: auto;
+  padding: 26px 0 64px;
+}
+
+.lx-mapa-falso {
+  --m-fondo: #172c21;
+  --m-manzana: #1e382a;
+  --m-borde: rgba(255, 255, 255, 0.05);
+  --m-parque: #23553b;
+  --m-rio: #275867;
+  --m-calle: #2b4a3a;
+  --m-avenida: #375a46;
+
+  position: relative;
+  inset: auto;
+  width: 90%;
+  margin-left: 10%;
+  aspect-ratio: 520 / 440;
+  border-radius: 28px;
+  overflow: hidden;
+  background: var(--m-fondo);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 50px 90px -40px rgba(0, 0, 0, 0.85),
+    0 0 0 10px rgba(255, 255, 255, 0.03);
+}
+
+.lx-mapa-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.lx-m-fondo { fill: var(--m-fondo); }
+.lx-m-manzana { fill: var(--m-manzana); stroke: var(--m-borde); stroke-width: 1; }
+.lx-m-parque { fill: var(--m-parque); }
+
+.lx-m-rio {
+  fill: none;
+  stroke: var(--m-rio);
+  stroke-width: 18;
+  stroke-linecap: round;
+}
+
+.lx-m-calle,
+.lx-m-avenida,
+.lx-m-avenida-linea,
+.lx-m-ruta,
+.lx-m-ruta-brillo {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.lx-m-calle { stroke: var(--m-calle); stroke-width: 12; }
+.lx-m-avenida { stroke: var(--m-avenida); stroke-width: 22; }
+
+.lx-m-avenida-linea {
+  stroke: rgba(243, 180, 107, 0.45);
+  stroke-width: 2;
+  stroke-dasharray: 12 12;
+}
+
+/* La ruta se dibuja y luego sus puntos avanzan hacia la universidad */
+.lx-m-ruta-brillo {
+  stroke: rgba(243, 180, 107, 0.28);
+  stroke-width: 14;
+  stroke-dasharray: 420;
+  stroke-dashoffset: 420;
+  animation: lxRutaDibujar 1.6s ease forwards 1s;
+}
+
+.lx-m-ruta {
+  stroke: #f3b46b;
+  stroke-width: 4.5;
+  stroke-dasharray: 1 10;
+  opacity: 0;
+  animation: lxRutaAparece 0.4s ease forwards 2.4s, lxRutaAvanza 1.2s linear infinite 2.4s;
+}
+
+@keyframes lxRutaDibujar { to { stroke-dashoffset: 0; } }
+@keyframes lxRutaAparece { to { opacity: 1; } }
+@keyframes lxRutaAvanza { to { stroke-dashoffset: -22; } }
+
+/* Barra superior estilo app */
+.lx-mapa-barra {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  z-index: 4;
+}
+
+.lx-mapa-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: var(--radio-pill);
+  background: rgba(10, 20, 14, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #eef4ec;
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.lx-mapa-chip .lx-icono {
+  width: 15px;
+  height: 15px;
+  color: #f3b46b;
+  stroke-width: 2.2;
+}
+
+.lx-mapa-chip-claro {
+  background: rgba(255, 255, 255, 0.92);
+  color: #142219;
+  border-color: transparent;
+}
+
+/* Campus: tarjeta oscura con ícono naranja */
+.lx-pin-campus {
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px 5px 5px;
+  background: #0f1a13;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  font-size: 0.8rem;
+  z-index: 3;
+}
+
+.lx-pin-campus-icono {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--acento-naranja);
+}
+
+.lx-pin-campus .lx-icono,
+.lx-pin-campus-icono .lx-icono {
+  width: 15px;
+  height: 15px;
+  color: #fff;
+  stroke-width: 2.2;
+}
+
+.lx-radar {
+  width: 190px;
+  height: 190px;
+  margin: -95px 0 0 -95px;
+  border-color: rgba(243, 180, 107, 0.55);
+  background: radial-gradient(circle, rgba(243, 180, 107, 0.12), transparent 65%);
+}
+
+/* Pines de precio con su "colita" apuntando al lugar exacto */
+.lx-pin-precio {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transform: translate(-50%, -100%);
+  background: #fff;
+  color: #142219;
+  padding: 5px 10px;
+  font-size: 0.76rem;
+  z-index: 2;
+  animation: lxPinCae2 0.6s cubic-bezier(0.3, 1.5, 0.5, 1) both, lxPinFlota2 4.5s ease-in-out infinite;
+  animation-delay: calc(var(--d) + 0.6s), calc(var(--d) + 1.2s);
+}
+
+.lx-pin-precio::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  background: inherit;
+  transform: rotate(45deg);
+  border-radius: 0 0 3px 0;
+  z-index: -1;
+}
+
+.lx-pin-precio .lx-icono {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.3;
+}
+
+.lx-pin-activo {
+  background: var(--acento-naranja);
+  color: #fff;
+  font-size: 0.82rem;
+  padding: 6px 12px;
+  z-index: 3;
+  box-shadow: 0 10px 24px -6px rgba(196, 124, 43, 0.75);
+}
+
+@keyframes lxPinCae2 {
+  from { opacity: 0; transform: translate(-50%, -190%) scale(0.6); }
+  to { opacity: 1; transform: translate(-50%, -100%) scale(1); }
+}
+
+@keyframes lxPinFlota2 {
+  0%, 100% { transform: translate(-50%, -100%); }
+  50% { transform: translate(-50%, -116%); }
+}
+
+/* Tiempo caminando sobre la ruta */
+.lx-mapa-tiempo {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: var(--radio-pill);
+  background: #f3b46b;
+  color: #2a1a06;
+  font-size: 0.74rem;
+  font-weight: 800;
+  white-space: nowrap;
+  z-index: 3;
+  box-shadow: 0 8px 18px -8px rgba(0, 0, 0, 0.6);
+  opacity: 0;
+  animation: lxAparecer 0.5s ease forwards 2.6s;
+}
+
+.lx-mapa-tiempo svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@keyframes lxAparecer {
+  from { opacity: 0; transform: translate(-50%, -30%); }
+  to { opacity: 1; transform: translate(-50%, -50%); }
+}
+
+/* Controles decorativos */
+.lx-mapa-zoom {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(10, 20, 14, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  z-index: 4;
+}
+
+.lx-mapa-zoom i {
+  width: 30px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  font-style: normal;
+  font-weight: 700;
+  color: #eef4ec;
+}
+
+.lx-mapa-zoom i + i {
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.lx-mapa-brujula {
+  position: absolute;
+  right: 14px;
+  bottom: 84px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #f3b46b;
+  background: rgba(10, 20, 14, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  z-index: 4;
+}
+
+/* Elementos flotantes alrededor del mapa */
+.lx-tarjeta-flotante {
+  left: auto;
+  right: -14px;
+  bottom: 6px;
+  width: 248px;
+}
+
+.lx-tarjeta-foto {
+  height: 118px;
+}
+
+.lx-chat {
+  right: auto;
+  left: 0;
+  top: 22%;
+}
+
+.lx-insignia {
+  right: auto;
+  left: 4%;
+  bottom: 28px;
+}
+
+/* Modo oscuro: el mapa en grises */
+
+/* Tableta */
+@media (max-width: 1024px) {
+  .lx-hero-visual {
+    max-width: 600px;
+  }
+}
+
+/* Celular */
+@media (max-width: 768px) {
+  .lx-hero {
+    padding: 104px 0 84px;
+  }
+
+  .lx-hero-visual {
+    height: auto;
+    padding: 10px 0 70px;
+  }
+
+  .lx-mapa-falso {
+    inset: auto;
+    width: 100%;
+    margin-left: 0;
+    border-radius: 22px;
+  }
+
+  .lx-mapa-barra { top: 10px; left: 10px; right: 10px; }
+  .lx-mapa-chip { font-size: 0.7rem; padding: 6px 10px; }
+  .lx-pin-precio { font-size: 0.7rem; padding: 4px 8px; }
+  .lx-pin-activo { font-size: 0.74rem; }
+  .lx-pin-campus { font-size: 0.72rem; }
+  .lx-mapa-brujula { display: none; }
+  .lx-mapa-zoom { display: none; }
+
+  .lx-tarjeta-flotante {
+    right: 8px;
+    bottom: 0;
+    width: 196px;
+  }
+
+  .lx-tarjeta-foto { height: 84px; }
+
+  /* En celular el mapa y la tarjeta bastan: el chat y la insignia saturan el espacio */
+  .lx-chat,
+  .lx-insignia { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lx-m-ruta-brillo { animation: none; stroke-dashoffset: 0; }
+  .lx-m-ruta { animation: none; opacity: 1; }
+  .lx-mapa-tiempo { animation: none; opacity: 1; }
+  .lx-pin-precio { animation: none; }
+}
+
+/* ==========================================================================
+   LANDING · MODO OSCURO "CARBÓN CÁLIDO"
+   ========================================================================== */
+html[data-tema="oscuro"] .lx-hero {
+  background: #110f0d;
+}
+
+html[data-tema="oscuro"] .lx-brillo-1 { background: rgba(46, 107, 79, 0.38); }
+html[data-tema="oscuro"] .lx-brillo-2 { background: rgba(204, 134, 64, 0.2); }
+
+html[data-tema="oscuro"] .lx-pagina .main-header:not(.lx-cabecera-baja) {
+  background-color: rgba(15, 14, 12, 0.62);
+}
+
+html[data-tema="oscuro"] .lx-chip-punto { background: #9ed3b3; }
+
+/* Mapa ilustrado de la portada en tonos carbón */
+html[data-tema="oscuro"] .lx-mapa-falso {
+  --m-fondo: #1a1714;
+  --m-manzana: #221f1a;
+  --m-borde: rgba(255, 240, 220, 0.04);
+  --m-parque: #1f3528;
+  --m-rio: #1f3a41;
+  --m-calle: #2b2722;
+  --m-avenida: #34302a;
+  background: var(--m-fondo);
+}
+
+html[data-tema="oscuro"] .lx-pin-campus { background: #0f0e0c; }
+
+/* Búsqueda de la portada: una sola superficie */
+html[data-tema="oscuro"] .lx-busqueda {
+  background: var(--superficie);
+  border: 1px solid var(--borde-arena);
+}
+
+html[data-tema="oscuro"] .lx-busqueda select {
+  background-color: transparent;
+  border: 0;
+  color: var(--tinta-fuerte);
+}
+
+html[data-tema="oscuro"] .lx-mapa { background: var(--fondo-crema-alt); }
+
+/* Cajas de íconos */
+html[data-tema="oscuro"] .lx-icono-caja:not(.lx-icono-caja-oscura) {
+  background: var(--superficie-alta);
+  border-color: var(--borde-arena);
+  box-shadow: none;
+}
+
+html[data-tema="oscuro"] .lx-final-caja {
+  background: radial-gradient(circle at 20% 0%, #24392d 0%, #171512 60%), #171512;
+  border: 1px solid var(--borde-suave);
+}

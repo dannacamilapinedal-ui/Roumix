@@ -792,7 +792,6 @@ main {
 .university-dot { background-color: var(--verde-950); }
 .property-dot { background-color: #d32f2f; }
 
-
 /* ==========================================================================
    4. PÁGINA DETALLE DEL INMUEBLE (DETALLE.HTML - IMAGEN 1 DE REFERENCIA)
    ========================================================================== */
@@ -1087,7 +1086,6 @@ main {
   color: var(--tinta-tenue);
 }
 
-
 /* ==========================================================================
    5. PÁGINA COMPARAR (COMPARAR.HTML - IMAGEN 2 DE REFERENCIA)
    ========================================================================== */
@@ -1241,7 +1239,6 @@ main {
   background-color: var(--verde-800);
   transform: translateY(-1px);
 }
-
 
 /* ==========================================================================
    6. PÁGINA MIS PUBLICACIONES (MIS-PUBLICACIONES.HTML - ESPACIO Y BOTÓN MEJORADOS)
@@ -1437,7 +1434,6 @@ main {
   background: #d32f2f;
   color: #ffffff;
 }
-
 
 /* ==========================================================================
    7. PÁGINA INICIO DE SESIÓN / ACCESO (INDEX.HTML - BOCETO 1)
@@ -1676,7 +1672,6 @@ main {
   text-decoration: underline;
   color: var(--tinta-fuerte);
 }
-
 
 /* ==========================================================================
    8. PÁGINA PUBLICAR (PUBLICAR.HTML)
@@ -1925,7 +1920,6 @@ main {
   line-height: 1.5;
 }
 
-
 /* ==========================================================================
    9. PÁGINA CÓMO FUNCIONA & EQUIPO (COMO-FUNCIONA.HTML)
    ========================================================================== */
@@ -2054,7 +2048,6 @@ main {
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
-
 
 /* ==========================================================================
    10. MODAL DE CONTACTO WHATSAPP
@@ -2385,7 +2378,6 @@ main {
   .contacto-burbuja { margin-left: 12px; }
 }
 
-
 /* ==========================================================================
    11. PIE DE PÁGINA (FOOTER)
    ========================================================================== */
@@ -2465,7 +2457,6 @@ main {
   color: #7d8f7b;
   text-align: center;
 }
-
 
 /* ==========================================================================
    12. RESPONSIVIDAD
@@ -5419,184 +5410,18 @@ body.rx-con-barra .rx-avisos { bottom: 96px; }
 }
 
 /* ==========================================================================
-   MODO OSCURO (solo se activa con el botón ☀/☾ de la barra superior)
-   Paleta en grises neutros con un único verde de marca para acciones.
+   BOTÓN DE TEMA (☀/☾). La paleta oscura está al final del archivo:
+   "MODO OSCURO · CARBÓN CÁLIDO".
    ========================================================================== */
-html[data-tema="oscuro"] {
-  color-scheme: dark;
 
-  /* Un solo verde para botones, píldoras activas y acentos */
-  --verde-950: #2f7a52;
-  --verde-900: #2f7a52;
-  --verde-800: #2f7a52;
-  --verde-700: #2f7a52;
-  --verde-600: #3b8d61;
-  --verde-500: #4aa173;
 
-  --verde-pastilla: #1f2b24;
-  --verde-pastilla-borde: #2f4a3a;
-  --verde-badge-bg: #1f2b24;
-  --verde-badge-text: #8fd8ac;
 
-  /* Grises neutros */
-  --fondo-crema: #121212;
-  --fondo-crema-alt: #191919;
-  --superficie: #1e1e1e;
-  --borde-arena: #2f2f2f;
-  --borde-suave: #282828;
-
-  --tinta-fuerte: #f1f1ee;
-  --tinta-media: #b7b7b1;
-  --tinta-tenue: #8b8b86;
-  --texto-verde-oscuro: #8fd8ac;
-  --texto-verde-medio: #8fd8ac;
-
-  --sombra-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
-  --sombra-md: 0 6px 18px -4px rgba(0, 0, 0, 0.6);
-  --sombra-lg: 0 16px 34px -8px rgba(0, 0, 0, 0.7);
-
-  --rx-ilu-circulo: #262626;
-  --rx-ilu-casa: #2c2c2c;
-  --rx-ilu-trazo: #e6e6e1;
-  --rx-ilu-fondo: #1e1e1e;
-}
-
-html[data-tema="oscuro"] body {
-  background-color: var(--fondo-crema);
-  color: var(--tinta-fuerte);
-}
-
-/* Barra superior y pie: gris casi negro, no verde */
-html[data-tema="oscuro"] .main-header,
-html[data-tema="oscuro"] .app-footer {
-  background-color: #0b0b0b;
-}
-
-html[data-tema="oscuro"] .main-header {
-  border-bottom-color: #222;
-}
-
-/* Portada de Buscar: velo gris en vez de verde */
-html[data-tema="oscuro"] .hero-banner {
-  background:
-    linear-gradient(100deg, rgba(10, 10, 10, 0.95) 0%, rgba(10, 10, 10, 0.82) 45%, rgba(10, 10, 10, 0.4) 100%),
-    url("https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=1800&q=70") center 60% / cover no-repeat,
-    #0b0b0b;
-}
 
 /* Campos de formulario */
-html[data-tema="oscuro"] input,
-html[data-tema="oscuro"] select,
-html[data-tema="oscuro"] textarea,
-html[data-tema="oscuro"] .form-control,
-html[data-tema="oscuro"] .sort-select {
-  background-color: var(--fondo-crema-alt);
-  color: var(--tinta-fuerte);
-  border-color: var(--borde-arena);
-}
-
-html[data-tema="oscuro"] input::placeholder,
-html[data-tema="oscuro"] textarea::placeholder {
-  color: var(--tinta-tenue);
-}
 
 /* Recuadros que eran de color claro */
-html[data-tema="oscuro"] .advice-card,
-html[data-tema="oscuro"] .aviso-moderacion,
-html[data-tema="oscuro"] .compare-aviso-alerta,
-html[data-tema="oscuro"] .politica .politica-aviso {
-  background: #26211a;
-  color: #ead7b5;
-  border-color: #3d3426;
-}
-
-html[data-tema="oscuro"] .pub-mensaje-error,
-html[data-tema="oscuro"] .auth-captcha.captcha-error {
-  background: #331c1c;
-  color: #ffc9c4;
-}
-
-html[data-tema="oscuro"] .pub-mensaje-exito {
-  background: #1d2b23;
-  color: #bfe8c6;
-}
-
-html[data-tema="oscuro"] .detail-badge,
-html[data-tema="oscuro"] .badge-draft,
-html[data-tema="oscuro"] .owner-avatar-circle,
-html[data-tema="oscuro"] .btn-compare-quitar,
-html[data-tema="oscuro"] .tag-pill {
-  background: #262626;
-  color: var(--tinta-media);
-}
-
-html[data-tema="oscuro"] .map-view-box,
-html[data-tema="oscuro"] .mapa-selector,
-html[data-tema="oscuro"] .mapa-detalle {
-  background: #1a1a1a;
-}
-
-html[data-tema="oscuro"] .leaflet-tile-pane {
-  filter: brightness(0.8) saturate(0.8);
-}
 
 /* Ventana de contacto: colores del modo oscuro de WhatsApp */
-html[data-tema="oscuro"] .contacto-sello,
-html[data-tema="oscuro"] .modal-badge-whatsapp {
-  background: #1d2b23;
-  color: #8fe3ae;
-}
-
-html[data-tema="oscuro"] .contacto-burbuja-wrap {
-  background: #0b141a;
-}
-
-html[data-tema="oscuro"] .contacto-burbuja {
-  background: #005c4b;
-}
-
-html[data-tema="oscuro"] .contacto-burbuja textarea {
-  color: #e9edef;
-}
-
-html[data-tema="oscuro"] .contacto-contador {
-  color: #8696a0;
-}
-
-html[data-tema="oscuro"] .contacto-avatar {
-  background: #2c2c2c;
-  color: #f1f1ee;
-}
-
-html[data-tema="oscuro"] .btn-guardar-corazon,
-html[data-tema="oscuro"] .galeria-flecha {
-  background: rgba(30, 30, 30, 0.92);
-  color: #f1f1ee;
-}
-
-html[data-tema="oscuro"] .btn-guardar-corazon svg {
-  stroke: #f1f1ee;
-}
-
-html[data-tema="oscuro"] .rx-barra-contacto {
-  background: rgba(30, 30, 30, 0.95);
-}
-
-html[data-tema="oscuro"] .nav-link.active {
-  background: rgba(255, 255, 255, 0.12);
-}
-
-html[data-tema="oscuro"] .modal-backdrop {
-  background: rgba(0, 0, 0, 0.7);
-}
-
-html[data-tema="oscuro"] .rx-aviso {
-  background: #2a2a2a;
-}
-
-html[data-tema="oscuro"] img {
-  filter: brightness(0.95);
-}
 
 /* ---------- Botón para cambiar de tema ---------- */
 .rx-tema-toggle {
@@ -5668,87 +5493,8 @@ html.rx-cambiando-tema * {
 }
 
 /* Modo oscuro: superficies de marca que deben ser gris oscuro, no verde */
-html[data-tema="oscuro"] .auth-brand-side {
-  background-color: #0b0b0b;
-}
-
-html[data-tema="oscuro"] .auth-fondo-capa {
-  background: linear-gradient(to top, #0b0b0b 0%, rgba(10, 10, 10, 0.3) 50%, rgba(10, 10, 10, 0.65) 100%);
-}
-
-html[data-tema="oscuro"] .team-table th,
-html[data-tema="oscuro"] .admin-cerrar {
-  background: #262626;
-}
-
-html[data-tema="oscuro"] .map-pin-university,
-html[data-tema="oscuro"] .university-dot {
-  background: #1b1b1b;
-}
-
-html[data-tema="oscuro"] .rx-skeleton {
-  background: linear-gradient(90deg, #222 25%, #2c2c2c 37%, #222 63%);
-  background-size: 400% 100%;
-}
 
 /* Modo oscuro más sobrio: colores apagados para que no se sienta saturado */
-html[data-tema="oscuro"] {
-  --verde-950: #3a5747;
-  --verde-900: #3a5747;
-  --verde-800: #3a5747;
-  --verde-700: #3a5747;
-  --verde-600: #466654;
-  --verde-500: #577a66;
-
-  --verde-pastilla: #202523;
-  --verde-pastilla-borde: #2e3632;
-  --verde-badge-bg: #202523;
-  --verde-badge-text: #a9c4b4;
-  --texto-verde-oscuro: #a9c4b4;
-  --texto-verde-medio: #a9c4b4;
-
-  --acento-naranja: #b98a5a;
-  --acento-naranja-hover: #a77b4e;
-  --color-wa-real: #2e8b57;
-
-  --tinta-fuerte: #e8e8e4;
-  --tinta-media: #a9a9a4;
-}
-
-html[data-tema="oscuro"] .insignia-revisada {
-  border-color: #2e3632;
-}
-
-html[data-tema="oscuro"] .pill-guardados:not(.active) {
-  color: #cf8a95;
-}
-
-html[data-tema="oscuro"] .btn-guardar-corazon.guardado svg {
-  fill: #c96b78;
-  stroke: #c96b78;
-}
-
-html[data-tema="oscuro"] .hero-eyebrow {
-  color: #d2b48f;
-}
-
-html[data-tema="oscuro"] .btn-whatsapp-action,
-html[data-tema="oscuro"] .rx-barra-boton {
-  box-shadow: none;
-}
-
-html[data-tema="oscuro"] .leaflet-tile-pane {
-  filter: brightness(0.72) saturate(0.45) contrast(1.05);
-}
-
-html[data-tema="oscuro"] img {
-  filter: brightness(0.9) saturate(0.85);
-}
-
-html[data-tema="oscuro"] .rx-aviso-exito .rx-aviso-icono {
-  background: #3a5747;
-  color: #e8e8e4;
-}
 
 /* ---------- Visitantes: solo "Iniciar sesión", "Crear cuenta" y el tema ---------- */
 .btn-crear-cuenta {
@@ -5833,4 +5579,230 @@ html[data-tema="oscuro"] .rx-aviso-exito .rx-aviso-icono {
   .nav-link { padding: 8px 10px; font-size: 0.86rem; }
   .header-right { gap: 8px; }
   .user-role-badge { display: none; }
+}
+
+/* ==========================================================================
+   MODO OSCURO · "CARBÓN CÁLIDO"
+   Se activa solo con el botón ☾/☀. Tonos oscuros con un leve matiz cálido
+   (la versión nocturna del crema de Roumix), un único verde esmeralda para
+   las acciones y el naranja de marca como acento.
+   ========================================================================== */
+html[data-tema="oscuro"] {
+  color-scheme: dark;
+
+  /* Superficies: de más profunda a más elevada */
+  --oscuro-barra: #0f0e0c;
+  --fondo-crema: #151311;
+  --fondo-crema-alt: #1b1916;
+  --superficie: #221f1b;
+  --superficie-alta: #2a2621;
+  --borde-arena: #363129;
+  --borde-suave: #2b2722;
+
+  /* Texto cálido (no blanco puro, no cansa la vista) */
+  --tinta-fuerte: #f2ede4;
+  --tinta-media: #bcb3a5;
+  --tinta-tenue: #8e877c;
+
+  /* Verde de marca para botones y elementos activos */
+  --verde-950: #2e6b4f;
+  --verde-900: #2e6b4f;
+  --verde-800: #2e6b4f;
+  --verde-700: #2e6b4f;
+  --verde-600: #3a7f60;
+  --verde-500: #4b9373;
+  --texto-verde-oscuro: #9ed3b3;
+  --texto-verde-medio: #9ed3b3;
+
+  --verde-pastilla: #1d2a22;
+  --verde-pastilla-borde: #2e4637;
+  --verde-badge-bg: #1d2a22;
+  --verde-badge-text: #9ed3b3;
+
+  /* Acentos */
+  --acento-naranja: #cc8640;
+  --acento-naranja-hover: #d99650;
+  --color-wa-real: #23a15a;
+
+  --sombra-sm: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --sombra-md: 0 8px 20px -6px rgba(0, 0, 0, 0.55);
+  --sombra-lg: 0 18px 40px -12px rgba(0, 0, 0, 0.65);
+
+  /* Ilustraciones de estados vacíos */
+  --rx-ilu-circulo: #2a2621;
+  --rx-ilu-casa: #322d27;
+  --rx-ilu-trazo: #ece4d6;
+  --rx-ilu-fondo: #221f1b;
+}
+
+html[data-tema="oscuro"] body {
+  background-color: var(--fondo-crema);
+  color: var(--tinta-fuerte);
+}
+
+/* ---------- Barra superior y pie ---------- */
+html[data-tema="oscuro"] .main-header {
+  background-color: var(--oscuro-barra);
+  border-bottom-color: #23201b;
+}
+
+html[data-tema="oscuro"] .app-footer {
+  background-color: var(--oscuro-barra);
+  border-top: 1px solid #23201b;
+}
+
+html[data-tema="oscuro"] .nav-link.active {
+  background: rgba(255, 244, 228, 0.1);
+}
+
+/* ---------- Portadas (Buscar y acceso) ---------- */
+html[data-tema="oscuro"] .hero-banner {
+  background:
+    linear-gradient(100deg, rgba(15, 14, 12, 0.95) 0%, rgba(15, 14, 12, 0.82) 45%, rgba(15, 14, 12, 0.4) 100%),
+    url("https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=1800&q=70") center 60% / cover no-repeat,
+    var(--oscuro-barra);
+}
+
+html[data-tema="oscuro"] .auth-brand-side {
+  background-color: var(--oscuro-barra);
+}
+
+html[data-tema="oscuro"] .auth-fondo-capa {
+  background: linear-gradient(to top, #0f0e0c 0%, rgba(15, 14, 12, 0.3) 50%, rgba(15, 14, 12, 0.65) 100%);
+}
+
+/* ---------- Formularios ---------- */
+html[data-tema="oscuro"] input,
+html[data-tema="oscuro"] select,
+html[data-tema="oscuro"] textarea,
+html[data-tema="oscuro"] .form-control,
+html[data-tema="oscuro"] .sort-select {
+  background-color: var(--fondo-crema-alt);
+  color: var(--tinta-fuerte);
+  border-color: var(--borde-arena);
+}
+
+html[data-tema="oscuro"] input::placeholder,
+html[data-tema="oscuro"] textarea::placeholder {
+  color: var(--tinta-tenue);
+}
+
+/* ---------- Píldoras, etiquetas y chips ---------- */
+html[data-tema="oscuro"] .detail-badge,
+html[data-tema="oscuro"] .badge-draft,
+html[data-tema="oscuro"] .owner-avatar-circle,
+html[data-tema="oscuro"] .btn-compare-quitar,
+html[data-tema="oscuro"] .tag-pill {
+  background: var(--superficie-alta);
+  color: var(--tinta-media);
+}
+
+html[data-tema="oscuro"] .insignia-revisada {
+  border-color: var(--verde-pastilla-borde);
+}
+
+html[data-tema="oscuro"] .pill-guardados:not(.active) {
+  color: #e08a97;
+}
+
+/* ---------- Avisos de color ---------- */
+html[data-tema="oscuro"] .advice-card,
+html[data-tema="oscuro"] .aviso-moderacion,
+html[data-tema="oscuro"] .compare-aviso-alerta,
+html[data-tema="oscuro"] .politica .politica-aviso {
+  background: #2a2318;
+  color: #ecd8b4;
+  border-color: #453820;
+}
+
+html[data-tema="oscuro"] .pub-mensaje-error,
+html[data-tema="oscuro"] .auth-captcha.captcha-error {
+  background: #36201c;
+  color: #ffcdc5;
+}
+
+html[data-tema="oscuro"] .pub-mensaje-exito {
+  background: #1d2b22;
+  color: #bfe6c9;
+}
+
+html[data-tema="oscuro"] .rx-aviso {
+  background: var(--superficie-alta);
+  border: 1px solid var(--borde-arena);
+}
+
+html[data-tema="oscuro"] .rx-aviso-exito .rx-aviso-icono {
+  background: var(--verde-950);
+  color: #fff;
+}
+
+/* ---------- Mapas e imágenes ---------- */
+html[data-tema="oscuro"] .map-view-box,
+html[data-tema="oscuro"] .mapa-selector,
+html[data-tema="oscuro"] .mapa-detalle {
+  background: var(--fondo-crema-alt);
+}
+
+html[data-tema="oscuro"] .leaflet-tile-pane {
+  filter: brightness(0.78) saturate(0.7) sepia(0.12);
+}
+
+html[data-tema="oscuro"] .map-pin-university,
+html[data-tema="oscuro"] .university-dot {
+  background: var(--oscuro-barra);
+}
+
+html[data-tema="oscuro"] img {
+  filter: brightness(0.93);
+}
+
+html[data-tema="oscuro"] .rx-skeleton {
+  background: linear-gradient(90deg, #24211c 25%, #2d2924 37%, #24211c 63%);
+  background-size: 400% 100%;
+}
+
+/* ---------- Tarjetas y controles flotantes ---------- */
+html[data-tema="oscuro"] .btn-guardar-corazon,
+html[data-tema="oscuro"] .galeria-flecha {
+  background: rgba(34, 31, 27, 0.92);
+  color: var(--tinta-fuerte);
+}
+
+html[data-tema="oscuro"] .btn-guardar-corazon svg {
+  stroke: var(--tinta-fuerte);
+}
+
+html[data-tema="oscuro"] .btn-guardar-corazon.guardado svg {
+  fill: #e07080;
+  stroke: #e07080;
+}
+
+html[data-tema="oscuro"] .rx-barra-contacto {
+  background: rgba(34, 31, 27, 0.95);
+}
+
+html[data-tema="oscuro"] .modal-backdrop {
+  background: rgba(8, 7, 6, 0.72);
+}
+
+html[data-tema="oscuro"] .team-table th,
+html[data-tema="oscuro"] .admin-cerrar {
+  background: var(--superficie-alta);
+}
+
+/* ---------- Ventana de contacto (colores reales del modo oscuro de WhatsApp) ---------- */
+html[data-tema="oscuro"] .contacto-sello,
+html[data-tema="oscuro"] .modal-badge-whatsapp {
+  background: #1d2b22;
+  color: #8fe3ae;
+}
+
+html[data-tema="oscuro"] .contacto-burbuja-wrap { background: #0b141a; }
+html[data-tema="oscuro"] .contacto-burbuja { background: #005c4b; }
+html[data-tema="oscuro"] .contacto-burbuja textarea { color: #e9edef; }
+html[data-tema="oscuro"] .contacto-contador { color: #8696a0; }
+
+html[data-tema="oscuro"] .contacto-avatar {
+  background: var(--superficie-alta);
+  color: var(--tinta-fuerte);
 }

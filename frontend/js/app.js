@@ -899,7 +899,7 @@ const RoumixTema = {
     try { localStorage.setItem(this.CLAVE, tema); } catch (e) { /* almacenamiento bloqueado */ }
 
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute("content", tema === "oscuro" ? "#0b0b0b" : "#142219");
+    if (meta) meta.setAttribute("content", tema === "oscuro" ? "#0f0e0c" : "#142219");
 
     document.querySelectorAll(".rx-tema-toggle").forEach((boton) => {
       const oscuro = tema === "oscuro";
