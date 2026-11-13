@@ -66,9 +66,9 @@
             <li>
               <button type="button" class="auth-paso" data-paso="2" aria-expanded="false" aria-controls="paso-desc-2">
                 <span class="auth-paso-numero">2</span>
-                <span class="auth-paso-titulo">Contacto directo</span>
+                <span class="auth-paso-titulo">Solicitud acompañada</span>
               </button>
-              <p class="auth-paso-desc" id="paso-desc-2">Escribe al propietario por WhatsApp desde la publicación, sin intermediarios.</p>
+              <p class="auth-paso-desc" id="paso-desc-2">Envía tu solicitud desde la publicación: Roumix habla con el propietario y te avisa cada avance.</p>
             </li>
             <li>
               <button type="button" class="auth-paso" data-paso="3" aria-expanded="false" aria-controls="paso-desc-3">
@@ -153,7 +153,7 @@
 
             <!-- Celular (solo en registro; obligatorio para propietarios) -->
             <div class="auth-field-group" id="field-telefono" style="display: none;">
-              <label for="auth-telefono" class="auth-label" id="label-telefono">Celular / WhatsApp (opcional)</label>
+              <label for="auth-telefono" class="auth-label" id="label-telefono">Celular (opcional)</label>
               <input
                 type="tel"
                 id="auth-telefono"
@@ -276,7 +276,7 @@
       linkVolver.addEventListener("click", () => modoRecuperar(false));
 
       function actualizarTelefono() {
-        labelTelefono.textContent = rol === "propietario" ? "Celular (obligatorio · solo lo ve el equipo de Roumix)" : "Celular (opcional)";
+        labelTelefono.textContent = rol === "propietario" ? "Celular (obligatorio · solo lo ve el equipo de Roumix)" : "Celular (opcional · solo lo ve el equipo de Roumix)";
       }
 
       btnTabLogin.addEventListener("click", () => {

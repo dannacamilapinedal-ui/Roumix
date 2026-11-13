@@ -20,6 +20,12 @@ const ETIQUETAS = {
     rechazada: "Rechazada", retirada: "Retirada"
   },
   reporte: { pendiente: "Pendiente", procedente: "Procedente", no_procede: "No procede" },
+  solicitud: {
+    recibida: "Recibida", en_revision: "En revisión", aceptada: "Aceptada", rechazada: "Rechazada",
+    visita_coordinada: "Visita coordinada", en_negociacion: "En negociación", contrato_pendiente: "Contrato pendiente",
+    contrato_formalizado: "Contrato formalizado", pago_pendiente: "Pago pendiente", pagado: "Pagado",
+    completada: "Completada", cancelada: "Cancelada"
+  },
   estado: { disponible: "Disponible", pausado: "Pausado por el propietario", arrendado: "Arrendado", retirado: "Retirado por el propietario" },
   accion: {
     pausa_preventiva: "Pausa preventiva por reporte", aprobar: "Aprobada", pausar: "Pausada por Roumix para revisión",
@@ -62,7 +68,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // La página solo se muestra si el servidor confirma el rol admin
   if (!(await protegerPagina(["admin"]))) return;
 
-  const paneles = { resumen: cargarResumen, reportes: cargarReportes, propietarios: cargarPropietarios, inmuebles: cargarInmuebles, usuarios: cargarUsuarios, historial: cargarHistorial };
+  const paneles = { resumen: cargarResumen, solicitudes: cargarSolicitudes, reportes: cargarReportes, propietarios: cargarPropietarios, inmuebles: cargarInmuebles, usuarios: cargarUsuarios, historial: cargarHistorial };
 
   function abrirPanel(nombre) {
     document.querySelectorAll(".admin-tab").forEach(tab => {
@@ -85,7 +91,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       contador.textContent = data.reportes.pendientes;
       contador.hidden = data.reportes.pendientes === 0;
       actualizarContadorPropietarios(data);
+      actualizarContadorSolicitudes(data);
       const metricas = [
+        ["Solicitudes nuevas", data.solicitudes.nuevas, data.solicitudes.nuevas ? "alerta" : "neutro", "solicitudes"],
+        ["Solicitudes en curso", data.solicitudes.abiertas, "neutro", "solicitudes"],
         ["Propietarios por revisar", data.verificaciones.porRevisar, data.verificaciones.porRevisar ? "alerta" : "neutro", "propietarios"],
         ["Reportes pendientes", data.reportes.pendientes, "alerta", "reportes"],
         ["Publicaciones en revisión", data.inmuebles.enRevision, "alerta", "inmuebles"],
@@ -113,6 +122,167 @@ document.addEventListener("DOMContentLoaded", async () => {
     const contador = document.getElementById("contador-propietarios");
     contador.textContent = data.verificaciones.porRevisar;
     contador.hidden = data.verificaciones.porRevisar === 0;
+  }
+
+  function actualizarContadorSolicitudes(data) {
+    const contador = document.getElementById("contador-solicitudes");
+    contador.textContent = data.solicitudes.nuevas;
+    contador.hidden = data.solicitudes.nuevas === 0;
+  }
+
+  // ---------------- Solicitudes de arriendo ----------------
+  // Roumix es el intermediario: aquí se ven los datos de ambas partes, que nunca
+  // se muestran entre ellas.
+  const CHIP_SOLICITUD = {
+    recibida: "pendiente", en_revision: "en_revision", aceptada: "aprobada", rechazada: "rechazada",
+    visita_coordinada: "en_revision", en_negociacion: "en_revision", contrato_pendiente: "en_revision",
+    contrato_formalizado: "aprobada", pago_pendiente: "requiere_cambios", pagado: "aprobada",
+    completada: "aprobada", cancelada: "neutro"
+  };
+  const chipSolicitud = (estado) => chip(ETIQUETAS.solicitud[estado] || estado, CHIP_SOLICITUD[estado] || "neutro");
+  const fechaDia = (valor) => valor ? new Date(String(valor).slice(0, 10) + "T12:00:00").toLocaleDateString("es-CO", { dateStyle: "medium" }) : "—";
+
+  async function cargarSolicitudes() {
+    const contenedor = document.getElementById("lista-solicitudes-admin");
+    mostrarCarga(contenedor);
+    const params = new URLSearchParams({ estado: document.getElementById("filtro-solicitudes").value });
+    const q = document.getElementById("buscar-solicitudes").value.trim();
+    if (q) params.set("q", q);
+    try {
+      const { data } = await RoumixAPI.admin(`/solicitudes?${params}`);
+      if (data.length === 0) return vacio(contenedor, "No hay solicitudes con estos filtros.");
+      contenedor.innerHTML = `
+        <table class="admin-tabla">
+          <thead><tr><th scope="col">Solicitud</th><th scope="col">Inmueble</th><th scope="col">Estudiante</th><th scope="col">Propietario</th><th scope="col">Ingreso</th><th scope="col">Estado</th><th scope="col"><span class="sr-only">Acciones</span></th></tr></thead>
+          <tbody>${data.map(s => `
+            <tr>
+              <td><strong>#${s.id}</strong><br><small>${fecha(s.created_at)}</small></td>
+              <td>${escaparHTML(s.inmueble_titulo)}<br><small>#${s.inmueble_id} · ${escaparHTML(s.barrio || "—")} · ${formatearPrecioCOP(s.canon_mensual)}</small></td>
+              <td>${escaparHTML(s.estudiante_nombre || "Cuenta eliminada")}<br><small>${escaparHTML(s.estudiante_email || "")}</small></td>
+              <td>${escaparHTML(s.propietario_nombre || "—")}<br><small>${escaparHTML(s.propietario_telefono || s.propietario_email || "")}</small></td>
+              <td>${fechaDia(s.fecha_ingreso)}<br><small>${s.duracion_meses} mes(es) · ${s.personas} pers.</small></td>
+              <td>${chipSolicitud(s.estado)}${s.compartida_propietario_en ? "" : "<br><small>Sin compartir al propietario</small>"}</td>
+              <td><button type="button" class="btn-card-action" data-solicitud="${s.id}">${s.estado === "recibida" ? "Revisar" : "Gestionar"}</button></td>
+            </tr>`).join("")}
+          </tbody>
+        </table>`;
+    } catch (error) {
+      mostrarError(contenedor, error);
+    }
+  }
+  document.getElementById("filtro-solicitudes").addEventListener("change", cargarSolicitudes);
+  document.getElementById("buscar-solicitudes").addEventListener("input", () => {
+    clearTimeout(temporizador);
+    temporizador = setTimeout(cargarSolicitudes, 350);
+  });
+
+  const dialogoSolicitud = document.getElementById("dialogo-solicitud");
+  const contenidoSolicitud = document.getElementById("dialogo-solicitud-contenido");
+  dialogoSolicitud.querySelector("[data-cerrar]").addEventListener("click", () => dialogoSolicitud.close());
+  document.getElementById("lista-solicitudes-admin").addEventListener("click", (e) => {
+    const boton = e.target.closest("button[data-solicitud]");
+    if (boton) abrirSolicitud(Number(boton.dataset.solicitud));
+  });
+
+  async function abrirSolicitud(id) {
+    contenidoSolicitud.innerHTML = '<p class="admin-cargando" role="status">Cargando…</p>';
+    if (!dialogoSolicitud.open) dialogoSolicitud.showModal();
+    let s;
+    try {
+      ({ data: s } = await RoumixAPI.admin(`/solicitudes/${id}`));
+    } catch (error) {
+      return mostrarError(contenidoSolicitud, error);
+    }
+    const compartida = Boolean(s.compartida_propietario_en);
+    const cerrada = ["rechazada", "completada", "cancelada"].includes(s.estado);
+    const autor = (h) => h.autor_rol === "admin" ? `Roumix · ${escaparHTML(h.autor_nombre || "admin")}` : h.autor_rol === "estudiante" ? "Estudiante" : "Sistema";
+
+    contenidoSolicitud.innerHTML = `
+      <h2 id="dialogo-solicitud-titulo">Solicitud #${s.id} · ${escaparHTML(s.inmueble_titulo)}</h2>
+      <p>${chipSolicitud(s.estado)} ${compartida ? chip(`Compartida con el propietario el ${fecha(s.compartida_propietario_en)}`, "aprobada") : chip("El propietario aún no la conoce", "pendiente")}</p>
+      <div class="admin-detalle-grid">
+        <div>
+          <h3>Solicitud</h3>
+          <dl class="admin-datos">
+            <dt>Inmueble</dt><dd><a href="detalle.html?id=${s.inmueble_id}" target="_blank" rel="noopener">#${s.inmueble_id}</a> · ${escaparHTML(s.barrio || "—")} · ${escaparHTML(ETIQUETAS.estado[s.inmueble_estado] || s.inmueble_estado)}</dd>
+            <dt>Canon</dt><dd>${formatearPrecioCOP(s.canon_mensual)}/mes</dd>
+            <dt>Ingreso</dt><dd>${fechaDia(s.fecha_ingreso)}</dd>
+            <dt>Duración</dt><dd>${s.duracion_meses} mes(es)</dd>
+            <dt>Personas</dt><dd>${s.personas}${s.capacidad ? ` (capacidad: ${s.capacidad})` : ""}</dd>
+            <dt>Mensaje del estudiante</dt><dd class="admin-texto-largo">${escaparHTML(s.mensaje || "—")}</dd>
+          </dl>
+        </div>
+        <div>
+          <h3>Partes (solo Roumix)</h3>
+          <dl class="admin-datos">
+            <dt>Estudiante</dt><dd>${escaparHTML(s.estudiante_nombre || "Cuenta eliminada")}<br><small>${escaparHTML(s.estudiante_email || "")}${s.estudiante_telefono ? " · " + escaparHTML(s.estudiante_telefono) : ""}</small></dd>
+            <dt>Propietario</dt><dd>${escaparHTML(s.propietario_nombre || "—")}<br><small>${escaparHTML(s.propietario_email || "")}${s.propietario_telefono ? " · " + escaparHTML(s.propietario_telefono) : ""}</small></dd>
+          </dl>
+          <p class="fotos-ayuda">No compartas estos datos entre las partes: Roumix coordina toda la comunicación.</p>
+        </div>
+      </div>
+
+      <h3>Historial</h3>
+      <ol class="admin-historial-solicitud">
+        ${s.historial.map(h => `
+          <li>
+            <span class="admin-historial-meta">${fecha(h.created_at)} · ${autor(h)}</span>
+            ${h.estado_nuevo ? `<span>${h.estado_anterior ? `${escaparHTML(ETIQUETAS.solicitud[h.estado_anterior])} → ` : ""}<strong>${escaparHTML(ETIQUETAS.solicitud[h.estado_nuevo])}</strong></span>` : ""}
+            ${h.nota_estudiante ? `<p><em>Para el estudiante:</em> ${escaparHTML(h.nota_estudiante)}</p>` : ""}
+            ${h.nota_propietario ? `<p><em>Para el propietario:</em> ${escaparHTML(h.nota_propietario)}</p>` : ""}
+            ${h.nota_interna ? `<p class="admin-nota-interna"><em>Nota interna:</em> ${escaparHTML(h.nota_interna)}</p>` : ""}
+          </li>`).join("")}
+      </ol>
+
+      <form class="admin-decision" id="form-solicitud-admin" novalidate>
+        <h3>${cerrada ? "Agregar nota interna" : "Actualizar la solicitud"}</h3>
+        ${cerrada ? "" : `
+        <label for="sol-admin-estado" class="reporte-label">Nuevo estado</label>
+        <select id="sol-admin-estado">
+          <option value="">— Mantener "${escaparHTML(ETIQUETAS.solicitud[s.estado])}" —</option>
+          ${s.siguientes.map(e => `<option value="${e}">${escaparHTML(ETIQUETAS.solicitud[e])}</option>`).join("")}
+        </select>
+        <p class="fotos-ayuda">${compartida ? "" : "Al pasarla a \"En revisión\" se comparte con el propietario (sin datos del estudiante) y le llega un correo. "}Contrato formalizado, pago y pagado los pondrá el sistema en los próximos módulos: no se ponen a mano.</p>
+        <label for="sol-admin-nota-est" class="reporte-label">Mensaje para el estudiante (le llega por correo; obligatorio si rechazas o cancelas)</label>
+        <textarea id="sol-admin-nota-est" rows="2" maxlength="1000" placeholder="Ej: El propietario puede mostrarte la habitación el sábado a las 10 a. m."></textarea>
+        <label for="sol-admin-nota-prop" class="reporte-label">Mensaje para el propietario (le llega por correo)</label>
+        <textarea id="sol-admin-nota-prop" rows="2" maxlength="1000" placeholder="Ej: Una estudiante quiere tu habitación desde el próximo mes, por 6 meses."></textarea>`}
+        <label for="sol-admin-nota-int" class="reporte-label">Nota interna (solo la ve el equipo de Roumix)</label>
+        <textarea id="sol-admin-nota-int" rows="2" maxlength="1000" placeholder="Ej: Llamé al propietario, confirma disponibilidad."></textarea>
+        <p class="pub-mensaje" id="sol-admin-resultado" role="alert" hidden></p>
+        <button type="submit" class="btn-search-action">Guardar</button>
+      </form>`;
+
+    const form = document.getElementById("form-solicitud-admin");
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const resultado = document.getElementById("sol-admin-resultado");
+      const mostrar = (texto) => { resultado.textContent = texto; resultado.className = "pub-mensaje pub-mensaje-error"; resultado.hidden = false; };
+      const valor = (id) => { const el = document.getElementById(id); return el ? el.value.trim() : ""; };
+      const estado = valor("sol-admin-estado");
+      const cuerpo = {
+        estado: estado || undefined,
+        notaEstudiante: valor("sol-admin-nota-est") || undefined,
+        notaPropietario: valor("sol-admin-nota-prop") || undefined,
+        notaInterna: valor("sol-admin-nota-int") || undefined
+      };
+      if (!estado && !cuerpo.notaEstudiante && !cuerpo.notaPropietario && !cuerpo.notaInterna) return mostrar("Elige un nuevo estado o escribe al menos una nota.");
+      if ((estado === "rechazada" || estado === "cancelada") && !cuerpo.notaEstudiante) return mostrar("Explícale al estudiante por qué se cierra la solicitud.");
+      if ((estado === "rechazada" || estado === "cancelada") && !confirm(`¿Confirmas marcar la solicitud #${s.id} como "${ETIQUETAS.solicitud[estado]}"? Se cerrará.`)) return;
+
+      const boton = form.querySelector('button[type="submit"]');
+      boton.disabled = true;
+      try {
+        const respuesta = await RoumixAPI.admin(`/solicitudes/${s.id}`, { method: "POST", body: cuerpo });
+        RoumixAvisos.mostrar(respuesta.message, "exito");
+        cargarSolicitudes();
+        cargarContador();
+        abrirSolicitud(s.id);
+      } catch (error) {
+        mostrar(error.message);
+        boton.disabled = false;
+      }
+    });
   }
 
   // ---------------- Propietarios (verificación) ----------------
@@ -557,6 +727,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       contador.textContent = data.reportes.pendientes;
       contador.hidden = data.reportes.pendientes === 0;
       actualizarContadorPropietarios(data);
+      actualizarContadorSolicitudes(data);
     } catch (e) { /* el contador es informativo */ }
   }
 

@@ -161,48 +161,53 @@ function formatearPrecioCOP(valor) {
   return "$" + Number(valor).toLocaleString("es-CO");
 }
 
-// 4. Modal de Contacto por WhatsApp (Compartido)
-function abrirModalContacto(id) {
-  // Solo se usan inmuebles ya cargados desde la API
+// 4. Solicitudes de arriendo (comunicación gestionada por Roumix)
+// El estudiante no ve el contacto del propietario: envía una solicitud y el equipo
+// de Roumix revisa, habla con el propietario y le avisa cada avance por correo.
+const ROUMIX_ESTADOS_SOLICITUD = {
+  recibida: { texto: "Recibida", tono: "neutro", estudiante: "Roumix recibió tu solicitud y la revisará pronto.", propietario: "Roumix recibió la solicitud." },
+  en_revision: { texto: "En revisión", tono: "proceso", estudiante: "El equipo de Roumix está hablando con el propietario.", propietario: "Roumix está revisando la solicitud y te contactará para coordinar." },
+  aceptada: { texto: "Aceptada", tono: "ok", estudiante: "¡El propietario está interesado! Roumix coordinará los siguientes pasos contigo.", propietario: "Aceptaste la solicitud. Roumix coordinará los siguientes pasos." },
+  rechazada: { texto: "Rechazada", tono: "cerrada", estudiante: "Esta solicitud no siguió adelante. Puedes buscar otras opciones.", propietario: "La solicitud no siguió adelante." },
+  visita_coordinada: { texto: "Visita coordinada", tono: "proceso", estudiante: "Roumix coordinó una visita al inmueble. Revisa el mensaje con los detalles.", propietario: "Roumix coordinó una visita al inmueble." },
+  en_negociacion: { texto: "En negociación", tono: "proceso", estudiante: "Roumix está acordando las condiciones del arriendo con el propietario.", propietario: "Roumix está acordando las condiciones del arriendo." },
+  contrato_pendiente: { texto: "Contrato pendiente", tono: "proceso", estudiante: "Se está preparando el contrato. Todavía no tienes que pagar nada.", propietario: "Se está preparando el contrato." },
+  contrato_formalizado: { texto: "Contrato formalizado", tono: "ok", estudiante: "El contrato quedó formalizado.", propietario: "El contrato quedó formalizado." },
+  pago_pendiente: { texto: "Pago pendiente", tono: "proceso", estudiante: "Ya puedes pagar el primer mes a través de Roumix.", propietario: "Se espera el pago del primer mes del estudiante." },
+  pagado: { texto: "Pagado", tono: "ok", estudiante: "Roumix confirmó tu pago.", propietario: "El pago del primer mes fue confirmado." },
+  completada: { texto: "Completada", tono: "ok", estudiante: "¡Proceso completado! Bienvenido a tu nuevo hogar.", propietario: "El proceso de arriendo terminó." },
+  cancelada: { texto: "Cancelada", tono: "cerrada", estudiante: "Esta solicitud fue cancelada.", propietario: "La solicitud fue cancelada." }
+};
+const ROUMIX_SOLICITUD_CERRADA = ["rechazada", "completada", "cancelada"];
+const ROUMIX_ICONO_SOLICITUD = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="m9 15 2 2 4-4"/></svg>';
+
+// AAAA-MM-DD en la hora local, desplazado unos días
+function fechaLocalISO(dias = 0) {
+  const d = new Date();
+  d.setDate(d.getDate() + dias);
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 10);
+}
+
+// Se mantiene el nombre por compatibilidad: los botones "Solicitar" de Buscar,
+// Comparar y Detalle llaman a esta función.
+async function abrirModalContacto(id) {
   const inmueble = typeof RoumixAPI !== "undefined" ? RoumixAPI._cache[id] : null;
-
   if (!inmueble) return;
-
   const modal = document.getElementById("modal-contacto");
   if (!modal) return;
-
   const cuerpo = modal.querySelector(".modal-body");
   if (!cuerpo) return;
 
-  const propietario = inmueble.propietario || {};
-  const telefono = String(propietario.telefono || "").replace(/\D/g, "");
-  const primerNombre = String(propietario.nombre || "").trim().split(/\s+/)[0];
-  const saludo = primerNombre && primerNombre !== "Usuario" ? `Hola ${primerNombre}` : "Hola";
   const precio = inmueble.precioFormato || formatearPrecioCOP(inmueble.precio);
-  // Los asteriscos marcan negrita en WhatsApp: se quitan del título para no romper el formato
-  const titulo = String(inmueble.titulo || "").replace(/\*/g, "");
-  const usuario = RoumixStorage.getUsuario();
-  const firma = usuario && usuario.nombre ? `\n\nSoy ${String(usuario.nombre).trim().split(/\s+/)[0]}, estudiante. ¡Gracias!` : "\n\n¡Gracias!";
-  const referencia = `Vi tu publicación en Roumix:\n*${titulo}*\n${inmueble.barrio} · ${precio}/mes`;
-
-  const plantillas = {
-    disponibilidad: { etiqueta: "¿Está disponible?", texto: `${saludo} 👋\n\n${referencia}\n\n¿Todavía está disponible?${firma}` },
-    visita: { etiqueta: "Agendar visita", texto: `${saludo} 👋\n\n${referencia}\n\nMe gustaría conocerlo. ¿Qué día y hora te queda bien para una visita?${firma}` },
-    detalles: { etiqueta: "Qué incluye", texto: `${saludo} 👋\n\n${referencia}\n\n¿Me cuentas qué incluye el arriendo (servicios, internet) y cuál es el depósito?${firma}` }
-  };
-
   const imagen = inmueble.imagen || (inmueble.galeria && inmueble.galeria[0]) || "";
-  const iniciales = propietario.iniciales || "R";
+  const usuario = RoumixStorage.getUsuario();
 
-  cuerpo.innerHTML = `
+  const cabecera = `
     <div class="contacto-cabecera">
-      <span class="contacto-sello">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.8.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.5-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6l.4-.5c.2-.2.2-.3.3-.5.1-.2.1-.4 0-.5l-.9-2.2c-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.4s1 2.8 1.2 3c.1.2 2 3.1 4.9 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 1.9-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3zM12 21.8c-1.8 0-3.5-.5-5-1.4l-.4-.2-3.7 1 1-3.6-.2-.4C2.7 15.6 2.2 13.8 2.2 12 2.2 6.6 6.6 2.2 12 2.2S21.8 6.6 21.8 12 17.4 21.8 12 21.8zM12 .2C5.5.2.2 5.5.2 12c0 2.1.5 4.1 1.6 5.9L.1 24l6.3-1.6c1.7.9 3.7 1.4 5.6 1.4 6.5 0 11.8-5.3 11.8-11.8S18.5.2 12 .2z"/></svg>
-        Contacto directo por WhatsApp
-      </span>
-      <h3 id="modal-contact-title" class="modal-title">Escríbele al arrendador</h3>
+      <span class="contacto-sello">${ROUMIX_ICONO_SOLICITUD} Gestionado por Roumix</span>
+      <h3 id="modal-contact-title" class="modal-title">Solicitar arriendo</h3>
     </div>
-
     <div class="contacto-inmueble">
       ${imagen ? `<img src="${escaparHTML(imagen)}" alt="" class="contacto-inmueble-foto" loading="lazy">` : ""}
       <div class="contacto-inmueble-datos">
@@ -210,84 +215,118 @@ function abrirModalContacto(id) {
         <span>${escaparHTML(inmueble.barrio || "Villavicencio")} · ${escaparHTML(inmueble.tipoLabel || "Inmueble")}</span>
         <span class="contacto-precio">${escaparHTML(precio)}<small>/mes</small></span>
       </div>
-    </div>
+    </div>`;
 
-    <div class="contacto-dueno">
-      <span class="contacto-avatar" aria-hidden="true">${escaparHTML(iniciales)}</span>
-      <div>
-        <strong>${escaparHTML(propietario.nombre || "Usuario de Roumix")}</strong>
-        <span>Propietario · Villavicencio, Meta</span>
-      </div>
-    </div>
+  const abrir = () => {
+    modal.classList.add("open");
+    modal.setAttribute("aria-hidden", "false");
+    const cerrar = document.getElementById("btn-cerrar-modal");
+    if (cerrar) cerrar.focus({ preventScroll: true });
+  };
 
-    ${telefono ? `
-      <p class="contacto-paso">¿Qué quieres preguntar?</p>
-      <div class="contacto-chips" role="radiogroup" aria-label="Tipo de mensaje">
-        ${Object.entries(plantillas).map(([clave, p], i) => `
-          <button type="button" class="contacto-chip${i === 0 ? " activo" : ""}" role="radio" aria-checked="${i === 0}" data-plantilla="${clave}">${p.etiqueta}</button>`).join("")}
-      </div>
+  if (!usuario || usuario.rol !== "estudiante") {
+    cuerpo.innerHTML = `${cabecera}
+      <div class="contacto-sin-telefono solicitud-aviso">
+        <strong>Las solicitudes de arriendo las envían los estudiantes.</strong>
+        <span>${usuario
+          ? 'Si tienes preguntas sobre esta publicación, escríbele al equipo de Roumix: <a href="mailto:roumix04@gmail.com">roumix04@gmail.com</a>.'
+          : "Inicia sesión con tu cuenta de estudiante para enviar una solicitud."}</span>
+      </div>`;
+    return abrir();
+  }
 
-      <div class="contacto-burbuja-wrap">
-        <label for="modal-mensaje-wa" class="contacto-paso">Tu mensaje <span>· puedes editarlo</span></label>
-        <div class="contacto-burbuja">
-          <textarea id="modal-mensaje-wa" rows="7" maxlength="600"></textarea>
-          <span class="contacto-contador" id="contacto-contador"></span>
+  cuerpo.innerHTML = `${cabecera}<p class="solicitud-cargando" role="status">Cargando…</p>`;
+  abrir();
+
+  // ¿Ya tiene una solicitud abierta para este inmueble? (el servidor también lo impide)
+  let abierta = null;
+  try {
+    const mias = await RoumixAPI.getMisSolicitudes();
+    abierta = mias.find((s) => s.inmueble_id === inmueble.id && !ROUMIX_SOLICITUD_CERRADA.includes(s.estado)) || null;
+  } catch (e) { /* si falla, se muestra el formulario igual */ }
+
+  if (abierta) {
+    const estado = ROUMIX_ESTADOS_SOLICITUD[abierta.estado] || { texto: abierta.estado, estudiante: "" };
+    cuerpo.innerHTML = `${cabecera}
+      <div class="solicitud-resultado">
+        <strong>Ya enviaste una solicitud para este inmueble</strong>
+        <span class="solicitud-chip solicitud-chip-${estado.tono}">${escaparHTML(estado.texto)}</span>
+        <span>${escaparHTML(estado.estudiante)}</span>
+        <a href="solicitudes.html" class="btn-contact-wa-large">Ver mis solicitudes</a>
+      </div>`;
+    return;
+  }
+
+  const maxPersonas = inmueble.capacidad || 20;
+  const duraciones = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 18, 24];
+  cuerpo.innerHTML = `${cabecera}
+    <ol class="solicitud-pasos" aria-label="Cómo funciona">
+      <li><span>1</span>Envías tu solicitud</li>
+      <li><span>2</span>Roumix habla con el propietario</li>
+      <li><span>3</span>Te avisamos por correo</li>
+    </ol>
+    <form id="form-solicitud" class="solicitud-form" novalidate>
+      <div class="solicitud-fila">
+        <div>
+          <label for="sol-fecha" class="contacto-paso">¿Desde cuándo?</label>
+          <input type="date" id="sol-fecha" class="form-control" required min="${fechaLocalISO(0)}" max="${fechaLocalISO(365)}" value="${fechaLocalISO(7)}">
+        </div>
+        <div>
+          <label for="sol-duracion" class="contacto-paso">¿Cuánto tiempo?</label>
+          <select id="sol-duracion" class="form-control">
+            ${duraciones.map((m) => `<option value="${m}"${m === 6 ? " selected" : ""}>${m} ${m === 1 ? "mes" : "meses"}</option>`).join("")}
+          </select>
+        </div>
+        <div>
+          <label for="sol-personas" class="contacto-paso">Personas</label>
+          <input type="number" id="sol-personas" class="form-control" min="1" max="${maxPersonas}" value="1" required>
         </div>
       </div>
+      ${inmueble.capacidad ? `<p class="solicitud-ayuda">Este inmueble es para máximo ${inmueble.capacidad} persona${inmueble.capacidad === 1 ? "" : "s"}.</p>` : ""}
+      <label for="sol-mensaje" class="contacto-paso">Cuéntale a Roumix sobre ti <span>· opcional</span></label>
+      <textarea id="sol-mensaje" class="form-control form-textarea" rows="4" maxlength="1000"
+        placeholder="Ej: Estudio Ingeniería en la Santo Tomás, soy tranquila y no tengo mascotas. Me gustaría visitar el inmueble antes."></textarea>
+      <p class="pub-mensaje pub-mensaje-error" id="sol-error" role="alert" hidden></p>
+      <button type="submit" class="btn-contact-wa-large">${ROUMIX_ICONO_SOLICITUD} Enviar solicitud</button>
+      <p class="contacto-nota">El propietario no verá tu correo ni tu teléfono: Roumix coordina todo por ti.<br>Nunca pagues nada por fuera de la plataforma.</p>
+    </form>`;
 
-      <a id="modal-btn-whatsapp" href="#" target="_blank" rel="noopener noreferrer" class="btn-whatsapp-action">
-        <svg class="svg-icon-wa" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.8.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.5-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6l.4-.5c.2-.2.2-.3.3-.5.1-.2.1-.4 0-.5l-.9-2.2c-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.4s1 2.8 1.2 3c.1.2 2 3.1 4.9 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 1.9-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3zM12 21.8c-1.8 0-3.5-.5-5-1.4l-.4-.2-3.7 1 1-3.6-.2-.4C2.7 15.6 2.2 13.8 2.2 12 2.2 6.6 6.6 2.2 12 2.2S21.8 6.6 21.8 12 17.4 21.8 12 21.8zM12 .2C5.5.2.2 5.5.2 12c0 2.1.5 4.1 1.6 5.9L.1 24l6.3-1.6c1.7.9 3.7 1.4 5.6 1.4 6.5 0 11.8-5.3 11.8-11.8S18.5.2 12 .2z"/></svg>
-        Enviar por WhatsApp
-      </a>
-      <p class="contacto-nota">Se abrirá WhatsApp con este mensaje listo. Nunca pagues ni envíes dinero antes de visitar el inmueble.</p>
-    ` : `
-      <div class="contacto-sin-telefono">
-        <strong>Este arrendador aún no registró un número de WhatsApp.</strong>
-        <span>Vuelve más tarde o explora otras opciones parecidas.</span>
-      </div>
-    `}
-  `;
+  const form = cuerpo.querySelector("#form-solicitud");
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const error = cuerpo.querySelector("#sol-error");
+    const mostrarError = (texto) => { error.textContent = texto; error.hidden = false; };
+    error.hidden = true;
 
-  if (telefono) {
-    const areaMensaje = cuerpo.querySelector("#modal-mensaje-wa");
-    const botonWa = cuerpo.querySelector("#modal-btn-whatsapp");
-    const contador = cuerpo.querySelector("#contacto-contador");
+    const fecha = cuerpo.querySelector("#sol-fecha").value;
+    const personas = Number(cuerpo.querySelector("#sol-personas").value);
+    if (!fecha) return mostrarError("Elige la fecha en la que te gustaría mudarte.");
+    if (fecha < fechaLocalISO(0)) return mostrarError("La fecha no puede estar en el pasado.");
+    if (!Number.isInteger(personas) || personas < 1 || personas > maxPersonas) return mostrarError(`Indica entre 1 y ${maxPersonas} personas.`);
 
-    // El enlace siempre lleva lo que el estudiante ve (y editó) en el cuadro
-    const actualizarEnlace = () => {
-      botonWa.href = `https://wa.me/${telefono}?text=${encodeURIComponent(areaMensaje.value.trim())}`;
-      contador.textContent = `${areaMensaje.value.length}/600`;
-      // La burbuja crece con el texto, como en un chat
-      areaMensaje.style.height = "auto";
-      areaMensaje.style.height = `${areaMensaje.scrollHeight}px`;
-    };
-
-    cuerpo.querySelectorAll(".contacto-chip").forEach((chip) => {
-      chip.addEventListener("click", () => {
-        cuerpo.querySelectorAll(".contacto-chip").forEach((c) => {
-          c.classList.toggle("activo", c === chip);
-          c.setAttribute("aria-checked", String(c === chip));
-        });
-        areaMensaje.value = plantillas[chip.dataset.plantilla].texto;
-        actualizarEnlace();
+    const boton = form.querySelector('button[type="submit"]');
+    boton.disabled = true;
+    try {
+      await RoumixAPI.crearSolicitud({
+        inmuebleId: inmueble.id,
+        fechaIngreso: fecha,
+        duracionMeses: Number(cuerpo.querySelector("#sol-duracion").value),
+        personas,
+        mensaje: cuerpo.querySelector("#sol-mensaje").value.trim() || undefined
       });
-    });
-
-    areaMensaje.value = plantillas.disponibilidad.texto;
-    areaMensaje.addEventListener("input", actualizarEnlace);
-    actualizarEnlace();
-  }
-
-  modal.classList.add("open");
-  modal.setAttribute("aria-hidden", "false");
-  // La altura del mensaje solo se puede medir cuando la ventana ya es visible
-  const areaVisible = cuerpo.querySelector("#modal-mensaje-wa");
-  if (areaVisible) {
-    areaVisible.style.height = "auto";
-    areaVisible.style.height = `${areaVisible.scrollHeight}px`;
-  }
-  const cerrar = document.getElementById("btn-cerrar-modal");
-  if (cerrar) cerrar.focus({ preventScroll: true });
+      cuerpo.innerHTML = `${cabecera}
+        <div class="solicitud-resultado solicitud-exito">
+          <span class="solicitud-check" aria-hidden="true">✓</span>
+          <strong>¡Solicitud enviada!</strong>
+          <span>Roumix la revisará, hablará con el propietario y te escribirá a tu correo. Puedes seguir cada paso en "Mis solicitudes".</span>
+          <a href="solicitudes.html" class="btn-contact-wa-large">Ver mis solicitudes</a>
+        </div>`;
+      if (typeof lanzarConfeti === "function") lanzarConfeti();
+    } catch (err) {
+      mostrarError(err.message);
+      boton.disabled = false;
+    }
+  });
 }
 
 function cerrarModalContacto() {
@@ -342,8 +381,9 @@ function sincronizarBarraNavegacion() {
     if (esPropietario) {
       // Mientras Roumix no apruebe la cuenta, el primer paso es la verificación
       if (usuario.verificacion && usuario.verificacion !== "aprobado") enlaces.push(enlace("verificacion.html", "Mi verificación"));
-      enlaces.push(enlace("publicar.html", "Publicar"), enlace("mis-publicaciones.html", "Mis publicaciones"));
+      enlaces.push(enlace("publicar.html", "Publicar"), enlace("mis-publicaciones.html", "Mis publicaciones"), enlace("solicitudes.html", "Solicitudes"));
     }
+    if (usuario && usuario.rol === "estudiante") enlaces.push(enlace("solicitudes.html", "Mis solicitudes"));
     if (usuario && usuario.rol === "admin") enlaces.push(enlace("admin.html", "Administración"));
     navContainer.innerHTML = enlaces.join("");
   }

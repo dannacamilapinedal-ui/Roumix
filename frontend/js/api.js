@@ -16,7 +16,7 @@ const RoumixAPI = {
     ? 'http://localhost:3000/api'
     : '/api',
 
-  // Inmuebles ya cargados, por ID (lo usa el modal de contacto)
+  // Inmuebles ya cargados, por ID (lo usa la ventana de solicitud)
   _cache: {},
 
   /**
@@ -175,6 +175,20 @@ const RoumixAPI = {
   /**
    * Verificación del propietario (estado, datos del perfil y condiciones)
    */
+  // ---- Solicitudes de arriendo ----
+  crearSolicitud: async function(datos) {
+    return this._request('/solicitudes', { method: 'POST', body: JSON.stringify(datos) });
+  },
+
+  getMisSolicitudes: async function() {
+    const json = await this._request('/solicitudes/mias');
+    return json.data;
+  },
+
+  cancelarSolicitud: async function(id, motivo) {
+    return this._request(`/solicitudes/${encodeURIComponent(id)}/cancelar`, { method: 'POST', body: JSON.stringify({ motivo }) });
+  },
+
   getVerificacion: async function() {
     const json = await this._request('/propietario/verificacion');
     return json.data;
@@ -308,8 +322,7 @@ const RoumixAPI = {
       galeria: galeria.length ? galeria : [imagen],
       propietario: {
         nombre: nombrePropietario || 'Usuario de Roumix',
-        iniciales: nombrePropietario ? nombrePropietario.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase() : 'R',
-        telefono: item.propietario_telefono || null
+        iniciales: nombrePropietario ? nombrePropietario.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase() : 'R'
       }
     };
   }

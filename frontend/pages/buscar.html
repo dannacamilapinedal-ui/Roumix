@@ -59,7 +59,7 @@
             <span class="hero-eyebrow">Vivienda universitaria · Villavicencio</span>
             <h1 class="hero-title">Vivienda cerca de tu universidad, sin dar vueltas.</h1>
             <p class="hero-subtitle">
-              Habitaciones, apartaestudios y apartamentos en Villavicencio, con su zona en el mapa y contacto directo con el propietario.
+              Habitaciones, apartaestudios y apartamentos en Villavicencio, con su zona en el mapa. Roumix te acompaña desde la solicitud hasta el contrato.
             </p>
           </div>
           <div class="hero-stats">
@@ -204,33 +204,11 @@
     <span id="texto-vista-movil">Ver mapa</span>
   </button>
 
-  <!-- Modal para Contactar al Propietario (WhatsApp) -->
+  <!-- Ventana "Solicitar arriendo" (el contenido lo arma app.js) -->
   <div id="modal-contacto" class="modal-backdrop" aria-hidden="true">
-    <div class="modal-window" role="dialog" aria-labelledby="modal-contact-title">
-      <button type="button" class="modal-close-btn" id="btn-cerrar-modal" aria-label="Cerrar modal">&times;</button>
-      <div class="modal-body">
-        <div class="modal-badge-whatsapp">💬 Contacto Directo</div>
-        <h3 id="modal-contact-title" class="modal-title">Contactar al arrendador</h3>
-        <p class="modal-property-subtitle" id="modal-prop-nombre">Habitación amoblada en apartaestudio</p>
-        
-        <div class="modal-owner-box">
-          <div class="owner-avatar">👤</div>
-          <div class="owner-info">
-            <strong id="modal-prop-dueno">Usuario de Roumix</strong>
-            <span>Villavicencio, Meta</span>
-          </div>
-        </div>
-
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label for="modal-mensaje-wa" class="form-label">Mensaje para WhatsApp:</label>
-          <textarea id="modal-mensaje-wa" rows="3" class="form-control form-textarea"></textarea>
-        </div>
-
-        <a id="modal-btn-whatsapp" href="#" target="_blank" rel="noopener noreferrer" class="btn-whatsapp-action">
-          <svg class="svg-icon-wa" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.668-.699c.969.587 1.942.88 2.792.881 3.179 0 5.766-2.587 5.767-5.766.001-3.18-2.586-5.767-5.767-5.767zm3.391 8.232c-.147.414-.755.767-1.042.813-.287.047-.638.077-2.074-.518-1.748-.724-2.871-2.5-2.958-2.616-.087-.116-.708-.941-.708-1.794 0-.853.447-1.273.606-1.446.16-.174.348-.218.464-.218.116 0 .232.001.333.006.107.005.25.04.391.378.147.355.503 1.229.547 1.318.044.088.073.191.015.307-.058.116-.088.19-.175.292-.087.102-.183.228-.261.306-.088.088-.18.184-.078.36.102.175.454.749.974 1.212.67.597 1.235.782 1.41.869.175.088.277.073.38-.044.102-.116.436-.508.552-.682.116-.175.233-.146.392-.088.16.058 1.013.477 1.188.564.175.088.291.131.334.204.043.073.043.42-.104.834z"/></svg>
-          Abrir chat en WhatsApp
-        </a>
-      </div>
+    <div class="modal-window" role="dialog" aria-modal="true" aria-labelledby="modal-contact-title">
+      <button type="button" class="modal-close-btn" id="btn-cerrar-modal" aria-label="Cerrar">&times;</button>
+      <div class="modal-body"></div>
     </div>
   </div>
 
@@ -449,8 +427,8 @@
                     Saber más
                   </a>
                   <button type="button" class="btn-contact" onclick="abrirModalContacto(${item.id})">
-                    <svg class="svg-icon-wa" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.668-.699c.969.587 1.942.88 2.792.881 3.179 0 5.766-2.587 5.767-5.766.001-3.18-2.586-5.767-5.767-5.767zm3.391 8.232c-.147.414-.755.767-1.042.813-.287.047-.638.077-2.074-.518-1.748-.724-2.871-2.5-2.958-2.616-.087-.116-.708-.941-.708-1.794 0-.853.447-1.273.606-1.446.16-.174.348-.218.464-.218.116 0 .232.001.333.006.107.005.25.04.391.378.147.355.503 1.229.547 1.318.044.088.073.191.015.307-.058.116-.088.19-.175.292-.087.102-.183.228-.261.306-.088.088-.18.184-.078.36.102.175.454.749.974 1.212.67.597 1.235.782 1.41.869.175.088.277.073.38-.044.102-.116.436-.508.552-.682.116-.175.233-.146.392-.088.16.058 1.013.477 1.188.564.175.088.291.131.334.204.043.073.043.42-.104.834z"/></svg>
-                    Contactar
+                    <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="m9 15 2 2 4-4"/></svg>
+                    Solicitar
                   </button>
                 </div>
               </div>

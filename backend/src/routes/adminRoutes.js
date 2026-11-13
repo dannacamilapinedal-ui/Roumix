@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
+const solicitudesController = require('../controllers/solicitudesController');
 const { requireAuth, requireRol } = require('../middleware/auth');
 
 // Todas las rutas exigen sesión válida y rol admin leído de la base de datos.
@@ -17,5 +18,8 @@ router.post('/usuarios/:id/estado', adminController.cambiarEstadoUsuario);
 router.get('/historial', adminController.historial);
 router.get('/propietarios', adminController.listarPropietarios);
 router.post('/propietarios/:id/verificacion', adminController.decidirVerificacion);
+router.get('/solicitudes', solicitudesController.listarAdmin);
+router.get('/solicitudes/:id', solicitudesController.detalleAdmin);
+router.post('/solicitudes/:id', solicitudesController.actualizarAdmin);
 
 module.exports = router;

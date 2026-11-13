@@ -18,7 +18,7 @@ function selectInmueble({ exacto }) {
            i.disponible_desde, ${coordenadas}, i.imagen_principal, i.galeria,
            i.estado, i.retirado_en, i.moderacion, i.revisado_en, i.revision_alcance, i.created_at, i.updated_at,
            ${exacto ? 'i.moderacion_mensaje,' : ''}
-           u.nombre AS propietario_nombre, u.telefono AS propietario_telefono,
+           u.nombre AS propietario_nombre,
            (a.email_confirmed_at IS NOT NULL) AS propietario_correo_confirmado
     FROM inmuebles i
     LEFT JOIN usuarios u ON u.id = i.propietario_id
@@ -29,8 +29,9 @@ function selectInmueble({ exacto }) {
 const SELECT_PUBLICO = selectInmueble({ exacto: false });
 const SELECT_PROPIETARIO = selectInmueble({ exacto: true });
 
-// Datos del propietario que un visitante sin sesión nunca recibe (contacto e identificador interno)
-const CAMPOS_PRIVADOS_PROPIETARIO = ['propietario_id', 'propietario_nombre', 'propietario_telefono'];
+// Datos del propietario que un visitante sin sesión nunca recibe (nombre e identificador interno).
+// El teléfono no sale nunca: con la comunicación gestionada solo lo ve el equipo de Roumix.
+const CAMPOS_PRIVADOS_PROPIETARIO = ['propietario_id', 'propietario_nombre'];
 
 function ocultarPropietario(fila, req) {
   if (req.usuario) return fila;
@@ -458,6 +459,7 @@ async function eliminarInmueble(req, res) {
 }
 
 module.exports = {
+  CONDICION_PUBLICA,
   getInmuebles,
   getInmueblePorId,
   getMisInmuebles,

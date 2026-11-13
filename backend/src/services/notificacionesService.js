@@ -401,6 +401,106 @@ async function enviarRecuperacion({ email, enlace }) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Solicitudes de arriendo. Los correos nunca incluyen datos de contacto de la
+// otra parte: todo lo coordina el equipo de Roumix.
+// ---------------------------------------------------------------------------
+const formatoFecha = (valor) => new Date(`${valor}T12:00:00Z`).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+
+async function notificarSolicitudNueva({ solicitud, estudiante, urlBase }) {
+  try {
+    return await enviar({
+      para: await correosAdministradores(),
+      asunto: `Nueva solicitud de arriendo #${solicitud.id}: ${solicitud.inmuebleTitulo}`,
+      contenido: {
+        titulo: 'Llegó una solicitud de arriendo',
+        parrafos: [
+          `<strong>${escapar(estudiante.nombre)}</strong> (${escapar(estudiante.email)}) quiere arrendar <strong>${escapar(solicitud.inmuebleTitulo)}</strong>.`,
+          `Ingreso: ${escapar(formatoFecha(solicitud.fechaIngreso))} · ${solicitud.duracion} mes(es) · ${solicitud.personas} persona(s).`,
+          'Revísala en el panel, habla con el propietario y actualiza el estado para que el estudiante sepa en qué va.'
+        ],
+        boton: { texto: 'Ver la solicitud', url: `${urlBase}/pages/admin.html` }
+      }
+    });
+  } catch (error) {
+    console.error('⚠️ Notificación de solicitud nueva:', error.message);
+    return false;
+  }
+}
+
+async function notificarSolicitudCanceladaAdmin({ solicitud, motivo, urlBase }) {
+  try {
+    return await enviar({
+      para: await correosAdministradores(),
+      asunto: `Solicitud #${solicitud.id} cancelada por el estudiante`,
+      contenido: {
+        titulo: 'Un estudiante canceló su solicitud',
+        parrafos: [
+          `La solicitud #${solicitud.id} de <strong>${escapar(solicitud.inmuebleTitulo)}</strong> fue cancelada por el estudiante.`,
+          motivo ? `Motivo: ${escapar(motivo)}` : 'No indicó un motivo.'
+        ],
+        boton: { texto: 'Abrir el panel', url: `${urlBase}/pages/admin.html` }
+      }
+    });
+  } catch (error) {
+    console.error('⚠️ Notificación de solicitud cancelada:', error.message);
+    return false;
+  }
+}
+
+async function correoUsuarioActivo(id) {
+  if (!id) return null;
+  const { rows } = await db.query("SELECT email, nombre FROM usuarios WHERE id = $1 AND estado = 'activo'", [id]);
+  return rows[0] || null;
+}
+
+async function notificarSolicitudEstudiante({ estudianteId, solicitud, estado, etiqueta, nota, urlBase }) {
+  try {
+    const estudiante = await correoUsuarioActivo(estudianteId);
+    if (!estudiante) return false;
+    return await enviar({
+      para: estudiante.email,
+      asunto: estado ? `Tu solicitud #${solicitud.id} ahora está: ${etiqueta}` : `Novedad en tu solicitud #${solicitud.id}`,
+      contenido: {
+        titulo: estado ? `Tu solicitud está: ${etiqueta}` : 'Hay una novedad en tu solicitud',
+        parrafos: [
+          `Hola ${escapar(String(estudiante.nombre || '').split(' ')[0])}, esto es lo último de tu solicitud para <strong>${escapar(solicitud.inmuebleTitulo)}</strong>.`,
+          nota ? `<strong>Mensaje del equipo de Roumix:</strong><br>${escapar(nota)}` : 'Entra a Roumix para ver el detalle.'
+        ],
+        boton: { texto: 'Ver mis solicitudes', url: `${urlBase}/pages/solicitudes.html` },
+        nota: 'Roumix coordina todo con el propietario por ti. Nunca pagues por fuera de la plataforma.'
+      }
+    });
+  } catch (error) {
+    console.error('⚠️ Notificación de solicitud al estudiante:', error.message);
+    return false;
+  }
+}
+
+async function notificarSolicitudPropietario({ propietarioId, solicitud, estado, etiqueta, nota, nueva, urlBase }) {
+  try {
+    const propietario = await correoUsuarioActivo(propietarioId);
+    if (!propietario) return false;
+    return await enviar({
+      para: propietario.email,
+      asunto: nueva ? `Tienes una solicitud de arriendo para ${solicitud.inmuebleTitulo}` : `Solicitud #${solicitud.id}: ${etiqueta || 'novedad'}`,
+      contenido: {
+        titulo: nueva ? 'Un estudiante quiere arrendar tu inmueble' : (estado ? `La solicitud está: ${etiqueta}` : 'Novedad en una solicitud'),
+        parrafos: [
+          nueva
+            ? `El equipo de Roumix está gestionando una solicitud para <strong>${escapar(solicitud.inmuebleTitulo)}</strong> y te contactará para coordinar.`
+            : `Hay una actualización de la solicitud #${solicitud.id} para <strong>${escapar(solicitud.inmuebleTitulo)}</strong>.`,
+          nota ? `<strong>Mensaje del equipo de Roumix:</strong><br>${escapar(nota)}` : ''
+        ].filter(Boolean),
+        boton: { texto: 'Ver solicitudes', url: `${urlBase}/pages/solicitudes.html` }
+      }
+    });
+  } catch (error) {
+    console.error('⚠️ Notificación de solicitud al propietario:', error.message);
+    return false;
+  }
+}
+
 /**
  * Dirección pública de la aplicación para los enlaces de los correos.
  */
@@ -417,6 +517,10 @@ module.exports = {
   enviarConfirmacionCuenta,
   notificarVerificacionPendiente,
   notificarDecisionVerificacion,
+  notificarSolicitudNueva,
+  notificarSolicitudCanceladaAdmin,
+  notificarSolicitudEstudiante,
+  notificarSolicitudPropietario,
   enviarRecuperacion,
   urlBase,
   usarTransporte,

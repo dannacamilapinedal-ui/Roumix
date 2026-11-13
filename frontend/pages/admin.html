@@ -57,6 +57,7 @@
 
       <div class="admin-tabs" role="tablist" aria-label="Secciones del panel">
         <button type="button" role="tab" class="admin-tab activa" aria-selected="true" aria-controls="panel-resumen" id="tab-resumen" data-panel="resumen">Resumen</button>
+        <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-solicitudes" id="tab-solicitudes" data-panel="solicitudes">Solicitudes <span class="admin-contador" id="contador-solicitudes" hidden></span></button>
         <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-reportes" id="tab-reportes" data-panel="reportes">Reportes <span class="admin-contador" id="contador-reportes" hidden></span></button>
         <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-propietarios" id="tab-propietarios" data-panel="propietarios">Propietarios <span class="admin-contador" id="contador-propietarios" hidden></span></button>
         <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-inmuebles" id="tab-inmuebles" data-panel="inmuebles">Publicaciones</button>
@@ -79,6 +80,26 @@
           </select>
         </div>
         <div id="lista-reportes" class="admin-lista"></div>
+      </section>
+
+      <section class="admin-panel" id="panel-solicitudes" role="tabpanel" aria-labelledby="tab-solicitudes" hidden>
+        <div class="admin-filtros">
+          <label for="filtro-solicitudes">Estado</label>
+          <select id="filtro-solicitudes">
+            <option value="abiertas" selected>Abiertas</option>
+            <option value="recibida">Recibidas (nuevas)</option>
+            <option value="en_revision">En revisión</option>
+            <option value="aceptada">Aceptadas</option>
+            <option value="visita_coordinada">Visita coordinada</option>
+            <option value="en_negociacion">En negociación</option>
+            <option value="contrato_pendiente">Contrato pendiente</option>
+            <option value="cerradas">Cerradas</option>
+            <option value="todas">Todas</option>
+          </select>
+          <label for="buscar-solicitudes" class="sr-only">Buscar solicitudes</label>
+          <input type="search" id="buscar-solicitudes" placeholder="N.º, inmueble, estudiante o propietario" maxlength="100">
+        </div>
+        <div id="lista-solicitudes-admin" class="admin-lista"></div>
       </section>
 
       <section class="admin-panel" id="panel-propietarios" role="tabpanel" aria-labelledby="tab-propietarios" hidden>
@@ -146,6 +167,12 @@
   <dialog id="dialogo-inmueble" class="admin-dialogo" aria-labelledby="dialogo-inmueble-titulo">
     <button type="button" class="visor-cerrar admin-cerrar" data-cerrar aria-label="Cerrar">×</button>
     <div id="dialogo-inmueble-contenido"></div>
+  </dialog>
+
+  <!-- Gestión de una solicitud de arriendo -->
+  <dialog id="dialogo-solicitud" class="admin-dialogo" aria-labelledby="dialogo-solicitud-titulo">
+    <button type="button" class="visor-cerrar admin-cerrar" data-cerrar aria-label="Cerrar">×</button>
+    <div id="dialogo-solicitud-contenido"></div>
   </dialog>
 
   <!-- Revisión de un propietario -->

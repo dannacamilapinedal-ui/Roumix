@@ -43,7 +43,7 @@ function patron(valor) {
  * GET /api/admin/resumen
  */
 async function resumen(req, res) {
-  const [usuarios, inmuebles, reportes, verificaciones] = await Promise.all([
+  const [usuarios, inmuebles, reportes, verificaciones, solicitudes] = await Promise.all([
     db.query(`SELECT rol, estado, count(*)::int AS total FROM usuarios GROUP BY rol, estado`),
     db.query(`SELECT moderacion, estado, count(*)::int AS total FROM inmuebles GROUP BY moderacion, estado`),
     db.query(`SELECT estado, count(*)::int AS total FROM reportes GROUP BY estado`),
@@ -53,7 +53,12 @@ async function resumen(req, res) {
         count(*) FILTER (WHERE v.estado = 'aprobado')::int AS aprobados,
         count(*) FILTER (WHERE v.propietario_id IS NULL OR (v.estado = 'pendiente' AND v.perfil_enviado_en IS NULL))::int AS incompletos
       FROM usuarios u LEFT JOIN verificaciones_propietario v ON v.propietario_id = u.id
-      WHERE u.rol = 'propietario'`)
+      WHERE u.rol = 'propietario'`),
+    db.query(`SELECT
+        count(*) FILTER (WHERE estado = 'recibida')::int AS nuevas,
+        count(*) FILTER (WHERE estado NOT IN ('rechazada', 'completada', 'cancelada'))::int AS abiertas,
+        count(*)::int AS total
+      FROM solicitudes`)
   ]);
 
   const suma = (filas, filtro) => filas.filter(filtro).reduce((t, f) => t + f.total, 0);
@@ -83,7 +88,8 @@ async function resumen(req, res) {
         requiereInformacion: verificaciones.rows[0].requiere_informacion,
         aprobados: verificaciones.rows[0].aprobados,
         incompletos: verificaciones.rows[0].incompletos
-      }
+      },
+      solicitudes: solicitudes.rows[0]
     }
   });
 }

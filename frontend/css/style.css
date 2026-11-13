@@ -6506,3 +6506,336 @@ html[data-tema="oscuro"] .verif-aviso {
   background: #5f5f5f;
   color: #fff;
 }
+
+/* =========================================================================
+   Solicitudes de arriendo (módulo 3): ventana "Solicitar", página de
+   solicitudes y panel de administración
+   ========================================================================= */
+.contacto-sello {
+  background: var(--fondo-crema-alt);
+  color: var(--texto-verde-oscuro);
+}
+
+.contacto-sello svg { fill: none; }
+
+.solicitud-cargando {
+  padding: 18px 0;
+  color: var(--tinta-tenue);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.solicitud-pasos {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 16px 0;
+  padding: 0;
+}
+
+.solicitud-pasos li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  font-size: 0.74rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--tinta-media);
+}
+
+.solicitud-pasos span {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--verde-800);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.solicitud-form .form-control { width: 100%; }
+
+.solicitud-fila {
+  display: grid;
+  grid-template-columns: 1.3fr 1.1fr 0.8fr;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.solicitud-ayuda {
+  margin: -2px 0 10px;
+  font-size: 0.76rem;
+  color: var(--tinta-tenue);
+}
+
+.solicitud-form textarea { resize: vertical; min-height: 90px; margin-bottom: 4px; }
+
+.solicitud-form .btn-contact-wa-large { margin-top: 12px; }
+
+.solicitud-form .pub-mensaje { margin-top: 8px; }
+
+.solicitud-resultado {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 18px 16px 6px;
+  text-align: center;
+  font-size: 0.88rem;
+  color: var(--tinta-media);
+}
+
+.solicitud-resultado strong { color: var(--tinta-fuerte); font-size: 1.02rem; }
+
+.solicitud-resultado .btn-contact-wa-large { margin-top: 8px; }
+
+.solicitud-check {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--verde-800);
+  color: #fff;
+  font-size: 1.5rem;
+  font-weight: 800;
+  animation: rx-pop-check 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+
+@keyframes rx-pop-check {
+  from { transform: scale(0.4); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.solicitud-aviso { margin-top: 16px; }
+.solicitud-aviso a { color: var(--texto-verde-oscuro); font-weight: 700; }
+
+.detalle-gestion {
+  margin: -2px 0 12px;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  text-align: center;
+  color: var(--tinta-tenue);
+}
+
+/* Etiqueta de estado */
+.solicitud-chip {
+  display: inline-block;
+  padding: 4px 11px;
+  border-radius: var(--radio-pill);
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+  background: var(--fondo-crema-alt);
+  color: var(--tinta-media);
+}
+
+.solicitud-chip-proceso { background: #fdf0dc; color: #8a4f0f; }
+.solicitud-chip-ok { background: #e3f1e6; color: #1f6b3a; }
+.solicitud-chip-cerrada { background: #ececec; color: #5f5f5f; }
+
+/* Página de solicitudes */
+.solicitudes-garantia {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  border-radius: var(--radio-md);
+  background: var(--fondo-crema-alt);
+  border: 1px solid var(--borde-suave);
+  color: var(--texto-verde-oscuro);
+}
+
+.solicitudes-garantia svg { flex-shrink: 0; }
+.solicitudes-garantia p { margin: 0; font-size: 0.86rem; line-height: 1.45; color: var(--tinta-media); }
+
+.solicitudes-lista { display: flex; flex-direction: column; gap: 16px; }
+
+.solicitud-tarjeta {
+  padding: 18px;
+  border-radius: var(--radio-lg);
+  background: var(--superficie);
+  border: 1px solid var(--borde-suave);
+  box-shadow: 0 6px 18px -12px rgba(20, 34, 25, 0.25);
+}
+
+.solicitud-tarjeta.cerrada { opacity: 0.75; }
+
+.solicitud-cabeza {
+  display: grid;
+  grid-template-columns: 84px 1fr auto;
+  gap: 14px;
+  align-items: start;
+}
+
+.solicitud-foto {
+  width: 84px;
+  height: 84px;
+  border-radius: 12px;
+  object-fit: cover;
+  background: var(--fondo-crema);
+}
+
+.solicitud-tarjeta.cerrada .solicitud-foto { filter: grayscale(0.7); }
+
+.solicitud-datos { min-width: 0; }
+
+.solicitud-numero {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tinta-tenue);
+}
+
+.solicitud-datos h2 {
+  margin: 2px 0 2px;
+  font-size: 1.05rem;
+  line-height: 1.3;
+  color: var(--tinta-fuerte);
+}
+
+.solicitud-datos h2 a { color: inherit; text-decoration: none; }
+.solicitud-datos h2 a:hover { text-decoration: underline; }
+
+.solicitud-sub { font-size: 0.84rem; color: var(--tinta-tenue); }
+
+.solicitud-etiquetas { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+
+/* Barra de avance */
+.solicitud-progreso {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  margin: 18px 0 6px;
+  padding: 0;
+}
+
+.solicitud-progreso li {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--tinta-tenue);
+  text-align: center;
+}
+
+.solicitud-progreso li::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  right: 50%;
+  width: 100%;
+  height: 2px;
+  background: var(--borde-arena);
+}
+
+.solicitud-progreso li:first-child::before { display: none; }
+
+.solicitud-progreso .punto {
+  position: relative;
+  z-index: 1;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--superficie);
+  border: 2px solid var(--borde-arena);
+}
+
+.solicitud-progreso li.hecho::before,
+.solicitud-progreso li.actual::before { background: var(--verde-500); }
+
+.solicitud-progreso li.hecho .punto { background: var(--verde-500); border-color: var(--verde-500); }
+
+.solicitud-progreso li.actual { color: var(--tinta-fuerte); }
+
+.solicitud-progreso li.actual .punto {
+  background: var(--acento-naranja);
+  border-color: var(--acento-naranja);
+  box-shadow: 0 0 0 4px rgba(196, 124, 43, 0.2);
+}
+
+.solicitud-explicacion {
+  margin: 12px 0 0;
+  font-size: 0.88rem;
+  color: var(--tinta-media);
+}
+
+.solicitud-nota {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-left: 3px solid var(--acento-naranja);
+  border-radius: 0 var(--radio-md) var(--radio-md) 0;
+  background: var(--fondo-crema-alt);
+}
+
+.solicitud-nota strong { font-size: 0.76rem; color: var(--tinta-tenue); }
+.solicitud-nota p { margin: 2px 0 0; font-size: 0.9rem; color: var(--tinta-fuerte); white-space: pre-line; }
+
+.solicitud-pie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.solicitud-historial summary {
+  cursor: pointer;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--texto-verde-oscuro);
+}
+
+.solicitud-historial ol {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0 0 0 14px;
+  border-left: 2px solid var(--borde-arena);
+}
+
+.solicitud-historial li { margin-bottom: 10px; font-size: 0.84rem; color: var(--tinta-media); }
+.solicitud-historial time { display: block; font-size: 0.72rem; color: var(--tinta-tenue); }
+.solicitud-historial p { margin: 2px 0 0; white-space: pre-line; }
+
+/* Panel de administración */
+.admin-historial-solicitud {
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0 0 0 14px;
+  border-left: 2px solid var(--borde-arena);
+}
+
+.admin-historial-solicitud li { margin-bottom: 12px; font-size: 0.86rem; }
+.admin-historial-solicitud p { margin: 3px 0 0; }
+.admin-historial-meta { display: block; font-size: 0.74rem; color: var(--tinta-tenue); }
+.admin-nota-interna { padding: 4px 8px; border-radius: 6px; background: #fff6df; color: #6b4a00; }
+
+#form-solicitud-admin select { width: 100%; margin-bottom: 6px; }
+
+html[data-tema="oscuro"] .solicitud-chip-proceso { background: rgba(222, 150, 70, 0.18); color: #f0bf85; }
+html[data-tema="oscuro"] .solicitud-chip-ok { background: rgba(110, 190, 130, 0.16); color: #9fd8ac; }
+html[data-tema="oscuro"] .solicitud-chip-cerrada { background: rgba(255, 255, 255, 0.08); color: #b5b0a6; }
+html[data-tema="oscuro"] .admin-nota-interna { background: rgba(240, 190, 90, 0.12); color: #f0d39a; }
+
+@media (max-width: 640px) {
+  .solicitud-fila { grid-template-columns: 1fr 1fr; }
+  .solicitud-fila > div:first-child { grid-column: 1 / -1; }
+  .solicitud-cabeza { grid-template-columns: 64px 1fr; }
+  .solicitud-foto { width: 64px; height: 64px; }
+  .solicitud-cabeza .solicitud-chip { grid-column: 1 / -1; justify-self: start; }
+  .solicitud-progreso .texto { display: none; }
+  .solicitud-progreso li.actual .texto { display: block; position: absolute; top: 20px; white-space: nowrap; }
+  .solicitud-progreso { margin-bottom: 22px; }
+}

@@ -12,6 +12,7 @@ const propietarioRoutes = require('./routes/propietarioRoutes');
 const mapaRoutes = require('./routes/mapaRoutes');
 const configRoutes = require('./routes/configRoutes');
 const tareasRoutes = require('./routes/tareasRoutes');
+const solicitudesRoutes = require('./routes/solicitudesRoutes');
 const errorHandler = require('./middleware/errorHandler');
 const { cabecerasSeguridad, opcionesCors } = require('./config/seguridad');
 
@@ -35,6 +36,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/inmuebles', inmueblesRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/propietario', propietarioRoutes);
+app.use('/api/solicitudes', solicitudesRoutes);
 app.use('/api/mapa', mapaRoutes);
 app.use('/api/config', configRoutes);
 app.use('/api/tareas', tareasRoutes);
