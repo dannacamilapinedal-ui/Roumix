@@ -613,6 +613,50 @@ async function notificarContrato({ contrato, evento, parte, urlBase }) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Pagos (SIMULADOS: ningún correo afirma que se movió dinero real)
+// ---------------------------------------------------------------------------
+async function notificarPago({ pago, evento, detalle, urlBase }) {
+  try {
+    const pesos = (n) => `$${Number(n || 0).toLocaleString('es-CO')}`;
+    const boton = { texto: 'Ver el pago', url: `${urlBase}/pages/pago.html?id=${pago.id}` };
+    const nota = 'Pago demostrativo: Roumix aún no procesa dinero real.';
+    const ids = [pago.estudiante_id, pago.propietario_id].filter(Boolean);
+    const { rows } = ids.length ? await db.query("SELECT id, email, nombre FROM usuarios WHERE id = ANY($1) AND estado = 'activo'", [ids]) : { rows: [] };
+    const estudiante = rows.find((u) => u.id === pago.estudiante_id);
+    const propietario = rows.find((u) => u.id === pago.propietario_id);
+    const envios = [];
+    if (evento === 'habilitado' && estudiante) {
+      envios.push(enviar({ para: estudiante.email, asunto: 'Ya puedes pagar el primer mes de tu arriendo', contenido: {
+        titulo: 'Tu pago está habilitado', parrafos: ['El contrato quedó formalizado. Ya puedes pagar el primer mes a través de Roumix.'], boton: { ...boton, texto: 'Pagar el primer mes' }, nota } }));
+    }
+    if (evento === 'aprobado') {
+      if (estudiante) envios.push(enviar({ para: estudiante.email, asunto: `Pago confirmado · ${pago.referencia}`, contenido: {
+        titulo: 'Recibimos tu pago (simulado)', parrafos: [`Pagaste ${pesos(pago.monto)} por el primer mes de <strong>${escapar(pago.inmueble_titulo || '')}</strong>.`, `Referencia: <strong>${escapar(pago.referencia)}</strong>.`], boton, nota } }));
+      if (propietario) envios.push(enviar({ para: propietario.email, asunto: 'El estudiante pagó el primer mes', contenido: {
+        titulo: 'Pago del primer mes recibido (simulado)', parrafos: [`Canon: ${pesos(pago.monto)} · Comisión Roumix (10 %): ${pesos(pago.comision)} · Tu desembolso: <strong>${pesos(pago.neto_propietario)}</strong>.`, 'Roumix registrará tu desembolso y te avisará.'], boton, nota } }));
+      envios.push(enviar({ para: await correosAdministradores(), asunto: `Pago aprobado #${pago.id} · desembolso pendiente`, contenido: {
+        titulo: 'Un pago quedó aprobado', parrafos: [`Pago #${pago.id} (${escapar(pago.referencia)}): ${pesos(pago.monto)}. Desembolso pendiente: ${pesos(pago.neto_propietario)}.`], boton: { texto: 'Abrir el panel', url: `${urlBase}/pages/admin.html` }, nota } }));
+    }
+    if (evento === 'desembolso' && propietario) {
+      envios.push(enviar({ para: propietario.email, asunto: 'Registramos tu desembolso', contenido: {
+        titulo: 'Desembolso registrado (simulado)', parrafos: [`Monto: <strong>${pesos(pago.neto_propietario)}</strong> · Referencia: ${escapar(pago.referenciaDesembolso || '')}.`], boton, nota } }));
+    }
+    if (evento === 'devolucion' && estudiante) {
+      envios.push(enviar({ para: estudiante.email, asunto: 'Registramos la devolución de tu pago', contenido: {
+        titulo: 'Devolución registrada (simulada)', parrafos: [`Monto: <strong>${pesos(pago.monto)}</strong> · Referencia: ${escapar(pago.referenciaDevolucion || '')}.`, `Motivo: ${escapar(detalle || '')}`], boton, nota } }));
+    }
+    if (evento === 'disputa') {
+      envios.push(enviar({ para: await correosAdministradores(), asunto: `Disputa abierta en el pago #${pago.id}`, contenido: {
+        titulo: 'Un estudiante reportó un problema con un pago', parrafos: [`Pago #${pago.id} (${escapar(pago.inmueble_titulo || '')}). El desembolso quedó retenido.`, `<em>${escapar(detalle || '')}</em>`], boton: { texto: 'Revisar en el panel', url: `${urlBase}/pages/admin.html` }, nota } }));
+    }
+    return (await Promise.all(envios)).some(Boolean);
+  } catch (error) {
+    console.error('⚠️ Notificación de pago:', error.message);
+    return false;
+  }
+}
+
 /**
  * Dirección pública de la aplicación para los enlaces de los correos.
  */
@@ -636,6 +680,7 @@ module.exports = {
   notificarMensajeAdministracion,
   notificarRespuestaRoumix,
   notificarContrato,
+  notificarPago,
   enviarRecuperacion,
   urlBase,
   usarTransporte,

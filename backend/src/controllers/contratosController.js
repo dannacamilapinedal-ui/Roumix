@@ -13,6 +13,8 @@ const crypto = require('crypto');
 const db = require('../config/db');
 const notificaciones = require('../services/notificacionesService');
 const { crearAviso } = require('../services/avisosService');
+const pagos = require('../services/pagosService');
+const { avisarPagoHabilitado } = require('./pagosController');
 
 const PLAZO_ACEPTACION_DIAS = 7;
 const VIGENTES = ['borrador', 'enviado', 'pendiente_aceptacion'];
@@ -161,6 +163,7 @@ async function aceptarContrato(req, res) {
   const cliente = await db.pool.connect();
   let c;
   let formalizado = false;
+  let pagoHabilitado = null;
   try {
     await cliente.query('BEGIN');
     const { rows } = await cliente.query('SELECT * FROM contratos WHERE id = $1 FOR UPDATE', [id]);
@@ -194,6 +197,8 @@ async function aceptarContrato(req, res) {
          VALUES ($1, $2, 'contrato_formalizado', NULL, 'sistema', $3, $3, $4)`,
         [c.solicitud_id, s.estado, `Ambas partes aceptaron el contrato #${id}. El siguiente paso es el pago del primer mes a través de Roumix.`, nota]
       );
+      // Se habilita el pago del primer canon (si el propietario aceptó las condiciones de la comisión)
+      pagoHabilitado = await pagos.habilitarPago(cliente, c.solicitud_id);
     } else {
       await cliente.query(
         `INSERT INTO solicitudes_historial (solicitud_id, autor_id, autor_rol, nota_interna) VALUES ($1, $2, $3, $4)`,
@@ -215,6 +220,14 @@ async function aceptarContrato(req, res) {
       await crearAviso({ usuarioId, tipo: 'solicitud', titulo: `Contrato #${id} formalizado`, cuerpo: c.inmueble_titulo, enlace });
     }
     await notificaciones.notificarContrato({ contrato: c, evento: 'formalizado', urlBase });
+    if (pagoHabilitado && pagoHabilitado.habilitado) {
+      await avisarPagoHabilitado(pagoHabilitado, urlBase);
+    } else if (pagoHabilitado && pagoHabilitado.motivo === 'comision_no_aceptada') {
+      await crearAviso({
+        usuarioId: c.propietario_id, tipo: 'verificacion', titulo: 'Acepta las condiciones de la comisión',
+        cuerpo: 'Es necesario para habilitar el pago del primer mes del estudiante.', enlace: 'verificacion.html'
+      });
+    }
   } else {
     const otra = esEstudiante ? c.propietario_id : c.estudiante_id;
     await crearAviso({

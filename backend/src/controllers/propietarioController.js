@@ -5,6 +5,8 @@
 const db = require('../config/db');
 const verificacion = require('../services/verificacionService');
 const notificaciones = require('../services/notificacionesService');
+const pagos = require('../services/pagosService');
+const { avisarPagoHabilitado } = require('./pagosController');
 
 function errorHttp(status, message) {
   const err = new Error(message);
@@ -118,4 +120,59 @@ async function enviarPerfil(req, res) {
   });
 }
 
-module.exports = { obtenerVerificacion, enviarPerfil };
+/**
+ * POST /api/propietario/condiciones  { acepto: true }
+ * Un propietario (por ejemplo, uno aprobado antes de existir la comisión) acepta las
+ * condiciones vigentes sin volver a enviar su perfil. Si tenía arriendos con contrato
+ * formalizado esperando esta aceptación, sus pagos se habilitan de inmediato.
+ */
+async function aceptarCondiciones(req, res) {
+  if ((req.body || {}).acepto !== true) throw errorHttp(400, 'Debes aceptar las condiciones de la comisión.');
+  await verificacion.obtener(req.usuario.id);
+  await db.query(
+    `UPDATE verificaciones_propietario SET acepta_comision = true, acepta_comision_en = now(), version_condiciones = $2
+     WHERE propietario_id = $1`,
+    [req.usuario.id, verificacion.VERSION_CONDICIONES]
+  );
+  await db.query(
+    `INSERT INTO moderacion_historial (usuario_afectado_id, admin_id, accion, justificacion)
+     VALUES ($1, NULL, 'condiciones_aceptadas', $2)`,
+    [req.usuario.id, `Aceptó las condiciones de comisión (versión ${verificacion.VERSION_CONDICIONES}).`]
+  ).catch(() => {});
+
+  // Pagos que esperaban esta aceptación
+  const { rows } = await db.query(
+    `SELECT s.id FROM solicitudes s JOIN contratos c ON c.solicitud_id = s.id AND c.estado = 'formalizado'
+     WHERE s.propietario_id = $1 AND s.estado = 'contrato_formalizado'`,
+    [req.usuario.id]
+  );
+  let habilitados = 0;
+  for (const { id } of rows) {
+    const cliente = await db.pool.connect();
+    try {
+      await cliente.query('BEGIN');
+      const r = await pagos.habilitarPago(cliente, id);
+      await cliente.query('COMMIT');
+      if (r.habilitado) {
+        habilitados += 1;
+        await avisarPagoHabilitado(r, notificaciones.urlBase(req));
+      }
+    } catch (error) {
+      await cliente.query('ROLLBACK');
+      console.error('⚠️ No se pudo habilitar un pago tras aceptar condiciones:', error.message);
+    } finally {
+      cliente.release();
+    }
+  }
+
+  const v = await verificacion.obtener(req.usuario.id);
+  res.json({
+    status: 'success',
+    message: habilitados
+      ? `Aceptaste las condiciones. Se habilitó el pago de ${habilitados} arriendo(s).`
+      : 'Aceptaste las condiciones de la comisión.',
+    data: verificacion.vistaPropietario(v)
+  });
+}
+
+module.exports = { obtenerVerificacion, enviarPerfil, aceptarCondiciones };

@@ -7299,3 +7299,131 @@ html[data-tema="oscuro"] .contrato-pendiente { color: #f0bf85; }
   .contrato-demo { background: #fff; color: #000; }
   .contrato-firmas > div { background: #fff; }
 }
+
+/* =========================================================================
+   Pagos SIMULADOS (módulo 6)
+   ========================================================================= */
+.pago-contenedor { max-width: 720px; margin: 0 auto; padding: 28px 20px 48px; }
+
+.pago-tarjeta {
+  padding: 26px 28px;
+  border-radius: var(--radio-lg);
+  background: var(--superficie);
+  border: 1px solid var(--borde-suave);
+  box-shadow: 0 10px 28px -18px rgba(20, 34, 25, 0.35);
+}
+
+.pago-cabeza { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
+.pago-cabeza h1 { margin: 4px 0 0; font-size: 1.25rem; line-height: 1.3; color: var(--tinta-fuerte); }
+
+.pago-desglose { border-top: 1px solid var(--borde-suave); padding-top: 10px; }
+
+.pago-fila {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  font-size: 0.94rem;
+  color: var(--tinta-media);
+}
+
+.pago-fila strong { color: var(--tinta-fuerte); white-space: nowrap; }
+.pago-resta strong { color: #b3261e; }
+
+.pago-total {
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 2px solid var(--tinta-fuerte);
+  font-size: 1.06rem;
+  font-weight: 700;
+  color: var(--tinta-fuerte);
+}
+
+.pago-total strong { font-size: 1.25rem; }
+.pago-nota { margin: 10px 0 0; font-size: 0.82rem; line-height: 1.5; color: var(--tinta-tenue); }
+
+.pago-referencia { margin: 14px 0 0; font-size: 0.84rem; color: var(--tinta-media); }
+.pago-referencia code, .pago-historial code { font-family: "JetBrains Mono", monospace; font-size: 0.8rem; }
+
+.pago-form {
+  margin-top: 20px;
+  padding: 22px;
+  border-radius: var(--radio-lg);
+  background: var(--superficie);
+  border: 2px solid var(--verde-800);
+}
+
+.pago-form h2 { margin: 0 0 12px; font-size: 1.1rem; color: var(--tinta-fuerte); }
+.pago-form fieldset { border: 0; margin: 0 0 14px; padding: 0; }
+
+.pago-metodos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.pago-metodos legend { grid-column: 1 / -1; }
+
+.pago-metodo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 12px;
+  border-radius: var(--radio-md);
+  border: 1px solid var(--borde-arena);
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--tinta-fuerte);
+  cursor: pointer;
+}
+
+.pago-metodo:has(input:checked) { border-color: var(--verde-800); background: var(--fondo-crema-alt); }
+
+.pago-simulador {
+  padding: 12px 14px !important;
+  border-radius: var(--radio-md);
+  border: 1px dashed #d8b45a !important;
+  background: #fffaf0;
+}
+
+.pago-simulador label { display: block; margin: 4px 0; font-size: 0.88rem; color: var(--tinta-media); }
+
+.pago-disputa { margin-top: 18px; padding: 14px 16px; border-radius: var(--radio-md); background: var(--superficie); border: 1px solid var(--borde-suave); }
+.pago-disputa summary { cursor: pointer; font-weight: 700; font-size: 0.9rem; color: var(--tinta-fuerte); }
+.pago-disputa p { font-size: 0.86rem; color: var(--tinta-media); }
+.pago-disputa textarea { width: 100%; margin-bottom: 10px; }
+
+.pago-historial { margin-top: 22px; }
+.pago-historial h2 { margin: 0 0 10px; font-size: 1rem; color: var(--tinta-fuerte); }
+.pago-historial ol { list-style: none; margin: 0; padding: 0 0 0 14px; border-left: 2px solid var(--borde-arena); }
+.pago-historial li { margin-bottom: 10px; font-size: 0.86rem; color: var(--tinta-media); }
+.pago-historial time { display: block; font-size: 0.72rem; color: var(--tinta-tenue); }
+.pago-historial p { margin: 2px 0 0; }
+
+/* Condiciones de la comisión (verificación) */
+.verif-condiciones {
+  margin: 18px 0;
+  padding: 18px 20px;
+  border-radius: var(--radio-lg);
+  background: var(--superficie);
+  border: 1px solid var(--borde-suave);
+}
+
+.verif-condiciones h2 { margin: 0 0 8px; font-size: 1.02rem; color: var(--tinta-fuerte); }
+.verif-condiciones > p { margin: 0 0 12px; font-size: 0.9rem; line-height: 1.55; color: var(--tinta-media); }
+.verif-condiciones .admin-check { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 12px; font-size: 0.88rem; }
+.verif-condiciones-ok { margin: 0; font-weight: 700; color: #1f6b3a; }
+.verif-condiciones-falta { margin: 0 0 10px; font-size: 0.88rem; color: #8a4f0f; font-weight: 600; }
+
+.admin-metricas-pagos { margin-bottom: 14px; }
+#panel-pagos .contrato-demo { margin-bottom: 14px; }
+#pagos-esperando .verif-aviso { margin-bottom: 14px; flex-wrap: wrap; }
+
+html[data-tema="oscuro"] .pago-simulador { background: rgba(240, 190, 90, 0.08); }
+html[data-tema="oscuro"] .pago-resta strong { color: #f2a59d; }
+html[data-tema="oscuro"] .verif-condiciones-ok { color: #9fd8ac; }
+html[data-tema="oscuro"] .verif-condiciones-falta { color: #f0bf85; }
+
+@media (max-width: 640px) {
+  .pago-tarjeta { padding: 20px 18px; }
+  .pago-cabeza { flex-direction: column; }
+  .pago-metodos { grid-template-columns: 1fr; }
+}
+
+/* La aclaración de la verificación lleva negritas en línea, no como título */
+.verif-comprobaciones .verif-aclaracion strong { display: inline; font-size: inherit; }

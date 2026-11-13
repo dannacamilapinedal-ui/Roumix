@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Pago del primer mes de arriendo a través de Roumix (demostrativo).">
+  <title>Pago — Roumix</title>
+  <script>try{if(localStorage.getItem("roumix_tema")==="oscuro"){document.documentElement.dataset.tema="oscuro";}}catch(e){}</script>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#142219">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="../css/style.css">
+  <script>(function(d){d.classList.add("rx-cargando");setTimeout(function(){if(d.classList.contains("rx-cargando"))d.classList.add("rx-mostrar")},300);setTimeout(function(){d.classList.remove("rx-mostrar","rx-cargando")},6000)})(document.documentElement)</script>
+</head>
+
+<body>
+  <header class="main-header">
+    <div class="header-inner">
+      <div class="header-left">
+        <a href="buscar.html" class="logo">
+          <span class="logo-text">roumix</span><span class="logo-dot">.</span>
+        </a>
+      </div>
+
+      <nav class="main-nav" aria-label="Navegación principal">
+        <ul class="nav-links">
+          <li><a href="buscar.html" class="nav-link">Buscar</a></li>
+          <li><a href="solicitudes.html" class="nav-link">Solicitudes</a></li>
+        </ul>
+      </nav>
+
+      <div class="header-right">
+        <a href="../ingresar.html" class="btn-logout-pill" id="btn-logout">Cerrar sesión</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="pago-contenedor" id="pago">
+      <p class="solicitud-cargando" role="status">Cargando…</p>
+    </div>
+  </main>
+
+  <footer class="app-footer">
+    <div class="footer-container">
+      <div class="footer-col">
+        <div class="footer-logo">
+          <span>roumix</span><span class="dot-orange">.</span>
+        </div>
+        <p class="footer-desc">
+          Plataforma de vivienda universitaria para la comunidad estudiantil de Villavicencio.
+        </p>
+      </div>
+
+      <div class="footer-col">
+        <h4>Roumix</h4>
+        <ul>
+          <li><a href="solicitudes.html" class="footer-link">Solicitudes</a></li>
+          <li><a href="mensajes.html" class="footer-link">Mensajes</a></li>
+          <li><a href="privacidad.html" class="footer-link">Privacidad</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Contacto Académico</h4>
+        <address>
+          Universidad Santo Tomás, Villavicencio<br>
+          Facultad de Ingeniería de Sistemas<br>
+          <a href="mailto:roumix04@gmail.com">roumix04@gmail.com</a>
+        </address>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <small>© 2026 Roumix · Construcción de Software · Villavicencio, Colombia</small>
+    </div>
+  </footer>
+
+  <script src="../js/app.js"></script>
+  <script src="../js/api.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+      const usuario = await protegerPagina(["estudiante", "propietario", "admin"]);
+      if (!usuario) return;
+      const contenedor = document.getElementById("pago");
+      const id = Number(new URLSearchParams(location.search).get("id"));
+
+      const ESTADOS = {
+        pendiente: { texto: "Por pagar", tono: "proceso" },
+        fallido: { texto: "Pago rechazado", tono: "cerrada" },
+        aprobado: { texto: "Pagado", tono: "ok" },
+        en_disputa: { texto: "En revisión por un reporte", tono: "proceso" },
+        reembolsado: { texto: "Devuelto", tono: "cerrada" },
+        cancelado: { texto: "Cancelado", tono: "cerrada" }
+      };
+      const DESEMBOLSO = { pendiente: "Pendiente", retenido: "Retenido mientras se revisa un reporte", realizado: "Realizado", anulado: "Anulado" };
+      const EVENTOS = {
+        habilitado: "Pago habilitado", intento_aprobado: "Pago aprobado", intento_rechazado: "Pago rechazado",
+        cancelado: "Pago cancelado", devolucion: "Devolución registrada", disputa_abierta: "Problema reportado",
+        disputa_resuelta: "Reporte resuelto", desembolso_realizado: "Desembolso al propietario"
+      };
+      const momento = (valor) => new Date(valor).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" });
+      const pesos = (n) => formatearPrecioCOP(n);
+
+      function error(texto) {
+        contenedor.innerHTML = "";
+        const p = document.createElement("p");
+        p.className = "pub-mensaje pub-mensaje-error";
+        p.setAttribute("role", "alert");
+        p.textContent = texto;
+        contenedor.appendChild(p);
+      }
+
+      async function cargar() {
+        if (!id) return error("Falta el número del pago.");
+        let p;
+        try {
+          ({ data: p } = await RoumixAPI._request(`/pagos/${id}`));
+        } catch (e) {
+          return error(e.message);
+        }
+        document.title = `Pago #${p.id} — Roumix`;
+        const estado = ESTADOS[p.estado] || { texto: p.estado, tono: "neutro" };
+        const esEstudiante = p.mi_rol === "estudiante";
+        const puedePagar = esEstudiante && ["pendiente", "fallido"].includes(p.estado);
+        const puedeReportar = esEstudiante && p.estado === "aprobado";
+
+        const desglose = esEstudiante
+          ? `
+            <div class="pago-fila"><span>Primer mes de arriendo</span><strong>${pesos(p.monto)}</strong></div>
+            <div class="pago-fila"><span>Comisión de Roumix para ti</span><strong>$0</strong></div>
+            <div class="pago-fila pago-total"><span>Total a pagar</span><strong>${pesos(p.monto)}</strong></div>
+            <p class="pago-nota">La comisión de Roumix (10 % del primer mes) la paga el propietario, no tú.</p>`
+          : `
+            <div class="pago-fila"><span>Primer mes que paga el estudiante</span><strong>${pesos(p.monto)}</strong></div>
+            <div class="pago-fila pago-resta"><span>Comisión Roumix (${Number(p.porcentaje_comision)} %, una sola vez)</span><strong>− ${pesos(p.comision)}</strong></div>
+            <div class="pago-fila pago-total"><span>${p.mi_rol === "admin" ? "Desembolso al propietario" : "Tu desembolso"}</span><strong>${pesos(p.neto_propietario)}</strong></div>
+            <p class="pago-nota">Desembolso: <strong>${escaparHTML(DESEMBOLSO[p.desembolso_estado] || "Se registra cuando el estudiante pague")}</strong>${p.desembolso_referencia ? ` · ${escaparHTML(p.desembolso_referencia)}` : ""}${p.version_condiciones ? ` · Condiciones aceptadas: versión ${escaparHTML(p.version_condiciones)}` : ""}</p>`;
+
+        contenedor.innerHTML = `
+          <div class="contrato-barra">
+            <a href="${usuario.rol === "admin" ? "admin.html" : "solicitudes.html"}" class="msg-enlace">← Volver</a>
+          </div>
+
+          <div class="contrato-demo" role="note">
+            <strong>Pago demostrativo.</strong> Roumix todavía no tiene un proveedor de pagos autorizado:
+            no se mueve dinero real y no se guardan datos de tarjetas ni de cuentas bancarias.
+          </div>
+
+          <section class="pago-tarjeta">
+            <header class="pago-cabeza">
+              <div>
+                <span class="solicitud-numero">Pago #${p.id} · Solicitud #${p.solicitud_id} · Contrato #${p.contrato_id}</span>
+                <h1>${escaparHTML(p.inmueble_titulo)}</h1>
+              </div>
+              <span class="solicitud-chip solicitud-chip-${estado.tono}">${escaparHTML(estado.texto)}</span>
+            </header>
+            <div class="pago-desglose">${desglose}</div>
+            ${p.referencia ? `<p class="pago-referencia">Referencia de la transacción: <code>${escaparHTML(p.referencia)}</code>${p.aprobado_en ? ` · ${momento(p.aprobado_en)}` : ""}</p>` : ""}
+            ${p.estado === "fallido" && esEstudiante ? `<p class="pub-mensaje pub-mensaje-error">${escaparHTML(p.ultimo_error || "El pago fue rechazado.")} Puedes intentarlo de nuevo.</p>` : ""}
+            ${p.devolucion_referencia ? `<p class="pago-nota">Devolución ${escaparHTML(p.devolucion_referencia)} · ${escaparHTML(p.devolucion_motivo || "")}</p>` : ""}
+          </section>
+
+          ${puedePagar ? `
+          <form class="pago-form" id="form-pagar" novalidate>
+            <h2>Pagar el primer mes</h2>
+            <fieldset class="pago-metodos">
+              <legend class="contacto-paso">Método de pago (simulado)</legend>
+              ${Object.entries(p.metodos).map(([valor, texto], i) => `
+                <label class="pago-metodo"><input type="radio" name="metodo" value="${valor}"${i === 0 ? " checked" : ""}> ${escaparHTML(texto)}</label>`).join("")}
+            </fieldset>
+            <fieldset class="pago-simulador">
+              <legend class="contacto-paso">Resultado que quieres simular</legend>
+              <label><input type="radio" name="resultado" value="aprobado" checked> Pago aprobado</label>
+              <label><input type="radio" name="resultado" value="rechazado"> Pago rechazado (para probar un error)</label>
+            </fieldset>
+            <p class="pub-mensaje pub-mensaje-error" id="pago-error" role="alert" hidden></p>
+            <button type="submit" class="btn-contact-wa-large">Pagar ${pesos(p.monto)} (simulado)</button>
+            <p class="contacto-nota">No escribas datos reales de tarjetas: este pago es solo una demostración.</p>
+          </form>` : ""}
+
+          ${p.estado === "aprobado" && esEstudiante ? `<p class="contrato-estado-msg">✓ Recibimos tu pago. Roumix gestiona ahora el desembolso al propietario.</p>` : ""}
+
+          ${puedeReportar ? `
+          <details class="pago-disputa">
+            <summary>¿Hubo un problema con el arriendo? Repórtalo</summary>
+            <p>Roumix retendrá el dinero del propietario mientras revisa tu caso.</p>
+            <label for="disputa-motivo" class="contacto-paso">Cuéntanos qué pasó</label>
+            <textarea id="disputa-motivo" class="form-control form-textarea" rows="3" maxlength="500"></textarea>
+            <p class="pub-mensaje pub-mensaje-error" id="disputa-error" role="alert" hidden></p>
+            <button type="button" class="btn-card-action btn-card-danger" id="btn-disputa">Reportar el problema</button>
+          </details>` : ""}
+
+          <section class="pago-historial">
+            <h2>Movimientos</h2>
+            <ol>
+              ${p.eventos.map((e) => `
+                <li>
+                  <time>${momento(e.created_at)}</time>
+                  <strong>${escaparHTML(EVENTOS[e.tipo] || e.tipo)}</strong>${e.monto ? ` · ${pesos(e.monto)}` : ""}${e.referencia ? ` · <code>${escaparHTML(e.referencia)}</code>` : ""}
+                  ${e.detalle ? `<p>${escaparHTML(e.detalle)}</p>` : ""}
+                </li>`).join("")}
+            </ol>
+          </section>`;
+
+        const form = document.getElementById("form-pagar");
+        if (form) {
+          form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const aviso = document.getElementById("pago-error");
+            const boton = form.querySelector("button");
+            boton.disabled = true;
+            try {
+              const r = await RoumixAPI._request(`/pagos/${p.id}/simular`, {
+                method: "POST",
+                body: JSON.stringify({
+                  metodo: form.querySelector('input[name="metodo"]:checked').value,
+                  resultado: form.querySelector('input[name="resultado"]:checked').value
+                })
+              });
+              RoumixAvisos.mostrar(r.message, r.data.estado === "aprobado" ? "exito" : "error", 5000);
+              if (r.data.estado === "aprobado" && typeof lanzarConfeti === "function") lanzarConfeti();
+              await cargar();
+            } catch (err) {
+              aviso.textContent = err.message;
+              aviso.hidden = false;
+              boton.disabled = false;
+            }
+          });
+        }
+        const disputa = document.getElementById("btn-disputa");
+        if (disputa) {
+          disputa.addEventListener("click", async () => {
+            const motivo = document.getElementById("disputa-motivo").value.trim();
+            const aviso = document.getElementById("disputa-error");
+            if (motivo.length < 10) { aviso.textContent = "Explica el problema en al menos 10 caracteres."; aviso.hidden = false; return; }
+            if (!confirm("¿Reportar este problema? Roumix retendrá el desembolso al propietario mientras lo revisa.")) return;
+            disputa.disabled = true;
+            try {
+              const r = await RoumixAPI._request(`/pagos/${p.id}/disputa`, { method: "POST", body: JSON.stringify({ motivo }) });
+              RoumixAvisos.mostrar(r.message, "info", 5000);
+              await cargar();
+            } catch (err) {
+              aviso.textContent = err.message;
+              aviso.hidden = false;
+              disputa.disabled = false;
+            }
+          });
+        }
+      }
+
+      cargar();
+    });
+  </script>
+</body>
+</html>

@@ -202,6 +202,7 @@
                 ${historial(s.historial || [])}
                 <div class="solicitud-acciones">
                   ${s.contrato ? `<a href="contrato.html?id=${s.contrato.id}" class="btn-card-action btn-contrato${["enviado", "pendiente_aceptacion"].includes(s.contrato.estado) ? " destacado" : ""}">${["enviado", "pendiente_aceptacion"].includes(s.contrato.estado) ? "Revisar contrato" : "Ver contrato"}</a>` : ""}
+                  ${s.pago ? `<a href="pago.html?id=${s.pago.id}" class="btn-card-action btn-contrato${esEstudiante && ["pendiente", "fallido"].includes(s.pago.estado) ? " destacado" : ""}">${esEstudiante && ["pendiente", "fallido"].includes(s.pago.estado) ? "Pagar primer mes" : "Ver pago"}</a>` : ""}
                   <a href="mensajes.html?solicitud=${s.id}" class="btn-card-action">Escribir a Roumix</a>
                 ${cancelable ? `<button type="button" class="btn-card-action btn-card-danger" data-cancelar="${s.id}">Cancelar solicitud</button>` : ""}
                 </div>

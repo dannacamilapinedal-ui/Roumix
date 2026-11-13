@@ -123,6 +123,15 @@
 
       // Aviso si la cuenta aún no está aprobada para publicar
       RoumixAPI.getVerificacion().then((verif) => {
+        if (verif.puedePublicar && !verif.aceptaComision) {
+          document.getElementById("aviso-verificacion-titulo").textContent = "Acepta las condiciones de la comisión";
+          document.getElementById("aviso-verificacion-texto").textContent = "Es necesario para que Roumix pueda habilitar el pago del primer mes cuando arriendes uno de tus inmuebles.";
+          const enlace = document.querySelector("#aviso-verificacion a");
+          enlace.href = "verificacion.html#condiciones";
+          enlace.textContent = "Ver condiciones";
+          document.getElementById("aviso-verificacion").hidden = false;
+          return;
+        }
         if (verif.puedePublicar) return;
         const textos = {
           incompleto: ["Completa tu perfil de propietario", "Para publicar, primero envía tu perfil a revisión."],

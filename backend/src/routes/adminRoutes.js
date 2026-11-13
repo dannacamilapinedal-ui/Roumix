@@ -4,6 +4,7 @@ const adminController = require('../controllers/adminController');
 const solicitudesController = require('../controllers/solicitudesController');
 const mensajesController = require('../controllers/mensajesController');
 const contratosController = require('../controllers/contratosController');
+const pagosController = require('../controllers/pagosController');
 const { requireAuth, requireRol } = require('../middleware/auth');
 
 // Todas las rutas exigen sesión válida y rol admin leído de la base de datos.
@@ -34,5 +35,12 @@ router.post('/solicitudes/:id/contrato', contratosController.crearBorrador);
 router.put('/contratos/:id', contratosController.editarBorrador);
 router.post('/contratos/:id/enviar', contratosController.enviarContrato);
 router.post('/contratos/:id/cancelar', contratosController.cancelarContrato);
+router.get('/pagos', pagosController.listarAdmin);
+router.get('/pagos/:id', pagosController.detalleAdmin);
+router.post('/solicitudes/:id/pago', pagosController.habilitarAdmin);
+router.post('/pagos/:id/desembolso', pagosController.registrarDesembolso);
+router.post('/pagos/:id/devolucion', pagosController.registrarDevolucion);
+router.post('/pagos/:id/resolver-disputa', pagosController.resolverDisputa);
+router.post('/pagos/:id/cancelar', pagosController.cancelarAdmin);
 
 module.exports = router;

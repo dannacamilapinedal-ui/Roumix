@@ -68,7 +68,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // La página solo se muestra si el servidor confirma el rol admin
   if (!(await protegerPagina(["admin"]))) return;
 
-  const paneles = { resumen: cargarResumen, solicitudes: cargarSolicitudes, contratos: cargarContratos, mensajes: cargarMensajes, reportes: cargarReportes, propietarios: cargarPropietarios, inmuebles: cargarInmuebles, usuarios: cargarUsuarios, historial: cargarHistorial };
+  const paneles = { resumen: cargarResumen, solicitudes: cargarSolicitudes, contratos: cargarContratos, pagos: cargarPagos, mensajes: cargarMensajes, reportes: cargarReportes, propietarios: cargarPropietarios, inmuebles: cargarInmuebles, usuarios: cargarUsuarios, historial: cargarHistorial };
 
   function abrirPanel(nombre) {
     document.querySelectorAll(".admin-tab").forEach(tab => {
@@ -94,7 +94,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       actualizarContadorSolicitudes(data);
       actualizarContadorMensajes(data);
       actualizarContadorContratos(data);
+      actualizarContadorPagos(data);
       const metricas = [
+        ["Desembolsos por hacer", data.pagos.por_desembolsar, data.pagos.por_desembolsar ? "alerta" : "neutro", "pagos"],
+        ["Pagos en disputa", data.pagos.en_disputa, data.pagos.en_disputa ? "alerta" : "neutro", "pagos"],
+        ["Comisiones (simuladas)", formatearPrecioCOP(data.pagos.comisiones), "ok", "pagos"],
         ["Contratos por aceptar", data.contratos.por_aceptar, "neutro", "contratos"],
         ["Contratos formalizados", data.contratos.formalizados, "ok", "contratos"],
         ["Mensajes por responder", data.conversaciones.pendientes, data.conversaciones.pendientes ? "alerta" : "neutro", "mensajes"],
@@ -529,6 +533,161 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       });
     }
+  }
+
+  // ---------------- Pagos (SIMULADOS) ----------------
+  const ETIQUETA_PAGO = {
+    pendiente: "Por pagar", fallido: "Rechazado", aprobado: "Aprobado", en_disputa: "En disputa",
+    reembolsado: "Devuelto", cancelado: "Cancelado"
+  };
+  const CHIP_PAGO = { pendiente: "pendiente", fallido: "rechazada", aprobado: "aprobada", en_disputa: "requiere_cambios", reembolsado: "neutro", cancelado: "neutro" };
+  const ETIQUETA_DESEMBOLSO = { pendiente: "Por desembolsar", retenido: "Retenido", realizado: "Desembolsado", anulado: "Anulado" };
+  const chipPago = (estado) => chip(ETIQUETA_PAGO[estado] || estado, CHIP_PAGO[estado] || "neutro");
+
+  function actualizarContadorPagos(data) {
+    const contador = document.getElementById("contador-pagos");
+    const n = data.pagos.por_desembolsar + data.pagos.en_disputa;
+    contador.textContent = n;
+    contador.hidden = n === 0;
+  }
+
+  async function cargarPagos() {
+    const contenedor = document.getElementById("lista-pagos-admin");
+    mostrarCarga(contenedor);
+    try {
+      const r = await RoumixAPI.admin(`/pagos?estado=${document.getElementById("filtro-pagos").value}`);
+      const t = r.totales;
+      document.getElementById("pagos-totales").innerHTML = [
+        ["Recaudado", t.recaudado], ["Comisiones Roumix", t.comisiones], ["Por desembolsar", t.por_desembolsar],
+        ["Desembolsado", t.desembolsado], ["Devuelto", t.devuelto]
+      ].map(([titulo, valor]) => `
+        <div class="admin-metrica admin-metrica-neutro">
+          <span class="admin-metrica-valor">${formatearPrecioCOP(valor)}</span>
+          <span class="admin-metrica-titulo">${titulo}</span>
+        </div>`).join("");
+      document.getElementById("pagos-esperando").innerHTML = r.esperandoCondiciones.length ? `
+        <div class="verif-aviso">
+          <div><strong>Pagos esperando que el propietario acepte la comisión</strong>
+            <p>${r.esperandoCondiciones.map(s => `Solicitud #${s.id} · ${escaparHTML(s.inmueble_titulo)} (${escaparHTML(s.propietario_nombre || "—")})`).join("<br>")}</p></div>
+          ${r.esperandoCondiciones.map(s => `<button type="button" class="btn-card-action" data-habilitar="${s.id}">Reintentar #${s.id}</button>`).join("")}
+        </div>` : "";
+      if (r.data.length === 0) return vacio(contenedor, "No hay pagos con este filtro.");
+      contenedor.innerHTML = `
+        <table class="admin-tabla">
+          <thead><tr><th scope="col">Pago</th><th scope="col">Inmueble</th><th scope="col">Partes</th><th scope="col">Monto</th><th scope="col">Comisión / neto</th><th scope="col">Estado</th><th scope="col"><span class="sr-only">Acciones</span></th></tr></thead>
+          <tbody>${r.data.map(p => `
+            <tr>
+              <td><strong>#${p.id}</strong><br><small>${escaparHTML(p.referencia || "Sin referencia")}</small></td>
+              <td>${escaparHTML(p.inmueble_titulo)}<br><small>Solicitud #${p.solicitud_id}</small></td>
+              <td><small>Estudiante:</small> ${escaparHTML(p.estudiante_nombre || "—")}<br><small>Propietario:</small> ${escaparHTML(p.propietario_nombre || "—")}</td>
+              <td>${formatearPrecioCOP(p.monto)}</td>
+              <td>${formatearPrecioCOP(p.comision)}<br><small>${formatearPrecioCOP(p.neto_propietario)} al propietario</small></td>
+              <td>${chipPago(p.estado)}${p.desembolso_estado ? `<br><small>${escaparHTML(ETIQUETA_DESEMBOLSO[p.desembolso_estado])}</small>` : ""}</td>
+              <td><button type="button" class="btn-card-action" data-pago="${p.id}">Gestionar</button></td>
+            </tr>`).join("")}
+          </tbody>
+        </table>`;
+    } catch (error) {
+      mostrarError(contenedor, error);
+    }
+  }
+  document.getElementById("filtro-pagos").addEventListener("change", cargarPagos);
+  document.getElementById("pagos-esperando").addEventListener("click", async (e) => {
+    const boton = e.target.closest("button[data-habilitar]");
+    if (!boton) return;
+    boton.disabled = true;
+    try {
+      const r = await RoumixAPI.admin(`/solicitudes/${boton.dataset.habilitar}/pago`, { method: "POST" });
+      RoumixAvisos.mostrar(r.message, "exito");
+      cargarPagos();
+    } catch (err) {
+      RoumixAvisos.mostrar(err.message, "error", 6000);
+      boton.disabled = false;
+    }
+  });
+
+  const dialogoPago = document.getElementById("dialogo-pago");
+  const contenidoPago = document.getElementById("dialogo-pago-contenido");
+  dialogoPago.querySelector("[data-cerrar]").addEventListener("click", () => dialogoPago.close());
+  document.getElementById("lista-pagos-admin").addEventListener("click", (e) => {
+    const boton = e.target.closest("button[data-pago]");
+    if (boton) abrirPago(Number(boton.dataset.pago));
+  });
+
+  async function abrirPago(id) {
+    contenidoPago.innerHTML = '<p class="admin-cargando" role="status">Cargando…</p>';
+    if (!dialogoPago.open) dialogoPago.showModal();
+    let p;
+    try {
+      ({ data: p } = await RoumixAPI.admin(`/pagos/${id}`));
+    } catch (error) {
+      return mostrarError(contenidoPago, error);
+    }
+    const acciones = [];
+    if (p.estado === "aprobado" && p.desembolso_estado === "pendiente") acciones.push(["desembolso", "Registrar desembolso (simulado)", "btn-search-action", false]);
+    if (["aprobado", "en_disputa"].includes(p.estado) && p.desembolso_estado !== "realizado") acciones.push(["devolucion", "Devolver al estudiante (simulado)", "btn-card-action btn-card-danger", true]);
+    if (p.estado === "en_disputa") acciones.push(["resolver-disputa", "Cerrar la disputa sin devolución", "btn-card-action", true]);
+    if (["pendiente", "fallido"].includes(p.estado)) acciones.push(["cancelar", "Cancelar el pago y cerrar la solicitud", "btn-card-action btn-card-danger", true]);
+
+    contenidoPago.innerHTML = `
+      <h2 id="dialogo-pago-titulo">Pago #${p.id} · ${escaparHTML(p.inmueble_titulo)}</h2>
+      <p>${chipPago(p.estado)} ${p.desembolso_estado ? chip(ETIQUETA_DESEMBOLSO[p.desembolso_estado], "neutro") : ""} ${chip("Simulado", "pendiente")}</p>
+      <dl class="admin-datos">
+        <dt>Monto (primer canon)</dt><dd>${formatearPrecioCOP(p.monto)}</dd>
+        <dt>Comisión Roumix</dt><dd>${formatearPrecioCOP(p.comision)} (${Number(p.porcentaje_comision)} %, a cargo del propietario${p.version_condiciones ? `, condiciones v. ${escaparHTML(p.version_condiciones)}` : ""})</dd>
+        <dt>Neto al propietario</dt><dd>${formatearPrecioCOP(p.neto_propietario)}${p.desembolso_referencia ? ` · ${escaparHTML(p.desembolso_referencia)}` : ""}</dd>
+        <dt>Referencia</dt><dd>${escaparHTML(p.referencia || "—")}${p.metodo ? ` · ${escaparHTML((p.metodos || {})[p.metodo] || p.metodo)}` : ""}</dd>
+        <dt>Intentos</dt><dd>${p.intentos}</dd>
+        <dt>Enlaces</dt><dd><a href="pago.html?id=${p.id}" target="_blank" rel="noopener">Ver pago</a> · <a href="contrato.html?id=${p.contrato_id}" target="_blank" rel="noopener">Contrato #${p.contrato_id}</a></dd>
+      </dl>
+      <h3>Movimientos</h3>
+      <ol class="admin-historial-solicitud">
+        ${p.eventos.map(e => `<li><span class="admin-historial-meta">${fecha(e.created_at)} · ${escaparHTML(e.autor_rol)}</span>
+          <strong>${escaparHTML(e.tipo.replace(/_/g, " "))}</strong>${e.monto ? ` · ${formatearPrecioCOP(e.monto)}` : ""}${e.referencia ? ` · ${escaparHTML(e.referencia)}` : ""}
+          ${e.detalle ? `<p>${escaparHTML(e.detalle)}</p>` : ""}</li>`).join("")}
+      </ol>
+      ${acciones.length ? `
+      <form class="admin-decision" id="form-pago-admin" novalidate>
+        <h3>Acciones</h3>
+        <label for="pago-motivo" class="reporte-label">Motivo o explicación (obligatorio para devolver, cerrar la disputa o cancelar)</label>
+        <textarea id="pago-motivo" rows="2" maxlength="500"></textarea>
+        <p class="pub-mensaje" id="pago-resultado" role="alert" hidden></p>
+        <div class="admin-botones">
+          ${acciones.map(([accion, texto, clase]) => `<button type="button" class="${clase}" data-accion-pago="${accion}">${texto}</button>`).join("")}
+        </div>
+      </form>` : `<p class="fotos-ayuda">No hay acciones pendientes para este pago.</p>`}`;
+
+    const form = document.getElementById("form-pago-admin");
+    if (!form) return;
+    form.addEventListener("click", async (e) => {
+      const boton = e.target.closest("button[data-accion-pago]");
+      if (!boton) return;
+      const accion = boton.dataset.accionPago;
+      const texto = document.getElementById("pago-motivo").value.trim();
+      const resultado = document.getElementById("pago-resultado");
+      const necesitaMotivo = acciones.find(a => a[0] === accion)[3];
+      if (necesitaMotivo && texto.length < 5) {
+        resultado.textContent = "Escribe el motivo (al menos 5 caracteres).";
+        resultado.className = "pub-mensaje pub-mensaje-error";
+        resultado.hidden = false;
+        return;
+      }
+      if (!confirm(`¿Confirmas "${boton.textContent}" para el pago #${p.id}?`)) return;
+      boton.disabled = true;
+      const cuerpo = accion === "resolver-disputa" ? { nota: texto } : { motivo: texto };
+      try {
+        const r = await RoumixAPI.admin(`/pagos/${p.id}/${accion}`, { method: "POST", body: cuerpo });
+        RoumixAvisos.mostrar(r.message, "exito", 5000);
+        cargarPagos();
+        cargarContador();
+        abrirPago(p.id);
+      } catch (err) {
+        resultado.textContent = err.message;
+        resultado.className = "pub-mensaje pub-mensaje-error";
+        resultado.hidden = false;
+        boton.disabled = false;
+      }
+    });
   }
 
   // ---------------- Mensajes (comunicación gestionada) ----------------
@@ -1092,6 +1251,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       actualizarContadorSolicitudes(data);
       actualizarContadorMensajes(data);
       actualizarContadorContratos(data);
+      actualizarContadorPagos(data);
     } catch (e) { /* el contador es informativo */ }
   }
 

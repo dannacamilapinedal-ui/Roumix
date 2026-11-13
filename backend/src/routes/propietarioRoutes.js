@@ -12,4 +12,7 @@ router.get('/verificacion', propietarioController.obtenerVerificacion);
 // PUT /api/propietario/verificacion - Enviar o reenviar el perfil para revisión
 router.put('/verificacion', propietarioController.enviarPerfil);
 
+// POST /api/propietario/condiciones - Aceptar las condiciones de la comisión (sin reenviar el perfil)
+router.post('/condiciones', propietarioController.aceptarCondiciones);
+
 module.exports = router;

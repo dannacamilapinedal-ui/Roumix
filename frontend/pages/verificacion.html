@@ -47,6 +47,13 @@
         <p class="admin-cargando">Cargando tu verificación…</p>
       </section>
 
+      <!-- Condiciones de la comisión (propietarios ya aprobados) -->
+      <section class="verif-condiciones" id="condiciones" hidden aria-labelledby="titulo-condiciones">
+        <h2 id="titulo-condiciones">Condiciones de la comisión</h2>
+        <p id="condiciones-texto"></p>
+        <div id="condiciones-estado"></div>
+      </section>
+
       <!-- Qué se comprueba -->
       <section class="verif-comprobaciones" aria-labelledby="titulo-comprobaciones">
         <h2 id="titulo-comprobaciones">Qué comprueba Roumix</h2>
@@ -220,6 +227,35 @@
         itemTel.querySelector("p").textContent = v.telefonoVerificadoPorRoumix
           ? "El equipo de Roumix te llamó y confirmó tu número."
           : "Lo escribes tú. Durante la revisión podemos llamarte para confirmarlo.";
+
+        // Propietario aprobado: puede aceptar las condiciones de la comisión sin reenviar el perfil
+        const seccionCondiciones = document.getElementById("condiciones");
+        seccionCondiciones.hidden = v.estado !== "aprobado";
+        if (v.estado === "aprobado") {
+          document.getElementById("condiciones-texto").textContent = v.condicionesComision;
+          const estadoCondiciones = document.getElementById("condiciones-estado");
+          if (v.aceptaComision) {
+            estadoCondiciones.innerHTML = `<p class="verif-condiciones-ok">✓ Aceptaste estas condiciones${v.aceptaComisionEn ? " el " + new Date(v.aceptaComisionEn).toLocaleDateString("es-CO", { dateStyle: "long" }) : ""} (versión ${escaparHTML(v.versionCondiciones)}).</p>`;
+          } else {
+            estadoCondiciones.innerHTML = `
+              <p class="verif-condiciones-falta">Todavía no las has aceptado. Sin esta aceptación no se puede habilitar el pago del primer mes de tus arriendos.</p>
+              <label class="admin-check"><input type="checkbox" id="acepto-condiciones"> Leí y acepto las condiciones de la comisión de Roumix.</label>
+              <button type="button" class="btn-search-action" id="btn-aceptar-condiciones">Aceptar condiciones</button>`;
+            document.getElementById("btn-aceptar-condiciones").addEventListener("click", async (e) => {
+              if (!document.getElementById("acepto-condiciones").checked) return RoumixAvisos.mostrar("Marca la casilla para aceptar.", "error");
+              e.target.disabled = true;
+              try {
+                const r = await RoumixAPI.aceptarCondicionesComision();
+                RoumixAvisos.mostrar(r.message, "exito", 5000);
+                setTimeout(() => location.reload(), 900);
+              } catch (err) {
+                RoumixAvisos.mostrar(err.message, "error", 5000);
+                e.target.disabled = false;
+              }
+            });
+          }
+          if (location.hash === "#condiciones") seccionCondiciones.scrollIntoView({ block: "start" });
+        }
 
         // El formulario solo se muestra si aún se puede enviar o corregir el perfil
         form.hidden = v.estado === "aprobado";

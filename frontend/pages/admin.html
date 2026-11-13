@@ -59,6 +59,7 @@
         <button type="button" role="tab" class="admin-tab activa" aria-selected="true" aria-controls="panel-resumen" id="tab-resumen" data-panel="resumen">Resumen</button>
         <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-solicitudes" id="tab-solicitudes" data-panel="solicitudes">Solicitudes <span class="admin-contador" id="contador-solicitudes" hidden></span></button>
         <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-contratos" id="tab-contratos" data-panel="contratos">Contratos <span class="admin-contador" id="contador-contratos" hidden></span></button>
+        <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-pagos" id="tab-pagos" data-panel="pagos">Pagos <span class="admin-contador" id="contador-pagos" hidden></span></button>
         <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-mensajes" id="tab-mensajes" data-panel="mensajes">Mensajes <span class="admin-contador" id="contador-mensajes" hidden></span></button>
         <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-reportes" id="tab-reportes" data-panel="reportes">Reportes <span class="admin-contador" id="contador-reportes" hidden></span></button>
         <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-propietarios" id="tab-propietarios" data-panel="propietarios">Propietarios <span class="admin-contador" id="contador-propietarios" hidden></span></button>
@@ -120,6 +121,25 @@
         </div>
         <p class="fotos-ayuda">Flujo demostrativo: la aceptación de las partes no es una firma electrónica con validez legal. Los contratos se preparan desde la solicitud, cuando está en "Contrato pendiente".</p>
         <div id="lista-contratos-admin" class="admin-lista"></div>
+      </section>
+
+      <section class="admin-panel" id="panel-pagos" role="tabpanel" aria-labelledby="tab-pagos" hidden>
+        <p class="contrato-demo"><strong>Pagos demostrativos.</strong> Roumix aún no tiene un proveedor de pagos autorizado: no se mueve dinero real.</p>
+        <div id="pagos-totales" class="admin-metricas admin-metricas-pagos"></div>
+        <div id="pagos-esperando"></div>
+        <div class="admin-filtros">
+          <label for="filtro-pagos">Mostrar</label>
+          <select id="filtro-pagos">
+            <option value="todos" selected>Todos</option>
+            <option value="por_desembolsar">Por desembolsar</option>
+            <option value="pendiente">Por pagar o rechazados</option>
+            <option value="en_disputa">En disputa</option>
+            <option value="aprobado">Aprobados</option>
+            <option value="reembolsado">Devueltos</option>
+            <option value="cancelado">Cancelados</option>
+          </select>
+        </div>
+        <div id="lista-pagos-admin" class="admin-lista"></div>
       </section>
 
       <section class="admin-panel" id="panel-mensajes" role="tabpanel" aria-labelledby="tab-mensajes" hidden>
@@ -213,6 +233,12 @@
   <dialog id="dialogo-solicitud" class="admin-dialogo" aria-labelledby="dialogo-solicitud-titulo">
     <button type="button" class="visor-cerrar admin-cerrar" data-cerrar aria-label="Cerrar">×</button>
     <div id="dialogo-solicitud-contenido"></div>
+  </dialog>
+
+  <!-- Gestión de un pago -->
+  <dialog id="dialogo-pago" class="admin-dialogo" aria-labelledby="dialogo-pago-titulo">
+    <button type="button" class="visor-cerrar admin-cerrar" data-cerrar aria-label="Cerrar">×</button>
+    <div id="dialogo-pago-contenido"></div>
   </dialog>
 
   <!-- Conversación con un usuario -->

@@ -221,6 +221,10 @@ const RoumixAPI = {
     return json.data;
   },
 
+  aceptarCondicionesComision: async function() {
+    return this._request('/propietario/condiciones', { method: 'POST', body: JSON.stringify({ acepto: true }) });
+  },
+
   enviarVerificacion: async function(datos) {
     return this._request('/propietario/verificacion', { method: 'PUT', body: JSON.stringify(datos) });
   },

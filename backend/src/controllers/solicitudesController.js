@@ -203,6 +203,8 @@ async function misSolicitudes(req, res) {
               s.duracion_meses, s.personas, s.mensaje, s.created_at, s.updated_at,
               (SELECT json_build_object('id', ct.id, 'estado', ct.estado) FROM contratos ct
                 WHERE ct.solicitud_id = s.id AND ct.estado <> 'borrador' ORDER BY ct.created_at DESC LIMIT 1) AS contrato,
+              (SELECT json_build_object('id', pg.id, 'estado', pg.estado) FROM pagos pg
+                WHERE pg.solicitud_id = s.id ORDER BY pg.created_at DESC LIMIT 1) AS pago,
               i.imagen_principal, i.barrio, ${HISTORIAL.estudiante} AS historial
        FROM solicitudes s JOIN inmuebles i ON i.id = s.inmueble_id
        WHERE s.estudiante_id = $1
@@ -218,6 +220,8 @@ async function misSolicitudes(req, res) {
             split_part(COALESCE(e.nombre, 'Estudiante'), ' ', 1) AS estudiante_nombre,
             (SELECT json_build_object('id', ct.id, 'estado', ct.estado) FROM contratos ct
                 WHERE ct.solicitud_id = s.id AND ct.estado <> 'borrador' ORDER BY ct.created_at DESC LIMIT 1) AS contrato,
+              (SELECT json_build_object('id', pg.id, 'estado', pg.estado) FROM pagos pg
+                WHERE pg.solicitud_id = s.id ORDER BY pg.created_at DESC LIMIT 1) AS pago,
               i.imagen_principal, i.barrio, ${HISTORIAL.propietario} AS historial
      FROM solicitudes s
      JOIN inmuebles i ON i.id = s.inmueble_id
