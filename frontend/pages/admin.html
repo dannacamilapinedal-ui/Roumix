@@ -58,6 +58,7 @@
       <div class="admin-tabs" role="tablist" aria-label="Secciones del panel">
         <button type="button" role="tab" class="admin-tab activa" aria-selected="true" aria-controls="panel-resumen" id="tab-resumen" data-panel="resumen">Resumen</button>
         <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-reportes" id="tab-reportes" data-panel="reportes">Reportes <span class="admin-contador" id="contador-reportes" hidden></span></button>
+        <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-propietarios" id="tab-propietarios" data-panel="propietarios">Propietarios <span class="admin-contador" id="contador-propietarios" hidden></span></button>
         <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-inmuebles" id="tab-inmuebles" data-panel="inmuebles">Publicaciones</button>
         <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-usuarios" id="tab-usuarios" data-panel="usuarios">Usuarios</button>
         <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-historial" id="tab-historial" data-panel="historial">Historial</button>
@@ -78,6 +79,23 @@
           </select>
         </div>
         <div id="lista-reportes" class="admin-lista"></div>
+      </section>
+
+      <section class="admin-panel" id="panel-propietarios" role="tabpanel" aria-labelledby="tab-propietarios" hidden>
+        <div class="admin-filtros">
+          <label for="filtro-verificacion">Verificación</label>
+          <select id="filtro-verificacion">
+            <option value="por_revisar" selected>Por revisar</option>
+            <option value="requiere_informacion">Requieren información</option>
+            <option value="incompleto">Perfil incompleto</option>
+            <option value="aprobado">Aprobados</option>
+            <option value="rechazado">Rechazados</option>
+            <option value="todos">Todos</option>
+          </select>
+          <label for="buscar-propietarios" class="sr-only">Buscar propietarios</label>
+          <input type="search" id="buscar-propietarios" placeholder="Nombre o correo" maxlength="100">
+        </div>
+        <div id="lista-propietarios" class="admin-lista"></div>
       </section>
 
       <section class="admin-panel" id="panel-inmuebles" role="tabpanel" aria-labelledby="tab-inmuebles" hidden>
@@ -128,6 +146,12 @@
   <dialog id="dialogo-inmueble" class="admin-dialogo" aria-labelledby="dialogo-inmueble-titulo">
     <button type="button" class="visor-cerrar admin-cerrar" data-cerrar aria-label="Cerrar">×</button>
     <div id="dialogo-inmueble-contenido"></div>
+  </dialog>
+
+  <!-- Revisión de un propietario -->
+  <dialog id="dialogo-propietario" class="admin-dialogo" aria-labelledby="dialogo-propietario-titulo">
+    <button type="button" class="visor-cerrar admin-cerrar" data-cerrar aria-label="Cerrar">×</button>
+    <div id="dialogo-propietario-contenido"></div>
   </dialog>
 
   <!-- Suspender o reactivar una cuenta -->

@@ -276,7 +276,7 @@
       linkVolver.addEventListener("click", () => modoRecuperar(false));
 
       function actualizarTelefono() {
-        labelTelefono.textContent = rol === "propietario" ? "Celular / WhatsApp (obligatorio)" : "Celular / WhatsApp (opcional)";
+        labelTelefono.textContent = rol === "propietario" ? "Celular (obligatorio · solo lo ve el equipo de Roumix)" : "Celular (opcional)";
       }
 
       btnTabLogin.addEventListener("click", () => {
@@ -371,7 +371,7 @@
             return;
           }
           if (rol === "propietario" && !telefono) {
-            mostrarMensaje("Como propietario necesitas un celular para que te contacten por WhatsApp.", "error");
+            mostrarMensaje("Como propietario necesitas registrar un celular. Solo lo verá el equipo de Roumix.", "error");
             return;
           }
         }
@@ -392,8 +392,10 @@
           }
 
           if (modo === "login") {
-            await RoumixAPI.login(email, password, captchaToken);
-            window.location.href = destino;
+            const usuario = await RoumixAPI.login(email, password, captchaToken);
+            // Un propietario sin aprobar empieza por su verificación (salvo que viniera a otra página)
+            const pendiente = usuario && usuario.rol === "propietario" && usuario.verificacion && usuario.verificacion !== "aprobado";
+            window.location.href = pendiente && !redirigir ? "pages/verificacion.html" : destino;
             return;
           }
 
@@ -401,7 +403,9 @@
           if (respuesta.requiereConfirmacion) {
             formAuth.reset();
             btnTabLogin.click();
-            mostrarMensaje(respuesta.message, "exito");
+            mostrarMensaje(rol === "propietario"
+              ? `${respuesta.message} Después de ingresar, completa tu perfil de propietario: el equipo de Roumix lo revisará antes de que puedas publicar.`
+              : respuesta.message, "exito");
           } else {
             window.location.href = destino;
             return;

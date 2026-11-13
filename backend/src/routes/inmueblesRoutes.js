@@ -4,6 +4,7 @@ const inmueblesController = require('../controllers/inmueblesController');
 const reportesController = require('../controllers/reportesController');
 const { requireAuth, requireRol, authOpcional } = require('../middleware/auth');
 const subidaFotos = require('../middleware/subidaFotos');
+const { requirePropietarioAprobado } = require('../middleware/verificacion');
 const { buscarLugar } = require('../services/geocodificacionService');
 
 const soloPropietario = [requireAuth, requireRol('propietario')];
@@ -31,10 +32,11 @@ router.get('/:id', authOpcional, inmueblesController.getInmueblePorId);
 router.post('/:id/reportes', requireAuth, requireRol('estudiante', 'propietario'), reportesController.crearReporte);
 
 // POST /api/inmuebles - Publicar un inmueble con fotos (solo propietarios)
-router.post('/', soloPropietario, subidaFotos, inmueblesController.crearInmueble);
+// Solo propietarios con la cuenta aprobada por Roumix
+router.post('/', soloPropietario, requirePropietarioAprobado, subidaFotos, inmueblesController.crearInmueble);
 
 // PUT /api/inmuebles/:id - Editar un inmueble propio y sus fotos
-router.put('/:id', soloPropietario, subidaFotos, inmueblesController.actualizarInmueble);
+router.put('/:id', soloPropietario, requirePropietarioAprobado, subidaFotos, inmueblesController.actualizarInmueble);
 
 // PATCH /api/inmuebles/:id/estado - Pausar, reactivar o marcar como arrendado
 router.patch('/:id/estado', soloPropietario, inmueblesController.cambiarEstado);

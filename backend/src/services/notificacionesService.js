@@ -283,6 +283,78 @@ async function notificarDecisionPropietario({ inmueble, decision, mensaje, urlBa
 }
 
 /**
+ * A la administración: un propietario envió su perfil para revisión.
+ */
+async function notificarVerificacionPendiente({ propietario, urlBase }) {
+  try {
+    const para = await correosAdministradores();
+    return await enviar({
+      para,
+      asunto: `Propietario por revisar: ${propietario.nombre}`,
+      contenido: {
+        titulo: 'Un propietario espera tu revisión',
+        parrafos: [
+          `<strong>${escapar(propietario.nombre)}</strong> (${escapar(propietario.email)}) completó su perfil de propietario.`,
+          'Revisa la información, confirma el teléfono si lo consideras necesario y aprueba, rechaza o pide información adicional.'
+        ],
+        boton: { texto: 'Revisar en el panel', url: `${urlBase}/pages/admin.html` }
+      }
+    });
+  } catch (error) {
+    console.error('⚠️ Notificación de verificación pendiente:', error.message);
+    return false;
+  }
+}
+
+const TEXTOS_VERIFICACION = {
+  aprobar: {
+    titulo: '¡Tu cuenta de propietario fue aprobada!',
+    explicacion: 'Ya puedes publicar tus inmuebles en Roumix. Los estudiantes los verán en cuanto los publiques.',
+    boton: 'Publicar mi primer inmueble',
+    ruta: 'publicar.html'
+  },
+  solicitar_informacion: {
+    titulo: 'Roumix necesita información adicional',
+    explicacion: 'Completa o corrige lo que te pedimos y vuelve a enviar tu perfil para continuar con la revisión.',
+    boton: 'Actualizar mi perfil',
+    ruta: 'verificacion.html'
+  },
+  rechazar: {
+    titulo: 'Tu solicitud de verificación fue rechazada',
+    explicacion: 'Por ahora no podrás publicar inmuebles en Roumix. Si crees que es un error, responde a este correo.',
+    boton: 'Ver mi verificación',
+    ruta: 'verificacion.html'
+  }
+};
+
+/**
+ * Al propietario: Roumix tomó una decisión sobre su verificación.
+ */
+async function notificarDecisionVerificacion({ propietario, decision, mensaje, urlBase }) {
+  try {
+    const textos = TEXTOS_VERIFICACION[decision];
+    if (!textos || !propietario || !propietario.email) return false;
+    return await enviar({
+      para: propietario.email,
+      asunto: textos.titulo,
+      contenido: {
+        titulo: textos.titulo,
+        parrafos: [
+          `Hola ${escapar(propietario.nombre)},`,
+          `<strong>Mensaje de Roumix:</strong><br>${escapar(mensaje)}`,
+          textos.explicacion
+        ],
+        boton: { texto: textos.boton, url: `${urlBase}/pages/${textos.ruta}` },
+        nota: 'La verificación de Roumix revisa tu perfil y tus datos de contacto; no es una verificación legal de identidad ni de la propiedad de los inmuebles.'
+      }
+    });
+  } catch (error) {
+    console.error('⚠️ Notificación de decisión de verificación:', error.message);
+    return false;
+  }
+}
+
+/**
  * Correo de confirmación de cuenta (lo envía Roumix, no Supabase).
  * Devuelve true si salió; quien lo llama decide qué hacer si falla.
  */
@@ -337,6 +409,8 @@ module.exports = {
   notificarPausaPropietario,
   notificarDecisionPropietario,
   enviarConfirmacionCuenta,
+  notificarVerificacionPendiente,
+  notificarDecisionVerificacion,
   enviarRecuperacion,
   urlBase,
   usarTransporte,

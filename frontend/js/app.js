@@ -340,6 +340,8 @@ function sincronizarBarraNavegacion() {
       `<li><a href="${prefixPages}${pagina}" class="nav-link ${paginaActual === pagina ? 'active' : ''}"${paginaActual === pagina ? ' aria-current="page"' : ''}>${texto}</a></li>`;
     const enlaces = [enlace("buscar.html", "Buscar"), enlace("comparar.html", "Comparar")];
     if (esPropietario) {
+      // Mientras Roumix no apruebe la cuenta, el primer paso es la verificación
+      if (usuario.verificacion && usuario.verificacion !== "aprobado") enlaces.push(enlace("verificacion.html", "Mi verificación"));
       enlaces.push(enlace("publicar.html", "Publicar"), enlace("mis-publicaciones.html", "Mis publicaciones"));
     }
     if (usuario && usuario.rol === "admin") enlaces.push(enlace("admin.html", "Administración"));

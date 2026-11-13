@@ -15,5 +15,7 @@ router.post('/inmuebles/:id/moderacion', adminController.moderarInmueble);
 router.get('/usuarios', adminController.listarUsuarios);
 router.post('/usuarios/:id/estado', adminController.cambiarEstadoUsuario);
 router.get('/historial', adminController.historial);
+router.get('/propietarios', adminController.listarPropietarios);
+router.post('/propietarios/:id/verificacion', adminController.decidirVerificacion);
 
 module.exports = router;

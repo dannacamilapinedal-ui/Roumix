@@ -40,7 +40,10 @@ function ocultarPropietario(fila, req) {
 }
 
 // Lo que puede ver cualquier visitante: disponible, aprobado por moderación y de una cuenta activa
-const CONDICION_PUBLICA = "i.estado = 'disponible' AND i.moderacion = 'aprobada' AND (u.id IS NULL OR u.estado = 'activo')";
+// y cuyo propietario tiene la verificación aprobada (si Roumix lo rechaza, sus publicaciones se ocultan)
+const CONDICION_PUBLICA = `i.estado = 'disponible' AND i.moderacion = 'aprobada' AND (u.id IS NULL OR u.estado = 'activo')
+  AND (i.propietario_id IS NULL OR EXISTS (
+    SELECT 1 FROM verificaciones_propietario vp WHERE vp.propietario_id = i.propietario_id AND vp.estado = 'aprobado'))`;
 
 // Zona de Villavicencio y alrededores: las ubicaciones fuera de ella se rechazan
 const ZONA = { latMin: 3.95, latMax: 4.35, lngMin: -73.85, lngMax: -73.4 };

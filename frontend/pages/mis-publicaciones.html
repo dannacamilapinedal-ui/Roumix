@@ -65,6 +65,11 @@
         </a>
       </div>
 
+      <div class="verif-aviso" id="aviso-verificacion" hidden>
+        <div><strong id="aviso-verificacion-titulo"></strong><p id="aviso-verificacion-texto"></p></div>
+        <a href="verificacion.html" class="btn-card-action">Ver mi verificación</a>
+      </div>
+
       <div id="lista-mis-publicaciones" class="my-publications-list">
         <!-- Renderizado dinámico vía JavaScript -->
       </div>
@@ -115,6 +120,21 @@
     document.addEventListener("DOMContentLoaded", async () => {
       // Solo propietarios con sesión válida
       if (!(await protegerPagina(["propietario"]))) return;
+
+      // Aviso si la cuenta aún no está aprobada para publicar
+      RoumixAPI.getVerificacion().then((verif) => {
+        if (verif.puedePublicar) return;
+        const textos = {
+          incompleto: ["Completa tu perfil de propietario", "Para publicar, primero envía tu perfil a revisión."],
+          pendiente: ["Tu perfil está en revisión", "Podrás publicar en cuanto Roumix apruebe tu cuenta."],
+          requiere_informacion: ["Roumix necesita información adicional", "Revisa el mensaje del equipo y reenvía tu perfil."],
+          rechazado: ["Tu verificación fue rechazada", "Por ahora no puedes publicar ni editar publicaciones."]
+        }[verif.etapa];
+        if (!textos) return;
+        document.getElementById("aviso-verificacion-titulo").textContent = textos[0];
+        document.getElementById("aviso-verificacion-texto").textContent = textos[1];
+        document.getElementById("aviso-verificacion").hidden = false;
+      }).catch(() => {});
 
       const contenedor = document.getElementById("lista-mis-publicaciones");
 

@@ -1,5 +1,6 @@
 const db = require('../config/db');
 const notificaciones = require('../services/notificacionesService');
+const verificacion = require('../services/verificacionService');
 
 // Todas las rutas de este controlador pasan por requireAuth + requireRol('admin')
 
@@ -40,10 +41,17 @@ function patron(valor) {
  * GET /api/admin/resumen
  */
 async function resumen(req, res) {
-  const [usuarios, inmuebles, reportes] = await Promise.all([
+  const [usuarios, inmuebles, reportes, verificaciones] = await Promise.all([
     db.query(`SELECT rol, estado, count(*)::int AS total FROM usuarios GROUP BY rol, estado`),
     db.query(`SELECT moderacion, estado, count(*)::int AS total FROM inmuebles GROUP BY moderacion, estado`),
-    db.query(`SELECT estado, count(*)::int AS total FROM reportes GROUP BY estado`)
+    db.query(`SELECT estado, count(*)::int AS total FROM reportes GROUP BY estado`),
+    db.query(`SELECT
+        count(*) FILTER (WHERE v.estado = 'pendiente' AND v.perfil_enviado_en IS NOT NULL)::int AS por_revisar,
+        count(*) FILTER (WHERE v.estado = 'requiere_informacion')::int AS requiere_informacion,
+        count(*) FILTER (WHERE v.estado = 'aprobado')::int AS aprobados,
+        count(*) FILTER (WHERE v.propietario_id IS NULL OR (v.estado = 'pendiente' AND v.perfil_enviado_en IS NULL))::int AS incompletos
+      FROM usuarios u LEFT JOIN verificaciones_propietario v ON v.propietario_id = u.id
+      WHERE u.rol = 'propietario'`)
   ]);
 
   const suma = (filas, filtro) => filas.filter(filtro).reduce((t, f) => t + f.total, 0);
@@ -67,6 +75,12 @@ async function resumen(req, res) {
       reportes: {
         pendientes: suma(reportes.rows, (f) => f.estado === 'pendiente'),
         total: suma(reportes.rows, () => true)
+      },
+      verificaciones: {
+        porRevisar: verificaciones.rows[0].por_revisar,
+        requiereInformacion: verificaciones.rows[0].requiere_informacion,
+        aprobados: verificaciones.rows[0].aprobados,
+        incompletos: verificaciones.rows[0].incompletos
       }
     }
   });
@@ -355,7 +369,128 @@ async function historial(req, res) {
   res.json({ status: 'success', total: result.rowCount, data: result.rows });
 }
 
+const DECISIONES_VERIFICACION = {
+  aprobar: { estado: 'aprobado', accion: 'verificacion_aprobada', exigeMensaje: false },
+  solicitar_informacion: { estado: 'requiere_informacion', accion: 'verificacion_info_solicitada', exigeMensaje: true },
+  rechazar: { estado: 'rechazado', accion: 'verificacion_rechazada', exigeMensaje: true }
+};
+
+/**
+ * GET /api/admin/propietarios?estado=por_revisar|incompleto|requiere_informacion|aprobado|rechazado|todos&q=
+ */
+async function listarPropietarios(req, res) {
+  const { estado, q } = req.query;
+  const params = [];
+  const condiciones = ["u.rol = 'propietario'"];
+  const filtros = {
+    por_revisar: "v.estado = 'pendiente' AND v.perfil_enviado_en IS NOT NULL",
+    incompleto: "(v.propietario_id IS NULL OR (v.estado = 'pendiente' AND v.perfil_enviado_en IS NULL))",
+    requiere_informacion: "v.estado = 'requiere_informacion'",
+    aprobado: "v.estado = 'aprobado'",
+    rechazado: "v.estado = 'rechazado'"
+  };
+  if (estado && estado !== 'todos') {
+    if (!filtros[estado]) throw errorHttp(400, 'Filtro de estado no válido.');
+    condiciones.push(filtros[estado]);
+  }
+  if (q && String(q).trim()) {
+    params.push(patron(String(q).trim()));
+    condiciones.push(`(u.nombre ILIKE $${params.length} OR u.email ILIKE $${params.length} OR v.nombre_completo ILIKE $${params.length})`);
+  }
+
+  const result = await db.query(
+    `SELECT u.id, u.nombre, u.email, u.estado AS cuenta, u.created_at,
+            (a.email_confirmed_at IS NOT NULL) AS correo_confirmado,
+            COALESCE(v.estado, 'pendiente') AS estado, v.perfil_enviado_en,
+            CASE WHEN v.propietario_id IS NULL OR (v.estado = 'pendiente' AND v.perfil_enviado_en IS NULL)
+                 THEN 'incompleto' ELSE v.estado END AS etapa,
+            v.nombre_completo, v.telefono, v.ciudad, v.relacion_inmueble, v.cantidad_inmuebles,
+            v.zonas, v.descripcion, v.acepta_comision, v.acepta_comision_en, v.version_condiciones,
+            v.telefono_verificado_por_roumix, v.telefono_verificado_en,
+            v.mensaje_admin, v.revisado_en, r.nombre AS revisado_por_nombre,
+            (SELECT count(*)::int FROM inmuebles i WHERE i.propietario_id = u.id) AS inmuebles
+     FROM usuarios u
+     LEFT JOIN auth.users a ON a.id = u.id
+     LEFT JOIN verificaciones_propietario v ON v.propietario_id = u.id
+     LEFT JOIN usuarios r ON r.id = v.revisado_por
+     WHERE ${condiciones.join(' AND ')}
+     ORDER BY v.perfil_enviado_en DESC NULLS LAST, u.created_at DESC
+     LIMIT 200`,
+    params
+  );
+  res.json({ status: 'success', total: result.rowCount, data: result.rows });
+}
+
+/**
+ * POST /api/admin/propietarios/:id/verificacion
+ * { decision: aprobar|solicitar_informacion|rechazar, mensaje, telefonoVerificado }
+ */
+async function decidirVerificacion(req, res) {
+  const id = String(req.params.id || '');
+  if (!/^[0-9a-f-]{36}$/i.test(id)) throw errorHttp(400, 'id de propietario no válido.');
+  const body = req.body || {};
+  const config = DECISIONES_VERIFICACION[body.decision];
+  if (!config) throw errorHttp(400, `decision debe ser una de: ${Object.keys(DECISIONES_VERIFICACION).join(', ')}.`);
+  if (id === req.usuario.id) throw errorHttp(403, 'No puedes revisar tu propia cuenta.');
+
+  const mensaje = config.exigeMensaje || (typeof body.mensaje === 'string' && body.mensaje.trim())
+    ? texto(body.mensaje, 'El mensaje para el propietario', 10, 1000)
+    : 'Revisamos tu perfil y tu cuenta quedó aprobada. Ya puedes publicar tus inmuebles en Roumix.';
+  const telefonoVerificado = body.telefonoVerificado === true;
+
+  const cliente = await db.pool.connect();
+  let propietario;
+  try {
+    await cliente.query('BEGIN');
+    const { rows } = await cliente.query("SELECT id, nombre, email, rol FROM usuarios WHERE id = $1 FOR UPDATE", [id]);
+    if (rows.length === 0 || rows[0].rol !== 'propietario') throw errorHttp(404, 'No existe ese propietario.');
+    propietario = rows[0];
+
+    const actual = await verificacion.obtener(id, cliente);
+    if (!actual.perfil_enviado_en) {
+      throw errorHttp(409, 'El propietario todavía no ha enviado su perfil. Espera a que lo complete.');
+    }
+    if (actual.estado === config.estado && config.estado === 'aprobado') {
+      throw errorHttp(409, 'La cuenta ya está aprobada.');
+    }
+
+    await cliente.query(
+      `UPDATE verificaciones_propietario SET
+         estado = $2, mensaje_admin = $3, revisado_por = $4, revisado_en = now(),
+         telefono_verificado_por_roumix = $5,
+         telefono_verificado_en = CASE WHEN $5 THEN COALESCE(telefono_verificado_en, now()) ELSE NULL END
+       WHERE propietario_id = $1`,
+      [id, config.estado, mensaje, req.usuario.id, telefonoVerificado]
+    );
+    await cliente.query(
+      `INSERT INTO moderacion_historial (usuario_afectado_id, admin_id, accion, justificacion)
+       VALUES ($1, $2, $3, $4)`,
+      [id, req.usuario.id, config.accion,
+        `${mensaje}${telefonoVerificado ? ' · Teléfono confirmado por llamada.' : ''}`]
+    );
+    await cliente.query('COMMIT');
+  } catch (error) {
+    await cliente.query('ROLLBACK').catch(() => {});
+    throw error;
+  } finally {
+    cliente.release();
+  }
+
+  const avisado = await notificaciones.notificarDecisionVerificacion({
+    propietario, decision: body.decision, mensaje, urlBase: notificaciones.urlBase(req)
+  });
+
+  res.json({
+    status: 'success',
+    correoEnviado: avisado,
+    message: `Decisión registrada.${avisado ? ' Se avisó al propietario por correo.' : ''}`,
+    data: { id, estado: config.estado }
+  });
+}
+
 module.exports = {
+  listarPropietarios,
+  decidirVerificacion,
   resumen,
   listarReportes,
   listarInmuebles,

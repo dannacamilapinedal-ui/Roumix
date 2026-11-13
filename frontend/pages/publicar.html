@@ -328,6 +328,32 @@
       // Solo propietarios con sesión válida (el servidor también lo valida al publicar)
       if (!(await protegerPagina(["propietario"]))) return;
 
+      // Solo los propietarios aprobados por Roumix pueden publicar (el servidor también lo exige)
+      try {
+        const verif = await RoumixAPI.getVerificacion();
+        if (!verif.puedePublicar) {
+          const textos = {
+            incompleto: ["Completa tu perfil para poder publicar", "Antes de publicar, el equipo de Roumix revisa tu perfil de propietario. Toma solo unos minutos."],
+            pendiente: ["Tu perfil está en revisión", "Podrás publicar en cuanto el equipo de Roumix apruebe tu cuenta. Te avisaremos por correo."],
+            requiere_informacion: ["Roumix necesita información adicional", "Revisa el mensaje del equipo en tu verificación y vuelve a enviar tu perfil."],
+            rechazado: ["Tu verificación fue rechazada", "Por ahora no puedes publicar. Revisa el mensaje del equipo en tu verificación."]
+          }[verif.etapa] || ["Tu cuenta aún no está aprobada", "Revisa el estado de tu verificación."];
+          const contenedor = document.querySelector(".publish-section-container");
+          contenedor.innerHTML = `
+            <div class="verif-bloqueo">
+              <span class="verif-bloqueo-icono" aria-hidden="true">🔒</span>
+              <h1></h1>
+              <p></p>
+              <a href="verificacion.html" class="btn-search-action">Ir a mi verificación →</a>
+            </div>`;
+          contenedor.querySelector("h1").textContent = textos[0];
+          contenedor.querySelector("p").textContent = textos[1];
+          return;
+        }
+      } catch (error) {
+        RoumixAvisos.mostrar(`No pudimos comprobar tu verificación: ${error.message}`, "error", 5000);
+      }
+
       const MAX_FOTOS = 10;
       const MAX_FOTOS_POR_ENVIO = 8;
       const MAX_BYTES = 5 * 1024 * 1024;

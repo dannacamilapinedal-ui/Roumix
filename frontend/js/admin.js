@@ -10,6 +10,11 @@ const ETIQUETAS = {
     fraude: "Posible fraude", informacion_falsa: "Información falsa", fotos_no_corresponden: "Fotos no corresponden",
     precio_enganoso: "Precio engañoso", contenido_inapropiado: "Contenido inapropiado", otro: "Otro"
   },
+  verificacion: {
+    incompleto: "Perfil incompleto", pendiente: "Por revisar", requiere_informacion: "Requiere información",
+    aprobado: "Aprobado", rechazado: "Rechazado"
+  },
+  relacion: { propietario: "Propietario", administrador: "Administrador", familiar: "Familiar", otro: "Otra" },
   moderacion: {
     aprobada: "Aprobada", en_revision: "En revisión", requiere_cambios: "Requiere cambios",
     rechazada: "Rechazada", retirada: "Retirada"
@@ -21,7 +26,9 @@ const ETIQUETAS = {
     rechazar: "Rechazada", retirar: "Retirada", correcciones_enviadas: "Correcciones enviadas por el propietario",
     cuenta_suspendida: "Cuenta suspendida", cuenta_reactivada: "Cuenta reactivada",
     rol_admin_asignado: "Rol de administrador asignado", rol_admin_retirado: "Rol de administrador retirado",
-    eliminado_demo: "Publicación de demostración eliminada"
+    eliminado_demo: "Publicación de demostración eliminada",
+    verificacion_enviada: "Perfil de propietario enviado", verificacion_aprobada: "Propietario aprobado",
+    verificacion_info_solicitada: "Información adicional solicitada", verificacion_rechazada: "Propietario rechazado"
   }
 };
 
@@ -54,7 +61,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // La página solo se muestra si el servidor confirma el rol admin
   if (!(await protegerPagina(["admin"]))) return;
 
-  const paneles = { resumen: cargarResumen, reportes: cargarReportes, inmuebles: cargarInmuebles, usuarios: cargarUsuarios, historial: cargarHistorial };
+  const paneles = { resumen: cargarResumen, reportes: cargarReportes, propietarios: cargarPropietarios, inmuebles: cargarInmuebles, usuarios: cargarUsuarios, historial: cargarHistorial };
 
   function abrirPanel(nombre) {
     document.querySelectorAll(".admin-tab").forEach(tab => {
@@ -76,7 +83,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       const contador = document.getElementById("contador-reportes");
       contador.textContent = data.reportes.pendientes;
       contador.hidden = data.reportes.pendientes === 0;
+      actualizarContadorPropietarios(data);
       const metricas = [
+        ["Propietarios por revisar", data.verificaciones.porRevisar, data.verificaciones.porRevisar ? "alerta" : "neutro", "propietarios"],
         ["Reportes pendientes", data.reportes.pendientes, "alerta", "reportes"],
         ["Publicaciones en revisión", data.inmuebles.enRevision, "alerta", "inmuebles"],
         ["Esperando correcciones", data.inmuebles.requiereCambios, "neutro", "inmuebles"],
@@ -84,7 +93,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         ["Publicaciones totales", data.inmuebles.total, "neutro", null],
         ["Usuarios", `${data.usuarios.total}`, "neutro", "usuarios"],
         ["Estudiantes / Propietarios", `${data.usuarios.estudiantes} / ${data.usuarios.propietarios}`, "neutro", "usuarios"],
-        ["Cuentas suspendidas", data.usuarios.suspendidos, data.usuarios.suspendidos ? "alerta" : "neutro", "usuarios"]
+        ["Cuentas suspendidas", data.usuarios.suspendidos, data.usuarios.suspendidos ? "alerta" : "neutro", "usuarios"],
+        ["Propietarios aprobados", data.verificaciones.aprobados, "ok", "propietarios"],
+        ["Perfiles incompletos", data.verificaciones.incompletos, "neutro", "propietarios"]
       ];
       contenedor.innerHTML = metricas.map(([titulo, valor, tipo, panel]) => `
         <${panel ? `button type="button" data-ir="${panel}"` : "div"} class="admin-metrica admin-metrica-${tipo}">
@@ -95,6 +106,148 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (error) {
       mostrarError(contenedor, error);
     }
+  }
+
+  function actualizarContadorPropietarios(data) {
+    const contador = document.getElementById("contador-propietarios");
+    contador.textContent = data.verificaciones.porRevisar;
+    contador.hidden = data.verificaciones.porRevisar === 0;
+  }
+
+  // ---------------- Propietarios (verificación) ----------------
+  let propietariosCargados = [];
+  async function cargarPropietarios() {
+    const contenedor = document.getElementById("lista-propietarios");
+    mostrarCarga(contenedor);
+    const params = new URLSearchParams({ estado: document.getElementById("filtro-verificacion").value });
+    const q = document.getElementById("buscar-propietarios").value.trim();
+    if (q) params.set("q", q);
+    try {
+      const { data } = await RoumixAPI.admin(`/propietarios?${params}`);
+      propietariosCargados = data;
+      if (data.length === 0) return vacio(contenedor, "No hay propietarios con este estado.");
+      const tipoChip = { incompleto: "pendiente", pendiente: "en_revision", requiere_informacion: "requiere_cambios", aprobado: "aprobada", rechazado: "rechazada" };
+      contenedor.innerHTML = `
+        <table class="admin-tabla">
+          <thead><tr><th scope="col">Propietario</th><th scope="col">Perfil</th><th scope="col">Contacto (solo Roumix)</th><th scope="col">Inmuebles</th><th scope="col">Verificación</th><th scope="col"><span class="sr-only">Acciones</span></th></tr></thead>
+          <tbody>${data.map(p => `
+            <tr>
+              <td><strong>${escaparHTML(p.nombre_completo || p.nombre)}</strong><br><small>${escaparHTML(p.email)}</small>
+                ${p.correo_confirmado ? "<br>" + chip("Correo confirmado", "aprobada") : ""}</td>
+              <td>${p.perfil_enviado_en ? `${escaparHTML(ETIQUETAS.relacion[p.relacion_inmueble] || "—")} · ${escaparHTML(p.ciudad || "—")}<br><small>${p.cantidad_inmuebles || "?"} inmueble(s) · enviado ${fecha(p.perfil_enviado_en)}</small>` : "<small>Aún no envía su perfil</small>"}</td>
+              <td>${escaparHTML(p.telefono || "—")}<br><small>${p.telefono_verificado_por_roumix ? "✓ verificado por Roumix" : "declarado"}</small></td>
+              <td>${p.inmuebles}</td>
+              <td>${chip(ETIQUETAS.verificacion[p.etapa], tipoChip[p.etapa])}${p.revisado_en ? `<br><small>${fecha(p.revisado_en)}${p.revisado_por_nombre ? " · " + escaparHTML(p.revisado_por_nombre) : ""}</small>` : ""}</td>
+              <td><button type="button" class="btn-card-action" data-propietario="${p.id}">${p.etapa === "pendiente" ? "Revisar" : "Ver"}</button></td>
+            </tr>`).join("")}
+          </tbody>
+        </table>`;
+    } catch (error) {
+      mostrarError(contenedor, error);
+    }
+  }
+  document.getElementById("filtro-verificacion").addEventListener("change", cargarPropietarios);
+  document.getElementById("buscar-propietarios").addEventListener("input", () => {
+    clearTimeout(temporizador);
+    temporizador = setTimeout(cargarPropietarios, 350);
+  });
+
+  const dialogoPropietario = document.getElementById("dialogo-propietario");
+  const contenidoPropietario = document.getElementById("dialogo-propietario-contenido");
+  dialogoPropietario.querySelector("[data-cerrar]").addEventListener("click", () => dialogoPropietario.close());
+
+  document.getElementById("lista-propietarios").addEventListener("click", (e) => {
+    const boton = e.target.closest("button[data-propietario]");
+    if (!boton) return;
+    const p = propietariosCargados.find(x => x.id === boton.dataset.propietario);
+    if (p) abrirPropietario(p);
+  });
+
+  function abrirPropietario(p) {
+    const puedeDecidir = Boolean(p.perfil_enviado_en);
+    contenidoPropietario.innerHTML = `
+      <h2 id="dialogo-propietario-titulo">${escaparHTML(p.nombre_completo || p.nombre)}</h2>
+      <p>${chip(ETIQUETAS.verificacion[p.etapa], p.etapa === "aprobado" ? "aprobada" : p.etapa === "rechazado" ? "rechazada" : "pendiente")}
+         ${p.correo_confirmado ? chip("Correo confirmado", "aprobada") : chip("Correo sin confirmar", "pendiente")}
+         ${chip(p.telefono_verificado_por_roumix ? "Teléfono verificado por Roumix" : "Teléfono declarado", p.telefono_verificado_por_roumix ? "aprobada" : "neutro")}</p>
+      <div class="admin-detalle-grid">
+        <div>
+          <h3>Perfil enviado</h3>
+          <dl class="admin-datos">
+            <dt>Nombre completo</dt><dd>${escaparHTML(p.nombre_completo || "—")}</dd>
+            <dt>Correo</dt><dd>${escaparHTML(p.email)}</dd>
+            <dt>Celular</dt><dd>${escaparHTML(p.telefono || "—")}</dd>
+            <dt>Ciudad</dt><dd>${escaparHTML(p.ciudad || "—")}</dd>
+            <dt>Relación</dt><dd>${escaparHTML(ETIQUETAS.relacion[p.relacion_inmueble] || "—")}</dd>
+            <dt>Inmuebles a publicar</dt><dd>${escaparHTML(p.cantidad_inmuebles || "—")}</dd>
+            <dt>Zonas</dt><dd>${escaparHTML(p.zonas || "—")}</dd>
+            <dt>Descripción</dt><dd class="admin-texto-largo">${escaparHTML(p.descripcion || "—")}</dd>
+          </dl>
+        </div>
+        <div>
+          <h3>Cuenta</h3>
+          <dl class="admin-datos">
+            <dt>Registro</dt><dd>${fecha(p.created_at)}</dd>
+            <dt>Perfil enviado</dt><dd>${fecha(p.perfil_enviado_en)}</dd>
+            <dt>Condiciones de comisión</dt><dd>${p.acepta_comision ? `Aceptadas el ${fecha(p.acepta_comision_en)} (versión ${escaparHTML(p.version_condiciones || "—")})` : "No aceptadas"}</dd>
+            <dt>Publicaciones</dt><dd>${p.inmuebles}</dd>
+            <dt>Última revisión</dt><dd>${p.revisado_en ? `${fecha(p.revisado_en)} · ${escaparHTML(p.revisado_por_nombre || "—")}` : "—"}</dd>
+            <dt>Mensaje enviado</dt><dd class="admin-texto-largo">${escaparHTML(p.mensaje_admin || "—")}</dd>
+          </dl>
+        </div>
+      </div>
+
+      ${puedeDecidir ? `
+      <form class="admin-decision" id="form-verificacion-admin" novalidate>
+        <h3>Registrar decisión</h3>
+        <p class="fotos-ayuda">Esta revisión no es una verificación legal de identidad. Marca el teléfono como verificado solo si llamaste al propietario y confirmaste el número.</p>
+        <fieldset class="admin-decisiones">
+          <legend class="sr-only">Decisión</legend>
+          <label><input type="radio" name="decision-verif" value="aprobar"> Aprobar (ya puede publicar)</label>
+          <label><input type="radio" name="decision-verif" value="solicitar_informacion"> Solicitar información adicional</label>
+          <label><input type="radio" name="decision-verif" value="rechazar"> Rechazar</label>
+        </fieldset>
+        <label class="admin-check"><input type="checkbox" id="verif-telefono" ${p.telefono_verificado_por_roumix ? "checked" : ""}> Llamé al propietario y confirmé el teléfono</label>
+        <label for="verif-mensaje-admin" class="reporte-label">Mensaje para el propietario (obligatorio si pides información o rechazas)</label>
+        <textarea id="verif-mensaje-admin" rows="3" maxlength="1000" placeholder="Ej: Necesitamos que nos indiques el barrio exacto de tus inmuebles."></textarea>
+        <p class="pub-mensaje" id="verif-resultado" role="alert" hidden></p>
+        <button type="submit" class="btn-search-action">Guardar decisión</button>
+      </form>` : `<p class="admin-vacio">El propietario todavía no ha enviado su perfil. Podrás revisarlo cuando lo haga.</p>`}`;
+
+    if (!dialogoPropietario.open) dialogoPropietario.showModal();
+    const form = document.getElementById("form-verificacion-admin");
+    if (!form) return;
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const resultado = document.getElementById("verif-resultado");
+      const decision = (form.querySelector('input[name="decision-verif"]:checked') || {}).value;
+      const mensaje = document.getElementById("verif-mensaje-admin").value.trim();
+      const mostrar = (texto, ok) => {
+        resultado.textContent = texto;
+        resultado.className = `pub-mensaje ${ok ? "pub-mensaje-exito" : "pub-mensaje-error"}`;
+        resultado.hidden = false;
+      };
+      if (!decision) return mostrar("Elige una decisión.", false);
+      if (decision !== "aprobar" && mensaje.length < 10) return mostrar("Escribe un mensaje de al menos 10 caracteres para el propietario.", false);
+      if (decision === "rechazar" && !confirm("¿Confirmas rechazar a este propietario? No podrá publicar y sus publicaciones dejarán de mostrarse.")) return;
+
+      const boton = form.querySelector('button[type="submit"]');
+      boton.disabled = true;
+      try {
+        const respuesta = await RoumixAPI.admin(`/propietarios/${p.id}/verificacion`, {
+          method: "POST",
+          body: { decision, mensaje: mensaje || undefined, telefonoVerificado: document.getElementById("verif-telefono").checked }
+        });
+        dialogoPropietario.close();
+        RoumixAvisos.mostrar(respuesta.message, "exito");
+        cargarPropietarios();
+        cargarContador();
+      } catch (error) {
+        mostrar(error.message, false);
+        boton.disabled = false;
+      }
+    });
   }
 
   // ---------------- Reportes ----------------
@@ -401,6 +554,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const contador = document.getElementById("contador-reportes");
       contador.textContent = data.reportes.pendientes;
       contador.hidden = data.reportes.pendientes === 0;
+      actualizarContadorPropietarios(data);
     } catch (e) { /* el contador es informativo */ }
   }
 

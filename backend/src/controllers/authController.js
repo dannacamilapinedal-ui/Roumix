@@ -43,7 +43,13 @@ function verificarClave(error) {
 
 async function obtenerPerfil(id) {
   const result = await db.query(
-    'SELECT id, nombre, email, rol, estado, telefono, universidad FROM usuarios WHERE id = $1',
+    `SELECT u.id, u.nombre, u.email, u.rol, u.estado, u.telefono, u.universidad,
+            CASE WHEN u.rol <> 'propietario' THEN NULL
+                 WHEN v.propietario_id IS NULL OR (v.estado = 'pendiente' AND v.perfil_enviado_en IS NULL) THEN 'incompleto'
+                 ELSE v.estado END AS verificacion
+     FROM usuarios u
+     LEFT JOIN verificaciones_propietario v ON v.propietario_id = u.id
+     WHERE u.id = $1`,
     [id]
   );
   return result.rows[0] || null;
@@ -233,7 +239,9 @@ async function refresh(req, res) {
  * Perfil del usuario con sesión, leído de la base de datos.
  */
 async function perfil(req, res) {
-  res.status(200).json({ status: 'success', usuario: req.usuario });
+  // Se lee de nuevo para incluir el estado de verificación del propietario
+  const usuario = await obtenerPerfil(req.usuario.id);
+  res.status(200).json({ status: 'success', usuario: usuario || req.usuario });
 }
 
 /**

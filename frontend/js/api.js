@@ -172,6 +172,18 @@ const RoumixAPI = {
   /**
    * Inmuebles del propietario con sesión iniciada (identificado por su ID en el servidor)
    */
+  /**
+   * Verificación del propietario (estado, datos del perfil y condiciones)
+   */
+  getVerificacion: async function() {
+    const json = await this._request('/propietario/verificacion');
+    return json.data;
+  },
+
+  enviarVerificacion: async function(datos) {
+    return this._request('/propietario/verificacion', { method: 'PUT', body: JSON.stringify(datos) });
+  },
+
   getMisInmuebles: async function() {
     const json = await this._request('/inmuebles/mios');
     return json.data.map((item) => this._guardarEnCache(this._normalizarInmueble(item)));
