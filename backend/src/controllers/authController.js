@@ -2,6 +2,7 @@ const db = require('../config/db');
 const { crearClienteSupabase, crearClienteAdmin, adminDisponible, SUPABASE_URL, SUPABASE_ANON_KEY } = require('../config/supabase');
 const { validarCorreoParaRegistro } = require('../services/correoService');
 const notificaciones = require('../services/notificacionesService');
+const { registrarFalloIngreso } = require('../middleware/limiteIngreso');
 
 // Los correos de cuenta salen desde Roumix (sin el límite por hora del correo de Supabase)
 // cuando hay clave de servicio y un medio de envío configurado; si no, los envía Supabase.
@@ -187,7 +188,10 @@ async function login(req, res) {
       throw errorHttp(403, 'Debes confirmar tu correo antes de iniciar sesión. Revisa tu bandeja de entrada.');
     }
     if (error.status === 429) throw errorHttp(429, 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.');
-    if (error.status === 400 || error.code === 'invalid_credentials') throw errorHttp(401, 'Correo o contraseña incorrectos.');
+    if (error.status === 400 || error.code === 'invalid_credentials') {
+      await registrarFalloIngreso(req, email);
+      throw errorHttp(401, 'Correo o contraseña incorrectos.');
+    }
     throw errorHttp(502, `No se pudo iniciar sesión: ${error.message}`);
   }
 

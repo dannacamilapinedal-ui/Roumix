@@ -21,6 +21,8 @@ async function limpiarCuentasSinConfirmar() {
      RETURNING a.id`,
     [HORAS_PARA_CONFIRMAR]
   );
+  // Las marcas de intentos (registro, ingreso) solo se necesitan unas horas
+  await db.query("DELETE FROM limites_uso WHERE creado_en < now() - interval '1 day'").catch(() => {});
   return result.rowCount;
 }
 

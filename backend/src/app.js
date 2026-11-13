@@ -12,22 +12,18 @@ const mapaRoutes = require('./routes/mapaRoutes');
 const configRoutes = require('./routes/configRoutes');
 const tareasRoutes = require('./routes/tareasRoutes');
 const errorHandler = require('./middleware/errorHandler');
+const { cabecerasSeguridad, opcionesCors } = require('./config/seguridad');
 
 const app = express();
 
 // Detrás del proxy de Render: req.ip y req.protocol (https) salen de las cabeceras del proxy
 app.set('trust proxy', 1);
 
-// CORS: en producción solo los orígenes listados en CORS_ORIGIN (separados por coma).
-// En desarrollo se permite cualquier origen (Live Server, archivos locales, etc.).
-const origenesPermitidos = (process.env.CORS_ORIGIN || '')
-  .split(',')
-  .map((o) => o.trim())
-  .filter(Boolean);
-
-app.use(cors({
-  origin: origenesPermitidos.length ? origenesPermitidos : true
-}));
+// Cabeceras de seguridad (CSP, anti-iframe, etc.) y CORS solo para los orígenes de Roumix.
+// Detalle en config/seguridad.js
+app.disable('x-powered-by');
+app.use(cabecerasSeguridad);
+app.use(cors(opcionesCors()));
 // Comprime HTML, CSS, JS y JSON (las páginas cargan más rápido)
 app.use(compression());
 app.use(express.json({ limit: '1mb' }));

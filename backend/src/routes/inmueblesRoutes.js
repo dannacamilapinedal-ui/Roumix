@@ -2,14 +2,15 @@ const express = require('express');
 const router = express.Router();
 const inmueblesController = require('../controllers/inmueblesController');
 const reportesController = require('../controllers/reportesController');
-const { requireAuth, requireRol } = require('../middleware/auth');
+const { requireAuth, requireRol, authOpcional } = require('../middleware/auth');
 const subidaFotos = require('../middleware/subidaFotos');
 const { buscarLugar } = require('../services/geocodificacionService');
 
 const soloPropietario = [requireAuth, requireRol('propietario')];
 
-// GET /api/inmuebles - Listar inmuebles visibles con filtros (público)
-router.get('/', inmueblesController.getInmuebles);
+// GET /api/inmuebles - Listar inmuebles visibles con filtros (público).
+// Sin sesión no se incluyen datos del propietario (ver ocultarPropietario).
+router.get('/', authOpcional, inmueblesController.getInmuebles);
 
 // GET /api/inmuebles/geocodificar?q= - Buscar una dirección o sector de Villavicencio (propietarios)
 router.get('/geocodificar', soloPropietario, async (req, res) => {
@@ -24,7 +25,7 @@ router.get('/mios', soloPropietario, inmueblesController.getMisInmuebles);
 router.get('/mios/:id', soloPropietario, inmueblesController.getMiInmueble);
 
 // GET /api/inmuebles/:id - Obtener un inmueble visible por su ID (público)
-router.get('/:id', inmueblesController.getInmueblePorId);
+router.get('/:id', authOpcional, inmueblesController.getInmueblePorId);
 
 // POST /api/inmuebles/:id/reportes - Reportar una publicación (estudiantes y propietarios con sesión)
 router.post('/:id/reportes', requireAuth, requireRol('estudiante', 'propietario'), reportesController.crearReporte);

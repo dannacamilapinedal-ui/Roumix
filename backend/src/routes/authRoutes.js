@@ -4,6 +4,7 @@ const authController = require('../controllers/authController');
 const { requireAuth, requireAuthConfigurada } = require('../middleware/auth');
 const requireCaptcha = require('../middleware/captcha');
 const limiteRegistro = require('../middleware/limiteRegistro');
+const { limiteIngreso } = require('../middleware/limiteIngreso');
 
 router.use(requireAuthConfigurada);
 
@@ -11,7 +12,7 @@ router.use(requireAuthConfigurada);
 router.post('/registro', limiteRegistro, requireCaptcha, authController.registro);
 
 // POST /api/auth/login - Iniciar sesión con correo y contraseña
-router.post('/login', requireCaptcha, authController.login);
+router.post('/login', limiteIngreso, requireCaptcha, authController.login);
 
 // POST /api/auth/recuperar - Enviar el correo para crear una contraseña nueva
 router.post('/recuperar', requireCaptcha, authController.recuperar);

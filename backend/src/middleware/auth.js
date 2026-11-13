@@ -58,6 +58,31 @@ async function requireAuth(req, res, next) {
 }
 
 /**
+ * Sesión opcional: si llega un token válido carga req.usuario; si no llega o no es válido,
+ * la petición sigue como visitante (sin error). Se usa en rutas públicas que muestran
+ * más o menos datos según haya sesión.
+ */
+async function authOpcional(req, res, next) {
+  const header = req.headers.authorization || '';
+  const [tipo, token] = header.split(' ');
+  if (!supabase || tipo !== 'Bearer' || !token) return next();
+
+  try {
+    const { data, error } = await supabase.auth.getUser(token);
+    if (error || !data || !data.user) return next();
+    const result = await db.query(
+      'SELECT id, nombre, email, rol, estado FROM usuarios WHERE id = $1',
+      [data.user.id]
+    );
+    if (result.rows.length && result.rows[0].estado === 'activo') req.usuario = result.rows[0];
+  } catch (error) {
+    // Un fallo validando el token no bloquea la consulta pública
+    console.error('⚠️ Sesión opcional:', error.message);
+  }
+  next();
+}
+
+/**
  * Exige que el usuario autenticado tenga uno de los roles indicados.
  * Debe usarse después de requireAuth.
  */
@@ -70,4 +95,4 @@ function requireRol(...roles) {
   };
 }
 
-module.exports = { requireAuth, requireRol, requireAuthConfigurada };
+module.exports = { requireAuth, requireRol, requireAuthConfigurada, authOpcional };

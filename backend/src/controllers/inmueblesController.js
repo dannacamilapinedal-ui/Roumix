@@ -29,6 +29,16 @@ function selectInmueble({ exacto }) {
 const SELECT_PUBLICO = selectInmueble({ exacto: false });
 const SELECT_PROPIETARIO = selectInmueble({ exacto: true });
 
+// Datos del propietario que un visitante sin sesión nunca recibe (contacto e identificador interno)
+const CAMPOS_PRIVADOS_PROPIETARIO = ['propietario_id', 'propietario_nombre', 'propietario_telefono'];
+
+function ocultarPropietario(fila, req) {
+  if (req.usuario) return fila;
+  const copia = { ...fila };
+  CAMPOS_PRIVADOS_PROPIETARIO.forEach((campo) => { delete copia[campo]; });
+  return copia;
+}
+
 // Lo que puede ver cualquier visitante: disponible, aprobado por moderación y de una cuenta activa
 const CONDICION_PUBLICA = "i.estado = 'disponible' AND i.moderacion = 'aprobada' AND (u.id IS NULL OR u.estado = 'activo')";
 
@@ -185,7 +195,7 @@ async function getInmuebles(req, res) {
   res.status(200).json({
     status: 'success',
     total: result.rowCount,
-    data: result.rows
+    data: result.rows.map((fila) => ocultarPropietario(fila, req))
   });
 }
 
@@ -208,7 +218,7 @@ async function getInmueblePorId(req, res) {
 
   res.status(200).json({
     status: 'success',
-    data: result.rows[0]
+    data: ocultarPropietario(result.rows[0], req)
   });
 }
 
