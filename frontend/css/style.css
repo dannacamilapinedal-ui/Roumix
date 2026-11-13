@@ -5806,3 +5806,335 @@ html[data-tema="oscuro"] .contacto-avatar {
   background: var(--superficie-alta);
   color: var(--tinta-fuerte);
 }
+
+/* ==========================================================================
+   BUSCAR · EL MAPA ES EL PROTAGONISTA
+   Computador: lista a la izquierda (~37 %) y mapa fijo a la derecha (~63 %).
+   Celular: se alterna entre lista y mapa con un botón flotante.
+   ========================================================================== */
+
+/* Portada más compacta para que el mapa aparezca antes */
+.hero-search-section .hero-banner {
+  padding: 30px 40px 26px;
+  margin-bottom: 16px;
+}
+
+.hero-search-section .hero-banner .hero-header-row {
+  margin-bottom: 20px;
+}
+
+.hero-search-section .hero-banner .hero-title {
+  font-size: clamp(1.7rem, 1.1rem + 1.7vw, 2.6rem);
+}
+
+.hero-search-section .hero-banner .hero-eyebrow {
+  margin-bottom: 8px;
+}
+
+.hero-search-section .hero-banner .stat-box {
+  padding: 12px 18px;
+  min-width: 112px;
+}
+
+.hero-search-section .hero-banner .stat-number {
+  font-size: 2rem;
+}
+
+/* Aviso de la zona del mapa */
+.barra-zona {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px 10px 16px;
+  margin-bottom: 14px;
+  border-radius: var(--radio-md);
+  background: var(--verde-badge-bg);
+  border: 1px solid var(--verde-pastilla-borde);
+  color: var(--texto-verde-oscuro);
+  font-size: 0.86rem;
+  font-weight: 600;
+  animation: rxPop 0.3s ease;
+}
+
+.barra-zona[hidden] { display: none; }
+
+.barra-zona-btn {
+  flex-shrink: 0;
+  padding: 7px 14px;
+  border-radius: var(--radio-pill);
+  border: 0;
+  background: var(--verde-950);
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.barra-zona-btn:hover { background: var(--verde-800); }
+
+/* Contenedor del mapa con controles propios encima */
+.mapa-envoltura {
+  position: relative;
+}
+
+.mapa-opcion-zona {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px 8px 10px;
+  border-radius: var(--radio-pill);
+  background: var(--superficie);
+  border: 1px solid var(--borde-arena);
+  box-shadow: var(--sombra-md);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--tinta-fuerte);
+  cursor: pointer;
+  user-select: none;
+}
+
+.mapa-opcion-zona[hidden] { display: none; }
+
+.mapa-opcion-zona input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--verde-950);
+  cursor: pointer;
+}
+
+.mapa-btn-centrar {
+  position: absolute;
+  left: 12px;
+  top: 104px;
+  z-index: 2;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: var(--superficie);
+  color: var(--tinta-fuerte);
+  border: 1px solid var(--borde-arena);
+  box-shadow: var(--sombra-md);
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.mapa-btn-centrar:hover { transform: scale(1.06); }
+.mapa-btn-centrar[hidden] { display: none; }
+
+.mapa-btn-centrar svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.mapa-opcion-zona:focus-within,
+.mapa-btn-centrar:focus-visible {
+  outline: 2px solid var(--acento-naranja);
+  outline-offset: 2px;
+}
+
+/* Botones + y − más grandes y visibles */
+#mapa-villavicencio .leaflet-control-zoom {
+  border: 1px solid var(--borde-arena);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: var(--sombra-md);
+  margin: 12px 0 0 12px;
+}
+
+#mapa-villavicencio .leaflet-control-zoom a {
+  width: 38px;
+  height: 38px;
+  line-height: 38px;
+  font-size: 1.25rem;
+  color: var(--tinta-fuerte);
+  background: var(--superficie);
+  border-bottom-color: var(--borde-suave);
+}
+
+#mapa-villavicencio .leaflet-control-zoom a:hover {
+  background: var(--fondo-crema-alt);
+}
+
+#mapa-villavicencio .leaflet-control-zoom a.leaflet-disabled {
+  color: var(--tinta-tenue);
+  opacity: 0.6;
+}
+
+/* Tarjeta del marcador un poco más amplia */
+#mapa-villavicencio .leaflet-popup-content-wrapper {
+  border-radius: 14px;
+  padding: 2px;
+}
+
+#mapa-villavicencio .leaflet-popup-content {
+  margin: 10px;
+}
+
+/* Botón de celular: oculto en computador */
+.btn-vista-movil {
+  display: none;
+}
+
+/* ---------- Computador ---------- */
+@media (min-width: 1025px) {
+  .results-map-container {
+    max-width: none;
+    grid-template-columns: minmax(400px, 37%) minmax(0, 1fr);
+    gap: 24px;
+    padding: 8px 24px 40px;
+  }
+
+  .map-column {
+    position: sticky;
+    top: 76px;
+    height: calc(100vh - 92px);
+  }
+
+  .map-column .map-card-wrapper {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+  }
+
+  .map-column .map-card-header {
+    margin-bottom: 10px;
+  }
+
+  .map-column .mapa-envoltura {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .map-column .map-view-box,
+  .map-column .mapa-envoltura .map-view-box {
+    height: 100%;
+    min-height: 420px;
+  }
+
+  .map-column .map-legend {
+    margin-top: 10px;
+  }
+
+  /* Tarjetas en la columna lateral */
+  .results-column .property-card {
+    grid-template-columns: 180px 1fr;
+    gap: 16px;
+    padding: 14px;
+  }
+
+  .results-column .card-image-wrap {
+    height: 100%;
+    min-height: 170px;
+  }
+}
+
+/* Pantallas de computador angostas: tarjeta vertical para que el texto respire */
+@media (min-width: 1025px) and (max-width: 1280px) {
+  .results-column .property-card {
+    grid-template-columns: 1fr;
+  }
+
+  .results-column .card-image-wrap {
+    height: 170px;
+    min-height: 0;
+  }
+}
+
+/* ---------- Tableta y celular: alternar lista / mapa ---------- */
+@media (max-width: 1024px) {
+  .btn-vista-movil {
+    position: fixed;
+    left: 50%;
+    bottom: 20px;
+    transform: translateX(-50%);
+    z-index: 950;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 13px 22px;
+    border: 0;
+    border-radius: var(--radio-pill);
+    background: var(--verde-950);
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    font-size: 0.95rem;
+    box-shadow: 0 14px 30px -10px rgba(20, 34, 25, 0.7);
+    cursor: pointer;
+  }
+
+  .btn-vista-movil:active { transform: translateX(-50%) scale(0.96); }
+
+  .btn-vista-movil svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .btn-vista-movil .icono-vista-lista { display: none; }
+  body.vista-mapa .btn-vista-movil .icono-vista-lista { display: block; }
+  body.vista-mapa .btn-vista-movil .icono-vista-mapa { display: none; }
+
+  /* Vista de lista (por defecto): el mapa no se muestra */
+  .map-column { display: none; }
+
+  /* Vista de mapa: el mapa ocupa la pantalla y se ocultan la lista y la portada */
+  body.vista-mapa .map-column {
+    display: block;
+    position: static;
+  }
+
+  body.vista-mapa .results-column,
+  body.vista-mapa .hero-banner,
+  body.vista-mapa .app-footer {
+    display: none;
+  }
+
+  body.vista-mapa .map-column .map-card-wrapper {
+    padding: 8px;
+  }
+
+  body.vista-mapa .map-column .map-view-box {
+    height: calc(100vh - 250px);
+    min-height: 360px;
+  }
+
+  /* Espacio para que el botón flotante no tape la última tarjeta */
+  .results-column { padding-bottom: 70px; }
+
+  .mapa-opcion-zona {
+    top: auto;
+    bottom: 12px;
+    right: 12px;
+    left: 12px;
+    justify-content: center;
+    font-size: 0.76rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .hero-search-section .hero-banner {
+    padding: 24px 18px 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .barra-zona { animation: none; }
+}

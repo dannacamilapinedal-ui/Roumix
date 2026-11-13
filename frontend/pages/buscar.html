@@ -148,6 +148,12 @@
           </div>
         </div>
 
+        <!-- Aviso cuando la lista muestra solo lo que se ve en el mapa -->
+        <div class="barra-zona" id="barra-zona" hidden>
+          <span id="texto-zona"></span>
+          <button type="button" class="barra-zona-btn" id="btn-ver-todos">Ver todos</button>
+        </div>
+
         <!-- Lista dinámica de tarjetas de inmuebles -->
         <div id="lista-inmuebles" class="cards-list">
           <!-- Renderizado dinámico vía JavaScript -->
@@ -161,9 +167,18 @@
             <h3 class="map-title">Ubicación en el mapa</h3>
           </div>
 
-          <!-- Contenedor del Mapa -->
-          <div id="mapa-villavicencio" class="map-view-box">
-            <!-- Renderizado dinámico -->
+          <!-- Contenedor del Mapa (con controles propios encima) -->
+          <div class="mapa-envoltura">
+            <div id="mapa-villavicencio" class="map-view-box">
+              <!-- Renderizado dinámico -->
+            </div>
+            <label class="mapa-opcion-zona">
+              <input type="checkbox" id="chk-zona" checked>
+              <span>Actualizar la lista al mover el mapa</span>
+            </label>
+            <button type="button" class="mapa-btn-centrar" id="btn-centrar" title="Centrar en los resultados" aria-label="Centrar el mapa en los resultados">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/><circle cx="12" cy="12" r="7.5"/></svg>
+            </button>
           </div>
 
           <!-- Leyenda del mapa -->
@@ -181,6 +196,13 @@
       </div>
     </div>
   </main>
+
+  <!-- Celular: alternar entre la lista y el mapa -->
+  <button type="button" class="btn-vista-movil" id="btn-vista-movil" aria-pressed="false">
+    <svg class="icono-vista-mapa" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6.5 8.5 4l7 2.5L21 4v13.5L15.5 20l-7-2.5L3 20z"/><path d="M8.5 4v13.5M15.5 6.5V20"/></svg>
+    <svg class="icono-vista-lista" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/></svg>
+    <span id="texto-vista-movil">Ver mapa</span>
+  </button>
 
   <!-- Modal para Contactar al Propietario (WhatsApp) -->
   <div id="modal-contacto" class="modal-backdrop" aria-hidden="true">
@@ -277,6 +299,9 @@
       let inmuebles = [];
       let consultaActual = 0; // descarta respuestas viejas si el usuario cambia filtros rápido
       let temporizadorTexto = null;
+      // Zona del mapa: al moverlo, la lista muestra solo lo que se ve en él
+      let filtrarPorZona = true;
+      let zonaActiva = false;
       let soloGuardados = false; // la píldora "❤ Guardados" filtra en el navegador
 
       let mapaInstancia = null;
@@ -325,6 +350,7 @@
         listaContenedor.removeAttribute("aria-busy");
           listaContenedor.classList.remove("rx-actualizando");
         inmuebles = soloGuardados ? resultado.filter(i => RoumixGuardados.contiene(i.id)) : resultado;
+        zonaActiva = false;
         render();
       }
 
@@ -337,9 +363,29 @@
           </button>`;
       }
 
-      function render() {
+      // Inmuebles cuyo marcador está dentro de lo que se ve en el mapa
+      function listaEnZona() {
+        if (!zonaActiva || !mapaInstancia) return inmuebles;
+        const limites = mapaInstancia.getBounds();
+        return inmuebles.filter(i => i.lat !== null && i.lng !== null && limites.contains([i.lat, i.lng]));
+      }
+
+      function actualizarBarraZona(visibles) {
+        const barra = document.getElementById("barra-zona");
+        barra.hidden = !zonaActiva;
+        if (zonaActiva) {
+          document.getElementById("texto-zona").textContent =
+            `Mostrando ${visibles} de ${inmuebles.length} en esta zona del mapa`;
+        }
+      }
+
+      function render({ desdeMapa = false } = {}) {
         const uniLabel = filtros.universidad === "todas" ? "Villavicencio" : filtros.universidad;
-        contadorResultados.innerHTML = `<strong>${inmuebles.length} resultado${inmuebles.length === 1 ? "" : "s"}</strong> cerca de ${escaparHTML(uniLabel)}`;
+        const visibles = listaEnZona();
+        contadorResultados.innerHTML = zonaActiva
+          ? `<strong>${visibles.length} en esta zona</strong> de ${inmuebles.length} cerca de ${escaparHTML(uniLabel)}`
+          : `<strong>${inmuebles.length} resultado${inmuebles.length === 1 ? "" : "s"}</strong> cerca de ${escaparHTML(uniLabel)}`;
+        actualizarBarraZona(visibles.length);
 
         if (inmuebles.length === 0 && soloGuardados) {
           mostrarAviso("guardados", "Aún no tienes inmuebles guardados",
@@ -357,7 +403,14 @@
           return;
         }
 
-        listaContenedor.innerHTML = inmuebles.map(item => `
+        if (zonaActiva && visibles.length === 0) {
+          mostrarAviso("buscar", "No hay viviendas en esta zona del mapa",
+            "Aleja el mapa o muévelo hacia otro barrio para ver más opciones.",
+            { texto: "Ver todos los resultados", accion: verTodos });
+          return;
+        }
+
+        listaContenedor.innerHTML = visibles.map(item => `
           <article class="property-card" data-id="${item.id}">
             <div class="card-image-wrap">
               <img src="${escaparHTML(item.imagen)}" alt="${escaparHTML(item.titulo)}" class="card-img" loading="lazy">
@@ -404,7 +457,7 @@
           </article>
         `).join("");
 
-        actualizarPines(inmuebles);
+        if (!desdeMapa) actualizarPines(inmuebles);
       }
 
       // Agregar o quitar de la comparación (delegado en la lista)
@@ -556,16 +609,94 @@
       function initMapa() {
         const contenedorMapa = document.getElementById("mapa-villavicencio");
         try {
-          mapaInstancia = RoumixMapa.crear(contenedorMapa, { centro: RoumixMapa.CAMPUS_USTA, zoom: 14 });
+          // Zoom con la rueda del mouse, con límites para no perder Villavicencio de vista
+          mapaInstancia = RoumixMapa.crear(contenedorMapa, {
+            centro: RoumixMapa.CAMPUS_USTA,
+            zoom: 14,
+            scrollWheelZoom: true,
+            minZoom: 12,
+            maxZoom: 18,
+            maxBounds: L.latLngBounds([3.98, -73.80], [4.28, -73.45])
+          });
         } catch (e) {
           mapaInstancia = null;
         }
         if (!mapaInstancia) {
           RoumixMapa.mostrarNoDisponible(contenedorMapa, "El mapa no está disponible en este momento. Puedes seguir buscando con la lista.");
+          document.querySelector(".mapa-opcion-zona").hidden = true;
+          document.getElementById("btn-centrar").hidden = true;
           return;
         }
+        // Solo cuenta lo que hace la persona (arrastrar, rueda, botones +/−, doble clic, pellizcar);
+        // los encuadres automáticos y los cambios de tamaño no filtran la lista
+        let usuarioMovio = false;
+        const marcarMovimiento = () => { usuarioMovio = true; };
+        mapaInstancia.on("dragstart", marcarMovimiento);
+        contenedorMapa.addEventListener("wheel", marcarMovimiento, { passive: true });
+        contenedorMapa.addEventListener("dblclick", marcarMovimiento);
+        contenedorMapa.addEventListener("touchstart", (e) => { if (e.touches.length > 1) marcarMovimiento(); }, { passive: true });
+        contenedorMapa.querySelectorAll(".leaflet-control-zoom a").forEach((boton) => boton.addEventListener("click", marcarMovimiento));
+
+        // Al terminar de mover o acercar el mapa, la lista muestra solo esa zona
+        mapaInstancia.on("moveend", () => {
+          if (!usuarioMovio) return;
+          usuarioMovio = false;
+          if (!filtrarPorZona || inmuebles.length === 0) return;
+          zonaActiva = true;
+          render({ desdeMapa: true });
+        });
         actualizarPines(inmuebles);
       }
+
+      // Encuadra resultados y campus; este movimiento no filtra la lista
+      function encuadrar() {
+        if (!mapaInstancia) return;
+        const puntos = inmuebles.filter(i => i.lat !== null && i.lng !== null).map(i => [i.lat, i.lng]);
+        const referencia = filtros.universidad === "todas"
+          ? RoumixMapa.CAMPUS.map(c => c.coords)
+          : RoumixMapa.coordsCampus(filtros.universidad);
+        const encuadre = [...puntos, ...referencia];
+        if (encuadre.length > 1) {
+          mapaInstancia.fitBounds(L.latLngBounds(encuadre), { padding: [50, 50], maxZoom: 16 });
+        } else if (encuadre.length === 1) {
+          mapaInstancia.setView(encuadre[0], 15);
+        } else {
+          mapaInstancia.fitBounds(L.latLngBounds(RoumixMapa.CAMPUS.map(c => c.coords)), { padding: [30, 30] });
+        }
+      }
+
+      // "Ver todos" y "Centrar": vuelve a los resultados completos
+      function verTodos() {
+        zonaActiva = false;
+        encuadrar();
+        render({ desdeMapa: true });
+      }
+
+      document.getElementById("btn-ver-todos").addEventListener("click", verTodos);
+      document.getElementById("btn-centrar").addEventListener("click", verTodos);
+      document.getElementById("chk-zona").addEventListener("change", (e) => {
+        filtrarPorZona = e.target.checked;
+        if (!filtrarPorZona && zonaActiva) {
+          zonaActiva = false;
+          render({ desdeMapa: true });
+        }
+      });
+
+      // Celular: alternar entre la lista y el mapa
+      const botonVista = document.getElementById("btn-vista-movil");
+      botonVista.addEventListener("click", () => {
+        const verMapa = !document.body.classList.contains("vista-mapa");
+        document.body.classList.toggle("vista-mapa", verMapa);
+        botonVista.setAttribute("aria-pressed", String(verMapa));
+        document.getElementById("texto-vista-movil").textContent = verMapa ? "Ver lista" : "Ver mapa";
+        window.scrollTo({ top: 0, behavior: "instant" });
+        if (verMapa && mapaInstancia) {
+          setTimeout(() => {
+            mapaInstancia.invalidateSize();
+            if (!zonaActiva) encuadrar();
+          }, 60);
+        }
+      });
 
       // Tarjeta pequeña del marcador (se arma con nodos para no interpretar texto como HTML)
       function tarjetaPopup(item) {
@@ -618,18 +749,7 @@
         campusMarcadores = RoumixMapa.marcadoresCampus(mapaInstancia, filtros.universidad);
 
         // Encuadre automático: resultados + campus de la universidad elegida (o todos los campus)
-        const referencia = filtros.universidad === "todas"
-          ? RoumixMapa.CAMPUS.map(c => c.coords)
-          : RoumixMapa.coordsCampus(filtros.universidad);
-        const encuadre = [...puntos, ...referencia];
-        if (encuadre.length > 1) {
-          mapaInstancia.fitBounds(L.latLngBounds(encuadre), { padding: [40, 40], maxZoom: 16 });
-        } else if (encuadre.length === 1) {
-          mapaInstancia.setView(encuadre[0], 15);
-        } else {
-          // "Todas las universidades" sin resultados: se ven todos los campus
-          mapaInstancia.fitBounds(L.latLngBounds(RoumixMapa.CAMPUS.map(c => c.coords)), { padding: [30, 30] });
-        }
+        encuadrar();
       }
 
       initMapa();

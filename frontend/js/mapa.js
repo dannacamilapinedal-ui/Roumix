@@ -32,12 +32,20 @@ const RoumixMapa = {
    */
   crear: function(elemento, opciones = {}) {
     if (!this.disponible()) return null;
-    const mapa = L.map(elemento, {
+    const configuracion = {
       center: opciones.centro || this.CENTRO_VILLAVICENCIO,
       zoom: opciones.zoom || 14,
       scrollWheelZoom: opciones.scrollWheelZoom ?? false,
       zoomControl: true
-    });
+    };
+    // Límites opcionales: zoom mínimo/máximo y zona de la que no se puede salir arrastrando
+    if (opciones.minZoom) configuracion.minZoom = opciones.minZoom;
+    if (opciones.maxZoom) configuracion.maxZoom = opciones.maxZoom;
+    if (opciones.maxBounds) {
+      configuracion.maxBounds = opciones.maxBounds;
+      configuracion.maxBoundsViscosity = 0.85;
+    }
+    const mapa = L.map(elemento, configuracion);
     // Teselas de OpenStreetMap servidas por el backend de Roumix (con caché). Pedirlas
     // directamente desde el navegador falla con "403 Access blocked" cuando el navegador
     // no envía la cabecera Referer. (Las de CARTO dejaron de servirse sin clave.)
