@@ -14,6 +14,7 @@ const db = require('../config/db');
 const notificaciones = require('../services/notificacionesService');
 const { crearAviso } = require('../services/avisosService');
 const pagos = require('../services/pagosService');
+const { auditar } = require('../services/auditoriaService');
 const { avisarPagoHabilitado } = require('./pagosController');
 
 const PLAZO_ACEPTACION_DIAS = 7;
@@ -188,6 +189,11 @@ async function aceptarContrato(req, res) {
     );
 
     const nota = `${esEstudiante ? 'El estudiante' : 'El propietario'} aceptó el contrato #${id} (aceptación demostrativa).`;
+    await auditar({
+      actor: req.usuario, accion: formalizado ? 'contrato_formalizado' : 'contrato_aceptado', entidad: 'contrato', entidadId: id,
+      resumen: formalizado ? `${nota} Con esta aceptación quedó formalizado.` : nota,
+      datos: { solicitud_id: c.solicitud_id, huella: c.huella }, ip: req.ip
+    }, cliente);
     if (formalizado) {
       // Paso automático de la solicitud: solo el sistema pone "contrato_formalizado"
       const { rows: [s] } = await cliente.query('SELECT estado FROM solicitudes WHERE id = $1 FOR UPDATE', [c.solicitud_id]);

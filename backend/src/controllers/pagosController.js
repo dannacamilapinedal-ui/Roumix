@@ -10,6 +10,7 @@ const db = require('../config/db');
 const notificaciones = require('../services/notificacionesService');
 const { crearAviso } = require('../services/avisosService');
 const pagos = require('../services/pagosService');
+const { auditar } = require('../services/auditoriaService');
 
 const METODOS = { tarjeta_simulada: 'Tarjeta (simulada)', pse_simulado: 'PSE (simulado)', nequi_simulado: 'Nequi (simulado)' };
 const MAX_INTENTOS = 5;
@@ -147,6 +148,8 @@ async function simularPago(req, res) {
         pagoId: id, tipo: 'intento_rechazado', referencia: ref, monto: p.monto,
         detalle: `${METODOS[body.metodo]}: rechazado por el simulador.`, autorId: req.usuario.id, autorRol: 'estudiante'
       });
+      await auditar({ actor: req.usuario, accion: 'pago_rechazado', entidad: 'pago', entidadId: id,
+        resumen: `Intento rechazado por el simulador (${ref}).`, datos: { metodo: body.metodo, monto: p.monto, simulado: true }, ip: req.ip }, cliente);
       return { p, aprobado: false, ref };
     }
 
@@ -173,6 +176,9 @@ async function simularPago(req, res) {
       notaPropietario: 'El estudiante pagó el primer mes. Roumix gestionará tu desembolso.',
       notaInterna: `Pago #${id} aprobado (${ref}). Comisión ${p.comision}, desembolso pendiente ${p.neto_propietario}.`
     });
+    await auditar({ actor: req.usuario, accion: 'pago_aprobado', entidad: 'pago', entidadId: id,
+      resumen: `Pago del primer canon aprobado por el simulador (${ref}).`,
+      datos: { metodo: body.metodo, monto: p.monto, comision: p.comision, neto_propietario: p.neto_propietario, simulado: true }, ip: req.ip }, cliente);
     return { p, aprobado: true, ref };
   });
 
@@ -211,6 +217,7 @@ async function abrirDisputa(req, res) {
     await cliente.query("UPDATE pagos SET estado = 'en_disputa' WHERE id = $1", [id]);
     await cliente.query("UPDATE desembolsos SET estado = 'retenido', nota = 'Retenido por disputa del estudiante.' WHERE pago_id = $1", [id]);
     await pagos.registrarEvento(cliente, { pagoId: id, tipo: 'disputa_abierta', detalle: texto, autorId: req.usuario.id, autorRol: 'estudiante' });
+    await auditar({ actor: req.usuario, accion: 'disputa_abierta', entidad: 'pago', entidadId: id, resumen: 'El estudiante reportó un problema; desembolso retenido.', ip: req.ip }, cliente);
     return pago;
   });
   await notificaciones.notificarPago({ pago: p, evento: 'disputa', detalle: texto, urlBase: notificaciones.urlBase(req) });

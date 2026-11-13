@@ -65,11 +65,11 @@
         <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-propietarios" id="tab-propietarios" data-panel="propietarios">Propietarios <span class="admin-contador" id="contador-propietarios" hidden></span></button>
         <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-inmuebles" id="tab-inmuebles" data-panel="inmuebles">Publicaciones</button>
         <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-usuarios" id="tab-usuarios" data-panel="usuarios">Usuarios</button>
-        <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-historial" id="tab-historial" data-panel="historial">Historial</button>
+        <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-historial" id="tab-historial" data-panel="historial">Auditoría</button>
       </div>
 
       <section class="admin-panel" id="panel-resumen" role="tabpanel" aria-labelledby="tab-resumen">
-        <div class="admin-metricas" id="admin-metricas"><p class="admin-cargando">Cargando…</p></div>
+        <div class="admin-resumen" id="admin-metricas"><p class="admin-cargando">Cargando…</p></div>
       </section>
 
       <section class="admin-panel" id="panel-reportes" role="tabpanel" aria-labelledby="tab-reportes" hidden>
@@ -218,7 +218,35 @@
       </section>
 
       <section class="admin-panel" id="panel-historial" role="tabpanel" aria-labelledby="tab-historial" hidden>
+        <p class="fotos-ayuda">Historial de solo adición: cada acción del equipo y los pasos clave de los usuarios quedan registrados y no se pueden modificar ni borrar. Los mensajes y notas no se guardan aquí, solo que existieron.</p>
+        <div class="admin-filtros admin-filtros-auditoria">
+          <label for="aud-entidad">Sobre</label>
+          <select id="aud-entidad">
+            <option value="">Todo</option>
+            <option value="usuario">Cuentas y propietarios</option>
+            <option value="inmueble">Publicaciones</option>
+            <option value="solicitud">Solicitudes</option>
+            <option value="contrato">Contratos</option>
+            <option value="pago">Pagos</option>
+            <option value="conversacion">Mensajes</option>
+            <option value="panel">Accesos al panel</option>
+          </select>
+          <label for="aud-actor">Responsable</label>
+          <select id="aud-actor">
+            <option value="">Todos</option>
+            <option value="admin">Equipo Roumix</option>
+            <option value="usuarios">Estudiantes y propietarios</option>
+            <option value="sistema">Sistema</option>
+          </select>
+          <label for="aud-desde">Desde</label>
+          <input type="date" id="aud-desde">
+          <label for="aud-hasta">Hasta</label>
+          <input type="date" id="aud-hasta">
+          <label for="aud-buscar" class="sr-only">Buscar en la auditoría</label>
+          <input type="search" id="aud-buscar" placeholder="Nombre, acción o N.º" maxlength="100">
+        </div>
         <div id="lista-historial" class="admin-lista"></div>
+        <button type="button" class="btn-card-action admin-cargar-mas" id="aud-mas" hidden>Cargar más</button>
       </section>
     </div>
   </main>

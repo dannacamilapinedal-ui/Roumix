@@ -6,10 +6,26 @@ const mensajesController = require('../controllers/mensajesController');
 const contratosController = require('../controllers/contratosController');
 const pagosController = require('../controllers/pagosController');
 const { requireAuth, requireRol } = require('../middleware/auth');
+const auditoriaAdmin = require('../middleware/auditoriaAdmin');
+const { auditar } = require('../services/auditoriaService');
 
 // Todas las rutas exigen sesión válida y rol admin leído de la base de datos.
 // Ocultar el menú en el navegador no basta: aquí se rechaza cualquier otra cuenta.
-router.use(requireAuth, requireRol('admin'));
+// Un intento de usar el panel con una cuenta que no es admin queda en la auditoría
+async function registrarAccesoDenegado(req, res, next) {
+  if (req.usuario && req.usuario.rol !== 'admin') {
+    await auditar({
+      actor: req.usuario, accion: 'acceso_denegado_panel', entidad: 'panel',
+      resumen: `${req.method} ${req.baseUrl}${req.path}`.slice(0, 200), ip: req.ip
+    });
+  }
+  next();
+}
+
+router.use(requireAuth, registrarAccesoDenegado, requireRol('admin'));
+
+// Toda acción que cambia datos queda en la auditoría (antes de responder)
+router.use(auditoriaAdmin);
 
 router.get('/resumen', adminController.resumen);
 router.get('/reportes', adminController.listarReportes);
@@ -19,6 +35,7 @@ router.post('/inmuebles/:id/moderacion', adminController.moderarInmueble);
 router.get('/usuarios', adminController.listarUsuarios);
 router.post('/usuarios/:id/estado', adminController.cambiarEstadoUsuario);
 router.get('/historial', adminController.historial);
+router.get('/auditoria', adminController.auditoria);
 router.get('/propietarios', adminController.listarPropietarios);
 router.post('/propietarios/:id/verificacion', adminController.decidirVerificacion);
 router.get('/solicitudes', solicitudesController.listarAdmin);

@@ -7427,3 +7427,17 @@ html[data-tema="oscuro"] .verif-condiciones-falta { color: #f0bf85; }
 
 /* La aclaración de la verificación lleva negritas en línea, no como título */
 .verif-comprobaciones .verif-aclaracion strong { display: inline; font-size: inherit; }
+
+/* =========================================================================
+   Panel ampliado y auditoría (módulo 7)
+   ========================================================================= */
+.admin-resumen { display: flex; flex-direction: column; gap: 22px; }
+.admin-grupo-titulo { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; font-size: 1rem; color: var(--tinta-fuerte); }
+.admin-al-dia { font-size: 0.8rem; font-weight: 700; color: #1f6b3a; }
+html[data-tema="oscuro"] .admin-al-dia { color: #9fd8ac; }
+.admin-filtros-auditoria { flex-wrap: wrap; }
+.admin-filtros-auditoria input[type="date"] { max-width: 160px; }
+.admin-aud-datos { color: var(--tinta-tenue); }
+.admin-cargar-mas { display: block; margin: 14px auto 0; }
+a.admin-enlace { color: var(--texto-verde-oscuro); font-weight: 600; }
+.admin-filtros-auditoria select { max-width: 210px; }

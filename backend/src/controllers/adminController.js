@@ -67,6 +67,7 @@ async function resumen(req, res) {
       FROM contratos`),
     db.query(`SELECT
         count(*) FILTER (WHERE p.estado IN ('pendiente', 'fallido'))::int AS por_pagar,
+        count(*) FILTER (WHERE p.aprobado_en IS NOT NULL)::int AS registrados,
         count(*) FILTER (WHERE p.estado = 'en_disputa')::int AS en_disputa,
         count(*) FILTER (WHERE p.estado = 'aprobado' AND d.estado = 'pendiente')::int AS por_desembolsar,
         COALESCE((SELECT sum(monto) FROM comisiones WHERE estado = 'registrada'), 0)::int AS comisiones
@@ -395,6 +396,54 @@ async function historial(req, res) {
   res.json({ status: 'success', total: result.rowCount, data: result.rows });
 }
 
+/**
+ * GET /api/admin/auditoria?entidad=&entidadId=&actor=admin|usuarios|sistema&q=&desde=&hasta=&antes=<id>
+ * Historial de operaciones (solo adición), del más reciente al más antiguo, de a 100.
+ */
+async function auditoria(req, res) {
+  const params = [];
+  const condiciones = ['NOT a.es_prueba'];
+  const agregar = (sql, valor) => { params.push(valor); condiciones.push(sql.replace('?', `$${params.length}`)); };
+
+  const entidad = typeof req.query.entidad === 'string' ? req.query.entidad.trim() : '';
+  if (entidad) {
+    if (!/^[a-z_]{2,30}$/.test(entidad)) throw errorHttp(400, 'Filtro de entidad no válido.');
+    agregar('a.entidad = ?', entidad);
+  }
+  if (typeof req.query.entidadId === 'string' && req.query.entidadId.trim()) agregar('a.entidad_id = ?', req.query.entidadId.trim().slice(0, 60));
+  const actores = { admin: "a.actor_rol = 'admin'", usuarios: "a.actor_rol IN ('estudiante', 'propietario')", sistema: "a.actor_rol = 'sistema'" };
+  if (req.query.actor) {
+    if (!actores[req.query.actor]) throw errorHttp(400, 'Filtro de responsable no válido.');
+    condiciones.push(actores[req.query.actor]);
+  }
+  const q = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 100) : '';
+  if (q) {
+    params.push(patron(q), q.replace(/^#/, ''));
+    const texto = `$${params.length - 1}`;
+    const exacto = `$${params.length}`;
+    condiciones.push(`(a.actor_nombre ILIKE ${texto} OR a.resumen ILIKE ${texto} OR a.accion ILIKE ${texto} OR a.entidad_id = ${exacto})`);
+  }
+  const fecha = (valor, campo) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(valor)) throw errorHttp(400, `${campo} no es una fecha válida.`);
+    return valor;
+  };
+  if (req.query.desde) agregar("a.created_at >= (?::date)::timestamp AT TIME ZONE 'America/Bogota'", fecha(req.query.desde, 'Desde'));
+  if (req.query.hasta) agregar("a.created_at < ((?::date + 1)::timestamp AT TIME ZONE 'America/Bogota')", fecha(req.query.hasta, 'Hasta'));
+  if (req.query.antes) {
+    const antes = Number(req.query.antes);
+    if (!Number.isInteger(antes) || antes < 1) throw errorHttp(400, 'Cursor no válido.');
+    agregar('a.id < ?', antes);
+  }
+
+  const { rows } = await db.query(
+    `SELECT a.id, a.actor_rol, a.actor_nombre, a.accion, a.entidad, a.entidad_id, a.resumen, a.datos, a.origen, a.created_at
+     FROM auditoria a WHERE ${condiciones.join(' AND ')}
+     ORDER BY a.id DESC LIMIT 101`,
+    params
+  );
+  res.json({ status: 'success', hayMas: rows.length > 100, data: rows.slice(0, 100) });
+}
+
 const DECISIONES_VERIFICACION = {
   aprobar: { estado: 'aprobado', accion: 'verificacion_aprobada', exigeMensaje: false },
   solicitar_informacion: { estado: 'requiere_informacion', accion: 'verificacion_info_solicitada', exigeMensaje: true },
@@ -515,6 +564,7 @@ async function decidirVerificacion(req, res) {
 }
 
 module.exports = {
+  auditoria,
   listarPropietarios,
   decidirVerificacion,
   resumen,

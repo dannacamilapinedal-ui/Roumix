@@ -35,7 +35,18 @@ const ETIQUETAS = {
     rol_admin_asignado: "Rol de administrador asignado", rol_admin_retirado: "Rol de administrador retirado",
     eliminado_demo: "Publicación de demostración eliminada",
     verificacion_enviada: "Perfil de propietario enviado", verificacion_aprobada: "Propietario aprobado",
-    verificacion_info_solicitada: "Información adicional solicitada", verificacion_rechazada: "Propietario rechazado"
+    verificacion_info_solicitada: "Información adicional solicitada", verificacion_rechazada: "Propietario rechazado",
+    condiciones_aceptadas: "Condiciones de comisión aceptadas",
+    publicacion_moderada: "Publicación moderada", cuenta_estado_cambiado: "Estado de cuenta cambiado",
+    verificacion_decidida: "Verificación decidida", solicitud_actualizada: "Solicitud actualizada",
+    contrato_creado: "Contrato creado", contrato_editado: "Contrato editado", contrato_enviado: "Contrato enviado",
+    contrato_cancelado: "Contrato cancelado", contrato_aceptado: "Contrato aceptado por una parte",
+    contrato_formalizado: "Contrato formalizado", mensaje_a_parte: "Mensaje a una parte", mensaje_respondido: "Mensaje respondido",
+    nota_interna_registrada: "Nota interna", conversacion_estado: "Estado de conversación",
+    pago_habilitado: "Pago habilitado", pago_aprobado: "Pago aprobado (simulado)", pago_rechazado: "Pago rechazado (simulado)",
+    disputa_abierta: "Disputa abierta", disputa_resuelta: "Disputa resuelta", desembolso_registrado: "Desembolso registrado",
+    devolucion_registrada: "Devolución registrada", pago_cancelado: "Pago cancelado",
+    acceso_denegado_panel: "Intento de acceso al panel sin permiso"
   }
 };
 
@@ -95,32 +106,45 @@ document.addEventListener("DOMContentLoaded", async () => {
       actualizarContadorMensajes(data);
       actualizarContadorContratos(data);
       actualizarContadorPagos(data);
-      const metricas = [
-        ["Desembolsos por hacer", data.pagos.por_desembolsar, data.pagos.por_desembolsar ? "alerta" : "neutro", "pagos"],
-        ["Pagos en disputa", data.pagos.en_disputa, data.pagos.en_disputa ? "alerta" : "neutro", "pagos"],
-        ["Comisiones (simuladas)", formatearPrecioCOP(data.pagos.comisiones), "ok", "pagos"],
-        ["Contratos por aceptar", data.contratos.por_aceptar, "neutro", "contratos"],
-        ["Contratos formalizados", data.contratos.formalizados, "ok", "contratos"],
-        ["Mensajes por responder", data.conversaciones.pendientes, data.conversaciones.pendientes ? "alerta" : "neutro", "mensajes"],
-        ["Solicitudes nuevas", data.solicitudes.nuevas, data.solicitudes.nuevas ? "alerta" : "neutro", "solicitudes"],
-        ["Solicitudes en curso", data.solicitudes.abiertas, "neutro", "solicitudes"],
-        ["Propietarios por revisar", data.verificaciones.porRevisar, data.verificaciones.porRevisar ? "alerta" : "neutro", "propietarios"],
-        ["Reportes pendientes", data.reportes.pendientes, "alerta", "reportes"],
-        ["Publicaciones en revisión", data.inmuebles.enRevision, "alerta", "inmuebles"],
-        ["Esperando correcciones", data.inmuebles.requiereCambios, "neutro", "inmuebles"],
-        ["Publicaciones visibles", data.inmuebles.visibles, "ok", null],
-        ["Publicaciones totales", data.inmuebles.total, "neutro", null],
-        ["Usuarios", `${data.usuarios.total}`, "neutro", "usuarios"],
-        ["Estudiantes / Propietarios", `${data.usuarios.estudiantes} / ${data.usuarios.propietarios}`, "neutro", "usuarios"],
-        ["Cuentas suspendidas", data.usuarios.suspendidos, data.usuarios.suspendidos ? "alerta" : "neutro", "usuarios"],
-        ["Propietarios aprobados", data.verificaciones.aprobados, "ok", "propietarios"],
-        ["Perfiles incompletos", data.verificaciones.incompletos, "neutro", "propietarios"]
+      const atencion = (n) => (n ? "alerta" : "neutro");
+      const grupos = [
+        ["Requiere atención", [
+          ["Propietarios por revisar", data.verificaciones.porRevisar, atencion(data.verificaciones.porRevisar), "propietarios"],
+          ["Solicitudes nuevas", data.solicitudes.nuevas, atencion(data.solicitudes.nuevas), "solicitudes"],
+          ["Mensajes por responder", data.conversaciones.pendientes, atencion(data.conversaciones.pendientes), "mensajes"],
+          ["Reportes pendientes", data.reportes.pendientes, atencion(data.reportes.pendientes), "reportes"],
+          ["Publicaciones en revisión", data.inmuebles.enRevision, atencion(data.inmuebles.enRevision), "inmuebles"],
+          ["Contratos en borrador", data.contratos.borradores, atencion(data.contratos.borradores), "contratos"],
+          ["Desembolsos por hacer", data.pagos.por_desembolsar, atencion(data.pagos.por_desembolsar), "pagos"],
+          ["Pagos en disputa", data.pagos.en_disputa, atencion(data.pagos.en_disputa), "pagos"]
+        ]],
+        ["La plataforma", [
+          ["Estudiantes", data.usuarios.estudiantes, "neutro", "usuarios"],
+          ["Propietarios", data.usuarios.propietarios, "neutro", "propietarios"],
+          ["Propietarios aprobados", data.verificaciones.aprobados, "ok", "propietarios"],
+          ["Publicaciones disponibles", data.inmuebles.visibles, "ok", "inmuebles"],
+          ["Solicitudes en curso", data.solicitudes.abiertas, "neutro", "solicitudes"],
+          ["Contratos por aceptar", data.contratos.por_aceptar, "neutro", "contratos"],
+          ["Contratos formalizados", data.contratos.formalizados, "ok", "contratos"],
+          ["Cuentas suspendidas", data.usuarios.suspendidos, atencion(data.usuarios.suspendidos), "usuarios"]
+        ]],
+        ["Finanzas (simuladas)", [
+          ["Pagos registrados", data.pagos.registrados, "ok", "pagos"],
+          ["Pagos por hacer", data.pagos.por_pagar, "neutro", "pagos"],
+          ["Comisiones generadas", formatearPrecioCOP(data.pagos.comisiones), "ok", "pagos"]
+        ]]
       ];
-      contenedor.innerHTML = metricas.map(([titulo, valor, tipo, panel]) => `
+      const tarjeta = ([titulo, valor, tipo, panel]) => `
         <${panel ? `button type="button" data-ir="${panel}"` : "div"} class="admin-metrica admin-metrica-${tipo}">
           <span class="admin-metrica-valor">${escaparHTML(valor)}</span>
           <span class="admin-metrica-titulo">${titulo}</span>
-        </${panel ? "button" : "div"}>`).join("");
+        </${panel ? "button" : "div"}>`;
+      const pendientes = grupos[0][1].filter(m => m[1] > 0);
+      contenedor.innerHTML = grupos.map(([titulo, metricas], i) => `
+        <section class="admin-grupo" aria-label="${titulo}">
+          <h2 class="admin-grupo-titulo">${titulo}${i === 0 && pendientes.length === 0 ? ' <span class="admin-al-dia">✓ Todo al día</span>' : ""}</h2>
+          <div class="admin-metricas">${(i === 0 && pendientes.length ? pendientes : metricas).map(tarjeta).join("")}</div>
+        </section>`).join("");
       contenedor.querySelectorAll("[data-ir]").forEach(b => b.addEventListener("click", () => abrirPanel(b.dataset.ir)));
     } catch (error) {
       mostrarError(contenedor, error);
@@ -1211,29 +1235,82 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   // ---------------- Historial ----------------
-  async function cargarHistorial() {
+  // ---------------- Auditoría (solo adición) ----------------
+  const ENTIDAD = { usuario: "Cuenta", inmueble: "Publicación", solicitud: "Solicitud", contrato: "Contrato", pago: "Pago", conversacion: "Conversación", panel: "Panel" };
+  const RESPONSABLE = { admin: ["Roumix", "aprobada"], estudiante: ["Estudiante", "neutro"], propietario: ["Propietario", "neutro"], sistema: ["Sistema", "pendiente"] };
+  let audCursor = null;
+
+  function detallesAuditoria(datos) {
+    const partes = Object.entries(datos || {})
+      .filter(([clave]) => !["historial_id", "inmueble_titulo"].includes(clave))
+      .map(([clave, valor]) => `${escaparHTML(clave.replace(/_/g, " "))}: ${escaparHTML(Array.isArray(valor) ? valor.join(", ") : valor)}`);
+    return partes.length ? `<br><small class="admin-aud-datos">${partes.join(" · ")}</small>` : "";
+  }
+
+  function enlaceEntidad(a) {
+    if (!a.entidad_id) return escaparHTML(ENTIDAD[a.entidad] || a.entidad);
+    const nombre = `${escaparHTML(ENTIDAD[a.entidad] || a.entidad)} ${/^\d+$/.test(a.entidad_id) ? "#" + escaparHTML(a.entidad_id) : ""}`;
+    const titulo = a.datos && a.datos.inmueble_titulo ? `<br><small>${escaparHTML(a.datos.inmueble_titulo)}</small>` : "";
+    if (a.entidad === "inmueble") return `<button type="button" class="admin-enlace" data-inmueble="${escaparHTML(a.entidad_id)}">${nombre}</button>${titulo}`;
+    if (["solicitud", "pago", "conversacion"].includes(a.entidad)) return `<button type="button" class="admin-enlace" data-aud-${a.entidad}="${escaparHTML(a.entidad_id)}">${nombre}</button>`;
+    if (a.entidad === "contrato") return `<a class="admin-enlace" href="contrato.html?id=${encodeURIComponent(a.entidad_id)}" target="_blank" rel="noopener">${nombre}</a>`;
+    return nombre + titulo;
+  }
+
+  async function cargarHistorial(masAntiguos = false) {
     const contenedor = document.getElementById("lista-historial");
-    mostrarCarga(contenedor);
+    const botonMas = document.getElementById("aud-mas");
+    if (!masAntiguos) { audCursor = null; mostrarCarga(contenedor); }
+    const params = new URLSearchParams();
+    const valor = (id) => document.getElementById(id).value.trim();
+    if (valor("aud-entidad")) params.set("entidad", valor("aud-entidad"));
+    if (valor("aud-actor")) params.set("actor", valor("aud-actor"));
+    if (valor("aud-desde")) params.set("desde", valor("aud-desde"));
+    if (valor("aud-hasta")) params.set("hasta", valor("aud-hasta"));
+    if (valor("aud-buscar")) params.set("q", valor("aud-buscar"));
+    if (masAntiguos && audCursor) params.set("antes", audCursor);
     try {
-      const { data } = await RoumixAPI.admin("/historial?limite=200");
-      if (data.length === 0) return vacio(contenedor, "Aún no hay acciones registradas.");
-      contenedor.innerHTML = `
-        <table class="admin-tabla">
-          <thead><tr><th scope="col">Fecha</th><th scope="col">Acción</th><th scope="col">Sobre</th><th scope="col">Responsable</th><th scope="col">Justificación</th></tr></thead>
-          <tbody>${data.map(h => `
-            <tr>
-              <td>${fecha(h.created_at)}</td>
-              <td>${escaparHTML(ETIQUETAS.accion[h.accion] || h.accion)}${h.moderacion_nueva ? `<br><small>${escaparHTML(ETIQUETAS.moderacion[h.moderacion_anterior] || "—")} → ${escaparHTML(ETIQUETAS.moderacion[h.moderacion_nueva])}</small>` : ""}</td>
-              <td>${h.inmueble_id ? `<button type="button" class="admin-enlace" data-inmueble="${h.inmueble_id}">#${h.inmueble_id} ${escaparHTML(h.inmueble_titulo || "")}</button>` : escaparHTML(h.inmueble_titulo || h.afectado_email || "—")}</td>
-              <td>${escaparHTML(h.admin_nombre || (h.accion === "correcciones_enviadas" ? "Propietario" : "Sistema"))}</td>
-              <td class="admin-texto-largo">${escaparHTML(h.justificacion || "—")}</td>
-            </tr>`).join("")}
-          </tbody>
-        </table>`;
+      const { data, hayMas } = await RoumixAPI.admin(`/auditoria?${params}`);
+      if (!masAntiguos && data.length === 0) { botonMas.hidden = true; return vacio(contenedor, "No hay registros con estos filtros."); }
+      const filas = data.map(a => {
+        const [quien, tono] = RESPONSABLE[a.actor_rol] || [a.actor_rol, "neutro"];
+        return `
+          <tr>
+            <td>${fecha(a.created_at)}</td>
+            <td>${chip(quien, tono)}<br><small>${escaparHTML(a.actor_nombre || "")}</small></td>
+            <td><strong>${escaparHTML(ETIQUETAS.accion[a.accion] || a.accion.replace(/_/g, " "))}</strong></td>
+            <td>${enlaceEntidad(a)}</td>
+            <td class="admin-texto-largo">${escaparHTML(a.resumen || "—")}${detallesAuditoria(a.datos)}</td>
+          </tr>`;
+      }).join("");
+      if (masAntiguos && contenedor.querySelector("tbody")) {
+        contenedor.querySelector("tbody").insertAdjacentHTML("beforeend", filas);
+      } else {
+        contenedor.innerHTML = `
+          <table class="admin-tabla">
+            <thead><tr><th scope="col">Fecha</th><th scope="col">Responsable</th><th scope="col">Acción</th><th scope="col">Sobre</th><th scope="col">Detalle</th></tr></thead>
+            <tbody>${filas}</tbody>
+          </table>`;
+      }
+      audCursor = data.length ? data[data.length - 1].id : audCursor;
+      botonMas.hidden = !hayMas;
     } catch (error) {
       mostrarError(contenedor, error);
     }
   }
+  ["aud-entidad", "aud-actor", "aud-desde", "aud-hasta"].forEach(id => document.getElementById(id).addEventListener("change", () => cargarHistorial()));
+  document.getElementById("aud-buscar").addEventListener("input", () => {
+    clearTimeout(temporizador);
+    temporizador = setTimeout(() => cargarHistorial(), 350);
+  });
+  document.getElementById("aud-mas").addEventListener("click", () => cargarHistorial(true));
+  document.getElementById("lista-historial").addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    if (b.dataset.audSolicitud) abrirSolicitud(Number(b.dataset.audSolicitud));
+    if (b.dataset.audPago) abrirPago(Number(b.dataset.audPago));
+    if (b.dataset.audConversacion) abrirConversacion(Number(b.dataset.audConversacion));
+  });
 
   function refrescarPanelActivo() {
     const activa = document.querySelector(".admin-tab.activa");
