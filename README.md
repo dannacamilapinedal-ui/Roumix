@@ -1,261 +1,241 @@
 # Roumix — Vivienda Universitaria en Villavicencio 🏠🎓
 
-Plataforma web para que estudiantes universitarios en Villavicencio (Meta) encuentren habitaciones,
-apartaestudios y apartamentos cercanos a su campus, comparen opciones y contacten directamente al
-propietario.
+Plataforma web de **intermediación de arriendos universitarios** en Villavicencio (Meta). Los estudiantes
+encuentran habitaciones, apartaestudios y apartamentos cerca de su universidad; los propietarios verificados
+publican sus inmuebles; y el equipo de Roumix **acompaña todo el proceso**: recibe las solicitudes, habla con
+cada parte, prepara el contrato y gestiona el pago del primer mes.
+
+> **Comunicación gestionada:** estudiantes y propietarios nunca se escriben directamente ni ven el teléfono o el
+> correo del otro. Todo pasa por el equipo de Roumix.
+>
+> **Partes demostrativas:** la firma del contrato y los pagos son **simulados** (ver
+> [Qué es demostrativo](#-qué-es-demostrativo)). No se mueve dinero real.
+
+**En producción:** https://roumix-eight.vercel.app
 
 ## 🛠️ Stack
 
-- **Frontend:** HTML5, CSS3 y JavaScript vanilla.
-- **Backend:** Node.js + Express (API REST que también sirve el frontend).
-- **Base de datos:** PostgreSQL en Supabase.
+- **Frontend:** HTML5, CSS3 y JavaScript vanilla (sin frameworks). Mapas con Leaflet + OpenStreetMap.
+- **Backend:** Node.js 20+ y Express 5 (API REST).
+- **Base de datos:** PostgreSQL en Supabase, con migraciones versionadas.
 - **Autenticación e imágenes:** Supabase Auth y Supabase Storage.
-- **Control de versiones:** Git y GitHub.
+- **Correo:** Gmail de Roumix por SMTP (o un Google Apps Script como relevo).
+- **Despliegue:** Vercel (páginas estáticas + la API como función).
+
+## 🔄 Cómo funciona (flujo completo)
+
+```
+Propietario                      Roumix (panel)                         Estudiante
+───────────                      ──────────────                         ──────────
+1. Se registra y envía su perfil ─► 2. Revisa y aprueba la cuenta
+3. Acepta las condiciones de la comisión (10 % del primer mes)
+4. Publica su inmueble ─────────────────────────────────────────────► 5. Busca en el mapa y compara
+                                   6. Recibe la solicitud ◄──────────── 5b. Envía "Solicitar arriendo"
+                                   7. Habla con cada parte (Mensajes), coordina visita y condiciones
+                                   8. Prepara el contrato y lo envía
+9. Acepta el contrato ───────────────────────────────────────────────► 9b. Acepta el contrato
+                                   10. Contrato FORMALIZADO → se habilita el pago (automático)
+                                                                       11. Paga el primer mes (simulado)
+                                   12. Registra la comisión (10 %) y el desembolso del 90 % al propietario
+                                   → Solicitud COMPLETADA
+```
+
+Estados de una solicitud: `recibida → en_revision → aceptada → visita_coordinada → en_negociacion →
+contrato_pendiente → contrato_formalizado → pago_pendiente → pagado → completada`, además de `rechazada`
+y `cancelada`. Los estados de contrato y pago **solo los pone el sistema**: nadie puede marcar a mano una
+solicitud como "pagada".
+
+## 👥 Roles
+
+| Rol | Puede |
+|-----|-------|
+| **Estudiante** | Buscar con filtros y mapa, ver el detalle, comparar hasta 3 inmuebles, enviar y cancelar solicitudes, escribirle a Roumix, aceptar su contrato, pagar el primer mes (simulado), reportar un problema con el pago y reportar publicaciones. |
+| **Propietario** | Enviar su perfil a verificación, aceptar las condiciones de la comisión, publicar (solo con la cuenta **aprobada**), editar, pausar, marcar como arrendado y **retirar** sus publicaciones, ver las solicitudes que Roumix le comparte, escribirle a Roumix, aceptar contratos y ver su desembolso. |
+| **Administrador** | Todo el panel `/pages/admin.html`: verificar propietarios, moderar publicaciones y reportes, gestionar solicitudes, mensajes (con notas internas), contratos, pagos, desembolsos, devoluciones y disputas, cuentas de usuario y la **auditoría**. |
+
+El rol de administrador **no se puede elegir al registrarse**. Se asigna con un procedimiento controlado
+(ver [Asignar el primer administrador](#asignar-el-primer-administrador)).
 
 ## 📁 Estructura
 
 ```
 roumix/
-├── frontend/              Sitio web
-│   ├── index.html         Portal de acceso (inicio de sesión / registro)
-│   ├── pages/             buscar, detalle, comparar, publicar, mis-publicaciones, como-funciona, admin, privacidad
-│   ├── css/style.css      Estilos compartidos
-│   ├── js/app.js          Lógica compartida (sesión, navegación, modal de contacto)
-│   ├── js/api.js          Cliente de la API (sin datos de respaldo locales)
-│   ├── js/mapa.js         Mapas Leaflet: búsqueda, selector de ubicación y zona aproximada
-│   ├── js/admin.js        Lógica del panel de administración
-│   └── assets/img/        Imágenes
-├── backend/               API Express
-│   ├── src/app.js         Configuración de Express, rutas y archivos estáticos
-│   ├── src/server.js      Arranque del servidor
-│   ├── src/config/        Conexión a PostgreSQL y cliente de Supabase
-│   ├── src/routes/        Rutas de la API
-│   ├── src/controllers/   Lógica de cada operación
-│   ├── src/middleware/    Autenticación, roles, recepción de fotos y errores
-│   ├── src/services/      Subida y borrado de fotos en Supabase Storage
-│   ├── scripts/migrate.js Aplica las migraciones de la base de datos
-│   └── scripts/asignar-admin.js  Procedimiento controlado para el rol administrador
-├── database/
-│   ├── migrations/        Cambios del esquema, en orden
-│   ├── schema.sql         Foto del esquema actual (referencia)
-│   └── seeds.sql          Inmuebles de demostración
-└── docs/                  Requisitos, arquitectura, modelo de datos y pruebas
+├── frontend/                 Sitio web (lo sirve Vercel o el propio backend en local)
+│   ├── index.html            Portada
+│   ├── ingresar.html         Inicio de sesión y registro
+│   ├── pages/
+│   │   ├── buscar.html       Búsqueda con el mapa como protagonista
+│   │   ├── detalle.html      Detalle del inmueble y "Solicitar arriendo"
+│   │   ├── comparar.html     Comparador (hasta 3)
+│   │   ├── solicitudes.html  Solicitudes del estudiante / del propietario
+│   │   ├── mensajes.html     Conversaciones con el equipo de Roumix y novedades
+│   │   ├── contrato.html     Contrato (documento imprimible y aceptación demostrativa)
+│   │   ├── pago.html         Pago simulado del primer mes, desglose y movimientos
+│   │   ├── publicar.html, mis-publicaciones.html, verificacion.html   (propietario)
+│   │   ├── admin.html        Panel de administración
+│   │   └── privacidad.html, restablecer.html, como-funciona.html
+│   ├── js/app.js             Sesión, navegación, ventana "Solicitar arriendo", avisos
+│   ├── js/api.js             Cliente de la API
+│   ├── js/admin.js           Lógica del panel
+│   ├── js/mapa.js            Mapas (Leaflet)
+│   └── css/style.css         Estilos (incluye modo oscuro e impresión del contrato)
+├── backend/
+│   ├── src/app.js            Express: seguridad, rutas y archivos estáticos
+│   ├── src/routes/           Rutas de la API (una por área)
+│   ├── src/controllers/      Lógica de cada operación
+│   ├── src/middleware/       Sesión, roles, verificación, límites, CAPTCHA, auditoría, fotos, errores
+│   ├── src/services/         Correo, avisos, pagos, auditoría, verificación, fotos, límites, geocodificación
+│   ├── scripts/migrate.js    Aplica las migraciones
+│   ├── scripts/asignar-admin.js
+│   └── tests/                Pruebas de integración (npm test)
+├── api/index.js              Punto de entrada de la API en Vercel (reutiliza backend/src/app.js)
+├── database/migrations/      Esquema en orden (001 … 013): la fuente de verdad de la base de datos
+└── docs/                     Requisitos, arquitectura, modelo de datos y pruebas
 ```
 
 ## 🚀 Instalación local
 
-Requisitos: Node.js 20 o superior y un proyecto en [Supabase](https://supabase.com).
+Requisitos: Node.js 20 o superior y un proyecto de [Supabase](https://supabase.com).
 
 ```bash
-cd backend
-npm install
+npm install                 # desde la raíz instala también el backend
 ```
 
-Copie `backend/.env.example` como `backend/.env` y complete los valores
-(Supabase Dashboard → **Connect** y **Project Settings → API Keys**):
+Copia `backend/.env.example` como `backend/.env` y completa los valores:
 
-| Variable | Descripción |
-|----------|-------------|
-| `DATABASE_URL` | Cadena de conexión de PostgreSQL (Transaction pooler) |
-| `SUPABASE_URL` | `https://<ref-del-proyecto>.supabase.co` |
-| `SUPABASE_ANON_KEY` | Clave pública *anon* / *publishable* |
-| `SUPABASE_SERVICE_ROLE_KEY` | **Secreta.** Permite que los correos de cuenta salgan desde el correo de Roumix (ver «Correos») |
-| `PORT` | Puerto del servidor (por defecto 3000) |
-| `CORS_ORIGIN` | Solo en producción: orígenes permitidos |
-| `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | CAPTCHA de Cloudflare Turnstile (si faltan, el CAPTCHA queda desactivado) |
-| `APP_URL` | Dirección pública, para el enlace de "recuperar contraseña" |
+| Variable | Obligatoria | Para qué |
+|----------|:-----------:|----------|
+| `DATABASE_URL` | Sí | Conexión a PostgreSQL (Supabase → Connect → Transaction pooler) |
+| `SUPABASE_URL`, `SUPABASE_ANON_KEY` | Sí | Validar sesiones y subir fotos |
+| `SUPABASE_SERVICE_ROLE_KEY` | Recomendada | **Secreta.** Que los correos de cuenta salgan desde el correo de Roumix |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` | Recomendada | Envío de correos (o `CORREO_RELAY_URL` + `CORREO_RELAY_SECRETO`) |
+| `CORREO_REMITENTE`, `CORREO_ADMIN` | No | Remitente y correo extra que recibe los avisos del equipo |
+| `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | No | CAPTCHA de Cloudflare (sin ellas queda desactivado) |
+| `APP_URL` | En producción | Dirección pública para los enlaces de los correos |
+| `CORS_ORIGIN` | No | Orígenes adicionales permitidos |
+| `CRON_SECRET` | En Vercel | Protege la tarea diaria de limpieza |
 
 > `backend/.env` contiene credenciales y **nunca** se sube a GitHub (está en `.gitignore`).
-
-Crear o actualizar las tablas y, opcionalmente, cargar los datos de demostración:
-
-```bash
-npm run migrate            # aplica database/migrations
-npm run migrate -- --seed  # además carga database/seeds.sql
-```
-
-Iniciar el servidor:
+> Ninguna clave secreta va en el frontend.
 
 ```bash
-npm run dev    # con recarga automática
-npm start      # modo normal
+npm run migrate      # crea o actualiza las tablas (aplica solo las migraciones nuevas)
+npm run dev          # servidor con recarga automática en http://localhost:3000
+npm test             # pruebas de integración (ver "Pruebas")
 ```
-
-Abra **http://localhost:3000** — el mismo servidor entrega la página y la API.
-
-> Estos comandos funcionan tanto desde `backend/` como desde la carpeta raíz del proyecto: el
-> `package.json` de la raíz solo reenvía `dev`, `start`, `migrate` y `admin:asignar` al backend.
-> Deja la terminal abierta mientras usas Roumix; si se cierra, la página mostrará
-> "No se pudo conectar con el servidor de Roumix".
-
-## 🔌 API
-
-| Método | Ruta | Acceso | Descripción |
-|--------|------|--------|-------------|
-| GET | `/api/health` | Público | Estado del servidor |
-| GET | `/api/health/db` | Público | Prueba la conexión con PostgreSQL |
-| POST | `/api/auth/registro` | Público + CAPTCHA | Crear cuenta (nombre, email, password, rol, telefono) |
-| POST | `/api/auth/login` | Público + CAPTCHA | Iniciar sesión; devuelve tokens y el perfil |
-| POST | `/api/auth/recuperar` | Público + CAPTCHA | Envía el correo para crear una contraseña nueva (no revela si la cuenta existe) |
-| POST | `/api/auth/restablecer` | Token del enlace | Guarda la contraseña nueva y cierra todas las sesiones |
-| GET | `/api/config` | Público | Configuración pública del frontend (clave pública del CAPTCHA) |
-| POST | `/api/auth/refresh` | Público | Renovar el token con el refresh token |
-| GET | `/api/auth/perfil` | Con sesión | Perfil del usuario (rol leído de la BD) |
-| POST | `/api/auth/logout` | Con sesión | Cerrar sesión en Supabase Auth |
-| GET | `/api/inmuebles?tipo=&precioMax=&universidad=&q=&orden=` | Público | Inmuebles disponibles. `q` busca en título, barrio, universidad, distancia y comodidades; `orden`: `precio-asc`, `precio-desc`, `distancia`, `recientes` |
-| GET | `/api/inmuebles?ids=1,2,3` | Público | Datos actuales de hasta 3 inmuebles disponibles (comparador) |
-| GET | `/api/inmuebles/:id` | Público | Detalle de un inmueble disponible |
-| GET | `/api/inmuebles/mios` | Propietario | Inmuebles del propietario autenticado (todos los estados) |
-| GET | `/api/inmuebles/mios/:id` | Propietario | Un inmueble propio (para editarlo) |
-| POST | `/api/inmuebles` | Propietario | Publicar con fotos (multipart: `datos` JSON + `fotos`) |
-| PUT | `/api/inmuebles/:id` | Propietario | Editar datos y fotos (`datos.fotosConservar` + `fotos` nuevas) |
-| PATCH | `/api/inmuebles/:id/estado` | Propietario | `disponible`, `pausado` o `arrendado` |
-| DELETE | `/api/inmuebles/:id` | Propietario | Eliminar el inmueble y sus fotos |
-| GET | `/api/inmuebles/geocodificar?q=` | Propietario | Buscar una dirección o sector de Villavicencio (OpenStreetMap) |
-| POST | `/api/inmuebles/:id/reportes` | Estudiante o propietario | Reportar una publicación (`motivo`, `descripcion`) |
-| GET | `/api/admin/resumen` | Admin | Métricas del panel |
-| GET | `/api/admin/reportes?estado=` | Admin | Reportes `pendiente`, `procedente`, `no_procede` o `todos` |
-| GET | `/api/admin/inmuebles?moderacion=&q=` | Admin | Publicaciones con su moderación y reportes pendientes |
-| GET | `/api/admin/inmuebles/:id` | Admin | Detalle completo, reportes e historial |
-| POST | `/api/admin/inmuebles/:id/moderacion` | Admin | `aprobar`, `solicitar_cambios`, `rechazar` o `retirar` con justificación |
-| GET | `/api/admin/usuarios?rol=&estado=&q=` | Admin | Usuarios y sus antecedentes |
-| POST | `/api/admin/usuarios/:id/estado` | Admin | Suspender o reactivar (no a sí mismo ni a otros admins) |
-| GET | `/api/admin/historial` | Admin | Auditoría de decisiones |
-
-Las contraseñas las gestiona Supabase Auth; Roumix nunca las guarda. Las rutas protegidas exigen `Authorization: Bearer <token de Supabase Auth>`. El rol y el
-propietario se obtienen en el servidor, nunca de lo que envía el navegador. Un propietario solo puede
-ver, editar, pausar o eliminar sus propios inmuebles.
-
-**Fotos:** JPG, PNG o WebP (se verifica el contenido real del archivo), máximo 5 MB cada una, hasta
-8 por envío y 10 por inmueble. El backend las sube a Supabase Storage con la sesión del propietario,
-y las políticas del bucket solo le permiten escribir en su carpeta `inmuebles/<id del propietario>/`.
-No se necesita la clave secreta de Supabase.
-
-## 👥 Roles
-
-1. **Estudiante:** busca con filtros, ve el detalle, compara opciones, contacta por WhatsApp y reporta anuncios sospechosos.
-2. **Propietario:** además publica inmuebles y gestiona solo sus propias publicaciones.
-3. **Administrador:** revisa reportes, modera publicaciones, suspende cuentas y consulta el historial en `/pages/admin.html`.
 
 ### Asignar el primer administrador
 
-No existe opción de registrarse como administrador. El rol se asigna con un procedimiento controlado
-que solo puede ejecutar quien tiene las credenciales de la base de datos (`backend/.env`):
+1. Crea una cuenta normal (estudiante) y confirma el correo. Usa una cuenta distinta a la de propietario.
+2. Desde la raíz: `npm run admin:asignar -- correo@ejemplo.com` (para quitarlo: agrega `--quitar`).
+3. Cierra sesión y vuelve a entrar: aparecerá "Administración" en el menú.
 
-1. Crea una cuenta normal en Roumix (como estudiante) y confirma el correo. Usa una cuenta distinta a la
-   de propietario, para que nadie modere sus propias publicaciones.
-2. Desde `backend/` ejecuta:
+## 🧪 Pruebas
 
 ```bash
-npm run admin:asignar -- correo@ejemplo.com
+ROUMIX_PRUEBAS_BD=si npm test             # Git Bash / macOS / Linux
+$env:ROUMIX_PRUEBAS_BD="si"; npm test     # PowerShell
+npm test -- 05 06                         # solo algunas
 ```
 
-3. Cierra sesión y vuelve a entrar: aparecerá "Administración" en el menú.
-   Para retirar el rol: `npm run admin:asignar -- correo@ejemplo.com --quitar`.
+Son **226 comprobaciones de integración** en 7 archivos (`backend/tests/`), una por módulo: verificación
+de propietarios, publicaciones, solicitudes, mensajes, contratos, pagos simulados y auditoría. Llaman a los
+controladores reales contra la base de datos configurada; cada prueba crea sus propios usuarios y datos
+(con correos `@roumix.test`) y **los borra al terminar**. No envían correos reales. Como escriben en la base
+de datos, piden confirmarlo con `ROUMIX_PRUEBAS_BD=si`. Detalle en [`docs/pruebas.md`](docs/pruebas.md).
 
-Se recomienda activar la autenticación multifactor (MFA) de Supabase para las cuentas de administración
-cuando se despliegue la plataforma.
+## 🛡️ Seguridad y confianza
 
-## 🛡️ Moderación y confianza
+- **Roles y permisos en el servidor:** el rol se lee siempre de la base de datos, nunca del navegador. Cada
+  consulta comprueba que el registro pertenezca a quien la hace (un estudiante no ve solicitudes, contratos ni
+  pagos ajenos; un propietario solo los de sus inmuebles).
+- **Base de datos:** RLS activado en todas las tablas y sin permisos para los roles públicos de Supabase; solo
+  el backend accede. Restricciones (`CHECK`, índices únicos) que impiden estados imposibles: un contrato no
+  queda formalizado sin las dos aceptaciones, un pago no puede marcarse como real, la comisión y el neto
+  siempre suman el monto.
+- **Sin datos de contacto entre las partes:** la API no devuelve teléfonos ni correos de la otra parte; sin
+  sesión ni siquiera el nombre del propietario. La ubicación pública se redondea (~100 m).
+- **Propietarios verificados:** solo publican con la cuenta aprobada por Roumix. La verificación revisa el
+  perfil y, si se llama, el teléfono; **no es** una verificación legal de identidad ni de propiedad.
+- **Auditoría de solo adición:** cada acción del panel y los pasos clave de los usuarios quedan en la tabla
+  `auditoria`, que la base de datos no deja modificar ni borrar. No guarda el contenido de mensajes y la IP
+  queda como huella (hash).
+- **Anti-abuso:** CAPTCHA, límites persistentes de intentos de ingreso y registro, límites de solicitudes,
+  mensajes y reportes; cabeceras de seguridad (CSP, `X-Frame-Options`) y CORS restringido.
+- **Contraseñas:** las gestiona Supabase Auth; Roumix nunca las guarda.
 
-- **Estado comercial y moderación son independientes.** El propietario decide `disponible`, `pausado` o
-  `arrendado`; Roumix decide `aprobada`, `en_revision`, `requiere_cambios`, `rechazada` o `retirada`.
-  Solo se muestra lo que está disponible **y** aprobado. Aprobar una revisión nunca reactiva algo que el
-  propietario había pausado.
-- **Reportar inicia una revisión, no es una condena.** Pausa preventiva con el primer reporte, salvo que la
-  publicación haya sido revisada y aprobada en los últimos 30 días (entonces se necesitan 2 personas).
-- **Registro solo con correos reales:** se rechazan dominios inexistentes o sin servidor de correo, correos
-  temporales y errores de escritura frecuentes (p. ej. gmial.com). El perfil de Roumix se crea solo al confirmar
-  el correo, las cuentas sin confirmar se eliminan a las 24 horas y hay un máximo de 5 registros por hora por conexión.
-- **Anti-abuso:** sesión obligatoria, un reporte por persona y publicación, máximo 5 por día, nadie reporta lo propio.
-- **Auditoría:** cada pausa, decisión y suspensión queda en `moderacion_historial` con responsable y justificación.
-- **Insignias reales:** "Correo confirmado" (Supabase Auth) y "Revisada por Roumix" (aprobación registrada con
-  fecha y alcance). No hay "teléfono verificado" porque aún no se verifica.
-- **Privacidad:** la API pública redondea la ubicación a ~100 m y el detalle muestra una zona de 250 m.
-  El propietario nunca sabe quién lo reportó. Política de datos (Ley 1581 de 2012) en `/pages/privacidad.html`
-  y aceptación obligatoria al registrarse.
+## 🎭 Qué es demostrativo
 
-## 🗺️ Mapas
+| Parte | Cómo funciona hoy | Qué falta para que sea real |
+|-------|-------------------|-----------------------------|
+| **Firma del contrato** | Cada parte escribe su nombre y confirma; se guardan fecha, hora y la huella SHA-256 del documento. | Integrar un proveedor de firma electrónica certificado. |
+| **Pagos** | Un simulador interno aprueba o rechaza (el estudiante elige el resultado para la demostración). Se registran referencias, comisión, desembolso, devoluciones y disputas, todo marcado como simulado. | Un proveedor de pagos autorizado que procese cobros y desembolsos a terceros (y una migración nueva y revisada, porque la base de datos hoy impide pagos no simulados). |
+| **Desembolsos y devoluciones** | El administrador los registra en el panel. | Lo mismo: el proveedor de pagos. |
 
-Leaflet con teselas de OpenStreetMap servidas por el backend (`/api/mapa/teselas`, con caché y limitado a la
-región de Villavicencio): pedirlas directo desde el navegador falla con "403 Access blocked" cuando el navegador
-no envía la cabecera Referer. La búsqueda de direcciones usa Nominatim, también a
-través del backend (máximo 1 petición por segundo y caché, según su política de uso). No requiere claves ni
-facturación. Para un sitio con mucho tráfico conviene contratar un proveedor de teselas (o Google Maps
-Platform, que exige clave restringida por dominio y facturación).
+No se guardan datos de tarjetas ni cuentas bancarias, y ningún texto afirma que se movió dinero real.
 
-## ☁️ Despliegue en Vercel (recomendado)
+## ☁️ Despliegue en Vercel
 
-Vercel entrega las páginas desde su red (`frontend/`) y ejecuta toda la API como una sola función
-(`api/index.js`, que reutiliza `backend/src/app.js`). La configuración está en `vercel.json`.
+Vercel sirve `frontend/` y ejecuta toda la API como una función (`api/index.js`). Cada `git push` a `main`
+despliega solo. Configuración en `vercel.json` (rutas, cabeceras de seguridad y la tarea diaria
+`/api/tareas/limpieza`, que borra cuentas sin confirmar).
 
-1. En [vercel.com](https://vercel.com) → **Add New → Project**, importa este repositorio de GitHub.
-   Deja **Framework Preset: Other** y la carpeta raíz del repositorio (Vercel lee `vercel.json`).
-2. En **Environment Variables** agrega: `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`,
-   `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`,
-   `CORREO_ADMIN`, `CRON_SECRET` y `APP_URL` (la dirección `https://<proyecto>.vercel.app`).
-3. Agrega la dirección de Vercel en Supabase (**Site URL** y **Redirect URLs** con `/**`) y en Cloudflare
-   Turnstile (**Hostnames**).
+1. Importa el repositorio en Vercel (Framework Preset: **Other**).
+2. Agrega las variables de entorno de la tabla de arriba, con `APP_URL=https://<proyecto>.vercel.app`.
+3. Agrega esa dirección en Supabase (**Site URL** y **Redirect URLs** con `/**`) y en Cloudflare Turnstile.
+4. Aplica las migraciones contra la base de producción con `npm run migrate`.
 
-Diferencias con un servidor tradicional, ya resueltas en el código:
-- **Límite de 4,5 MB por petición:** el navegador reduce las fotos antes de subirlas (`RoumixFotos` en `api.js`).
-- **Sin procesos permanentes:** la limpieza de cuentas sin confirmar corre una vez al día con un Cron Job
-  (`/api/tareas/limpieza`, protegido con `CRON_SECRET`).
-- Sin pantalla de "waking up": las funciones arrancan en alrededor de un segundo.
+`render.yaml` se conserva por si se quiere desplegar en Render (ver la historia del proyecto).
 
-## 📧 Correos de notificación
+## 📧 Correos y avisos
 
-- **Reporte nuevo →** correo a todas las cuentas `admin` (y a `CORREO_ADMIN`) con el motivo y un enlace al panel.
-- **Publicación ocultada de forma preventiva →** correo al propietario avisando que está en revisión.
-- **Decisión de la administración →** correo al propietario con la decisión, el mensaje de Roumix y un enlace
-  directo a lo que debe hacer (p. ej. corregir la publicación).
-- Ningún correo incluye la identidad de quien reportó. Si el envío falla, el reporte o la decisión se guardan igual.
-- **Confirmación de cuenta y recuperación de contraseña →** también salen desde el correo de Roumix cuando
-  existe `SUPABASE_SERVICE_ROLE_KEY`: Supabase solo genera el enlace (`auth.admin.generateLink`) y Roumix
-  envía el correo con su plantilla. Así no aplica el límite de pocos correos por hora del servicio de correo
-  de Supabase y muchas personas pueden registrarse al tiempo. Si el correo de confirmación no sale, la cuenta
-  recién creada se borra para que la persona pueda intentarlo de nuevo.
+Cada evento importante llega **por correo** y como **aviso en la plataforma** (contador junto a "Mensajes"):
+verificación del propietario, solicitudes (nueva, cambios de estado), respuestas de Roumix, contratos (enviado,
+falta tu aceptación, formalizado), pagos (habilitado, aprobado, desembolso, devolución) y reportes. Ningún
+correo incluye datos de contacto de la otra parte ni la identidad de quien reporta. Si un correo falla, la
+operación se guarda igual. Plantilla del relevo por Apps Script: [`docs/correo-apps-script.gs`](docs/correo-apps-script.gs).
 
-**Cómo se envían:** el plan gratuito de Render bloquea los puertos SMTP, así que en Render se usa un
-Google Apps Script en la cuenta roumix04@gmail.com (llamado por HTTPS con `CORREO_RELAY_URL` y
-`CORREO_RELAY_SECRETO`). El código del script y las instrucciones están en `docs/correo-apps-script.gs`.
-En local o en un hosting que permita SMTP también se puede usar `SMTP_HOST`, `SMTP_USER` y `SMTP_PASS`.
+## 🔌 API
 
-## ☁️ Despliegue (Render)
+Resumen por área (todas bajo `/api`; las rutas protegidas exigen `Authorization: Bearer <token>`).
+La lista completa con sus reglas está en [`docs/arquitectura.md`](docs/arquitectura.md).
 
-Roumix se despliega como un solo servicio web en [Render](https://render.com) usando `render.yaml`:
-
-1. En Render: **New → Blueprint**, conecta GitHub y elige este repositorio.
-2. Render pedirá `DATABASE_URL`, `SUPABASE_URL` y `SUPABASE_ANON_KEY` (los mismos valores de `backend/.env`).
-3. Cuando termine, la aplicación queda en `https://<nombre>.onrender.com` con HTTPS.
-4. En Supabase → **Authentication → URL Configuration**, cambia **Site URL** por esa dirección y en
-   **Redirect URLs** agrega `https://<nombre>.onrender.com/**` y `http://localhost:3000/**`, para que los
-   correos de confirmación y de recuperación de contraseña lleven a la página correcta.
-5. CAPTCHA: en Cloudflare → **Turnstile → Add widget** registra los dominios `<nombre>.onrender.com` y
-   `localhost`, y copia la clave de sitio y la secreta en `TURNSTILE_SITE_KEY` y `TURNSTILE_SECRET_KEY`.
-
-Cada `git push` a `main` vuelve a desplegar automáticamente. El plan gratuito se "duerme" tras 15 minutos
-sin visitas: la primera carga después puede tardar cerca de un minuto.
-
-**Evitar la pantalla "Service waking up" de Render:** el plan gratuito apaga el servidor tras 15 minutos sin
-visitas. Para mantenerlo despierto, un monitor gratuito (por ejemplo UptimeRobot) puede consultar
-`https://<nombre>.onrender.com/api/health` cada 5 minutos; o se puede pasar al plan pago de Render, que no se duerme.
+| Área | Rutas | Acceso |
+|------|-------|--------|
+| Salud y configuración | `GET /health`, `GET /health/db`, `GET /config` | Público |
+| Autenticación | `POST /auth/registro`, `/login`, `/recuperar`, `/restablecer`, `/refresh`, `/logout`; `GET /auth/perfil` | Público (con CAPTCHA) o sesión |
+| Inmuebles | `GET /inmuebles`, `GET /inmuebles/:id` (público); `GET /inmuebles/mios`, `POST`, `PUT`, `PATCH /:id/estado`, `DELETE /:id` = retirar (propietario); `POST /inmuebles/:id/reportes` | Según la ruta |
+| Verificación | `GET`/`PUT /propietario/verificacion`, `POST /propietario/condiciones` | Propietario |
+| Solicitudes | `POST /solicitudes`, `GET /solicitudes/mias`, `POST /solicitudes/:id/cancelar` | Estudiante / propietario |
+| Mensajes y avisos | `GET`/`POST /conversaciones`, `GET /conversaciones/:id`, `POST /conversaciones/:id/mensajes`; `GET /notificaciones`, `POST /notificaciones/leidas` | Estudiante / propietario |
+| Contratos | `GET /contratos/mios`, `GET /contratos/:id`, `POST /contratos/:id/aceptar` | Partes del contrato (y admin para ver) |
+| Pagos | `GET /pagos/mios`, `GET /pagos/:id`, `POST /pagos/:id/simular`, `POST /pagos/:id/disputa` | Partes del pago (y admin para ver) |
+| Panel | `/admin/…`: resumen, reportes, inmuebles, usuarios, propietarios, solicitudes, conversaciones, contratos, pagos, auditoría | Admin |
 
 ## 📌 Estado del proyecto
 
-- [x] Estructura de carpetas organizada (frontend / backend / database / docs)
-- [x] Conexión del backend con PostgreSQL en Supabase y migraciones
-- [x] Perfiles ligados a Supabase Auth, claves foráneas, RLS y bucket de imágenes
-- [x] Búsqueda y detalle leen la base de datos real, sin respaldos locales silenciosos
-- [x] Registro, inicio y cierre de sesión con Supabase Auth; páginas de propietario protegidas
-- [x] Publicación con fotos en Supabase Storage asociada al propietario autenticado
-- [x] Editar, pausar, reactivar, marcar como arrendada y eliminar publicaciones propias
-- [x] Búsqueda con filtros y orden en la API, detalle con galería completa y visor de fotos
-- [x] Comparador dinámico: hasta 3 inmuebles elegidos por el estudiante, con datos actuales de la API
-- [x] Reportes, moderación con historial de auditoría y panel de administración
-- [x] Insignias de confianza respaldadas por comprobaciones reales y política de datos personales
-- [x] Selector de ubicación en el mapa y zona aproximada pública
-- [ ] Despliegue
+- [x] Seguridad base: datos del propietario ocultos sin sesión, CORS, cabeceras, límites persistentes y permisos de BD
+- [x] Verificación de propietarios (perfil, revisión de Roumix, bloqueo para publicar)
+- [x] Publicaciones: capacidad, retiro sin borrar (historial) y pausa temporal de Roumix
+- [x] Solicitudes de arriendo con 12 estados, en lugar del contacto directo por WhatsApp
+- [x] Comunicación gestionada: conversaciones con Roumix, notas internas y avisos
+- [x] Contratos demostrativos con aceptación de ambas partes y huella del documento
+- [x] Pagos simulados: comisión del 10 %, desembolsos, devoluciones y disputas
+- [x] Panel ampliado y auditoría de solo adición
+- [x] Pruebas de integración (`npm test`) y documentación
+- [x] Despliegue en Vercel
+
+### Pendientes y limitaciones conocidas
+
+- **Firma electrónica y pagos reales:** requieren proveedores autorizados (ver "Qué es demostrativo").
+- **Propietarios existentes:** los dos propietarios aprobados antes del módulo de pagos deben aceptar las
+  condiciones de la comisión en "Mi verificación"; hasta entonces no se habilita el pago de sus arriendos.
+- **Rotar la contraseña de la base de datos** (Supabase → Database → Reset password) y actualizar
+  `DATABASE_URL` en `backend/.env` y en Vercel.
+- **MFA para administradores:** se recomienda activar la autenticación multifactor de Supabase.
+- **Pruebas sobre la base real:** las pruebas usan la base configurada; lo ideal es un proyecto de Supabase
+  separado para pruebas.
+- `database/schema.sql` es una foto antigua del esquema; la fuente de verdad son las migraciones.
 
 ---
 *Construcción de Software · Semestre 4 · Universidad Santo Tomás Villavicencio*

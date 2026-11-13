@@ -8,6 +8,7 @@
     "dev": "npm --prefix backend run dev",
     "start": "npm --prefix backend start",
     "migrate": "npm --prefix backend run migrate",
+    "test": "npm --prefix backend test --",
     "admin:asignar": "npm --prefix backend run admin:asignar --"
   },
   "engines": {

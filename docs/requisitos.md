@@ -1,33 +1,61 @@
 # Roumix — Requisitos del Sistema
 
 ## 1. Descripción general
-Roumix es una plataforma web para estudiantes universitarios en Villavicencio (Colombia) que necesitan encontrar vivienda cercana a su universidad. Conecta a **propietarios** que tienen inmuebles disponibles con **estudiantes** que buscan arrendar.
+
+Roumix es una plataforma de **intermediación de arriendos universitarios** en Villavicencio (Meta, Colombia).
+Conecta a estudiantes que buscan vivienda cerca de su universidad con propietarios verificados, y el equipo de
+Roumix **gestiona todo el proceso**: recibe las solicitudes, se comunica con cada parte, prepara el contrato y
+gestiona el pago del primer mes.
+
+Principios del modelo:
+
+- **Comunicación gestionada:** estudiante y propietario nunca se comunican directamente ni ven los datos de
+  contacto del otro. Cada uno conversa solo con el equipo de Roumix.
+- **Confianza verificable:** los propietarios publican solo después de que Roumix revisa su perfil, y cada
+  insignia refleja exactamente lo que se comprobó.
+- **Comisión justa:** Roumix cobra al **propietario** el 10 % del primer canon, una sola vez, y solo cuando el
+  arriendo se concreta (contrato formalizado y primer pago confirmado). El estudiante no paga comisión.
+- **Pagos y firma demostrativos** mientras no haya proveedores autorizados (ver sección 6).
 
 ---
 
-## 2. Roles de usuario
+## 2. Roles
 
 ### Estudiante
-- Puede registrarse e iniciar sesión.
-- Puede buscar inmuebles disponibles y filtrar por tipo, precio y barrio.
-- Puede ver el detalle completo de una publicación.
-- Puede seleccionar hasta 3 inmuebles y compararlos en tabla.
-- Puede contactar al propietario desde la ficha del inmueble.
-- **No puede** publicar, editar ni eliminar inmuebles.
-- **No puede** acceder a páginas protegidas sin sesión activa.
+- Se registra, confirma su correo e inicia sesión.
+- Busca inmuebles en el mapa y la lista, con filtros (tipo, precio, universidad, zona) y orden.
+- Ve el detalle y compara hasta 3 inmuebles.
+- Envía **solicitudes de arriendo** (fecha de ingreso, duración, personas, mensaje para Roumix) y las cancela
+  mientras no haya contrato formalizado.
+- Conversa con el equipo de Roumix sobre una vivienda o una solicitud y recibe novedades.
+- Revisa y acepta su contrato (aceptación demostrativa).
+- Paga el primer mes a través de Roumix (simulado) **solo después** de formalizar el contrato, y puede reportar
+  un problema con el pago (disputa).
+- Reporta publicaciones sospechosas.
+- **No puede:** publicar, ver datos de contacto del propietario, escribirle directamente, ni ver solicitudes,
+  contratos o pagos ajenos.
 
 ### Propietario
-- Puede registrarse e iniciar sesión como propietario.
-- Puede crear publicaciones con fotos, precio, servicios y barrio.
-- Puede ver, editar, pausar y eliminar sus propias publicaciones en "Mis publicaciones".
-- **No puede** modificar publicaciones de otro propietario.
-- **No puede** acceder a las publicaciones privadas de otros.
+- Se registra (celular obligatorio, solo visible para Roumix) y envía su **perfil a verificación**.
+- Acepta las **condiciones de la comisión** (con su versión y fecha).
+- Publica inmuebles **solo con la cuenta aprobada**; edita, pausa, marca como arrendado y **retira** sus
+  publicaciones (retirar no borra: se conservan como registro).
+- Ve las solicitudes de sus inmuebles **cuando Roumix se las comparte**, sin datos de contacto del estudiante
+  (solo su primer nombre).
+- Conversa con el equipo de Roumix, acepta contratos y consulta su comisión y desembolso.
+- **No puede:** modificar publicaciones ajenas, ver el mensaje del estudiante ni las notas internas.
 
-### Reglas comunes
-- El rol se valida en el **backend** en cada operación protegida.
-- La sesión se mantiene al navegar entre páginas y puede cerrarse explícitamente.
-- Un usuario no puede cambiar su propio rol manipulando el localStorage.
-- Los datos persisten en PostgreSQL (Supabase) sin depender del navegador.
+### Administrador (equipo de Roumix)
+- Accede a un panel independiente; el rol **no** se elige al registrarse (se asigna con un procedimiento
+  controlado desde el servidor).
+- Revisa y aprueba, rechaza o pide información a los propietarios.
+- Modera publicaciones (aprobar, pausar temporalmente, pedir cambios, rechazar, retirar) y atiende reportes.
+- Gestiona solicitudes: cambia estados válidos y deja mensajes para cada parte y notas internas.
+- Atiende las conversaciones (responder, notas internas, pendiente/atendida) y escribe a cualquiera de las
+  partes de una solicitud.
+- Prepara, edita, envía y cancela contratos.
+- Consulta pagos, comisiones, desembolsos y devoluciones; registra desembolsos, devoluciones y resuelve disputas.
+- Suspende o reactiva cuentas y consulta la auditoría.
 
 ---
 
@@ -35,16 +63,22 @@ Roumix es una plataforma web para estudiantes universitarios en Villavicencio (C
 
 | ID | Descripción |
 |----|-------------|
-| RF-01 | El usuario puede registrarse con correo, contraseña, nombre y rol (estudiante / propietario). |
-| RF-02 | El usuario puede iniciar sesión con correo y contraseña; el servidor devuelve un token JWT. |
-| RF-03 | El token JWT se almacena en `localStorage` y se envía en el header `Authorization` en cada petición protegida. |
-| RF-04 | La página de búsqueda muestra todos los inmuebles disponibles desde la API. |
-| RF-05 | El usuario puede filtrar por tipo de inmueble, precio máximo y barrio. |
-| RF-06 | El detalle del inmueble muestra foto principal, galería, servicios, precio y datos de contacto. |
-| RF-07 | El propietario autenticado puede publicar un inmueble con imágenes reales. |
-| RF-08 | "Mis publicaciones" muestra solo los inmuebles del propietario que inició sesión. |
-| RF-09 | El comparador muestra una tabla con los inmuebles seleccionados por el usuario (hasta 3). |
-| RF-10 | Cerrar sesión elimina el token y redirige al inicio. |
+| RF-01 | Registro con nombre, correo real, contraseña y rol (estudiante o propietario); confirmación por correo. |
+| RF-02 | Inicio de sesión, recuperación de contraseña y cierre de sesión (Supabase Auth). |
+| RF-03 | Verificación de propietarios con estados `pendiente`, `aprobado`, `rechazado` y `requiere_informacion`. |
+| RF-04 | Solo un propietario aprobado puede publicar o editar inmuebles. |
+| RF-05 | Estado comercial (`disponible`, `pausado`, `arrendado`, `retirado`) separado de la moderación de Roumix. |
+| RF-06 | Búsqueda con el mapa como protagonista, filtros, zona aproximada y comparador de hasta 3 inmuebles. |
+| RF-07 | Solicitud de arriendo con 12 estados (`recibida` … `completada`, `rechazada`, `cancelada`) y transiciones válidas. |
+| RF-08 | Conversaciones usuario ↔ Roumix ligadas a una vivienda o solicitud, con notas internas y estado pendiente/atendida. |
+| RF-09 | Avisos en la plataforma y correos para cada novedad importante. |
+| RF-10 | Contrato asociado a la solicitud y al inmueble con partes, canon, depósito, inicio, duración, día de pago, servicios y condiciones; estados `borrador`, `enviado`, `pendiente_aceptacion`, `formalizado`, `cancelado`, `expirado`. |
+| RF-11 | Al aceptar ambas partes, la solicitud pasa sola a `contrato_formalizado` y se habilita el pago. |
+| RF-12 | Pago del primer canon (simulado) solo con contrato formalizado y condiciones de comisión aceptadas. |
+| RF-13 | Registro de la comisión (10 %), desembolso del 90 % al propietario, pagos fallidos, cancelaciones, devoluciones y disputas, con referencias, montos y fechas. |
+| RF-14 | Panel con resumen (estudiantes, propietarios, por revisar, publicaciones disponibles, solicitudes, contratos formalizados, pagos y comisiones) y gestión de cada área. |
+| RF-15 | Auditoría de solo adición de las acciones administrativas sensibles y de los pasos clave de los usuarios. |
+| RF-16 | Reportes de publicaciones con pausa preventiva y resolución por el equipo. |
 
 ---
 
@@ -52,17 +86,27 @@ Roumix es una plataforma web para estudiantes universitarios en Villavicencio (C
 
 | ID | Descripción |
 |----|-------------|
-| RNF-01 | **Seguridad:** el backend valida el token en cada ruta protegida; el frontend nunca decide quién puede publicar. |
-| RNF-02 | **Persistencia:** todos los datos se almacenan en PostgreSQL en Supabase. |
-| RNF-03 | **Diseño:** los colores y tipografía del prototipo original no se modifican. |
-| RNF-04 | **Tecnología:** HTML, CSS, JavaScript vainilla + Node.js + Express. Sin frameworks de frontend. |
-| RNF-05 | **Imágenes:** las fotos se almacenan en Supabase Storage; el backend guarda solo la URL. |
-| RNF-06 | **Despliegue:** el backend se desplegará en Render; el frontend en Vercel o Netlify. |
+| RNF-01 | **Seguridad:** el backend valida sesión, rol (leído de la BD) y propiedad de cada registro; el frontend nunca decide permisos. |
+| RNF-02 | **Base de datos:** RLS activado, sin permisos para los roles públicos; restricciones que impiden estados imposibles. |
+| RNF-03 | **Privacidad:** sin datos de contacto entre las partes; ubicación pública aproximada; política de datos (Ley 1581 de 2012). |
+| RNF-04 | **Secretos:** ninguna clave privada en el frontend ni en el repositorio. |
+| RNF-05 | **Anti-abuso:** CAPTCHA, límites persistentes de ingreso, registro, solicitudes, mensajes y reportes. |
+| RNF-06 | **Diseño:** interfaz en español, adaptable a celular, con modo oscuro y estados visuales claros. |
+| RNF-07 | **Tecnología:** HTML, CSS y JavaScript vanilla + Node.js + Express + PostgreSQL (Supabase). |
+| RNF-08 | **Pruebas:** pruebas de integración automatizadas por módulo (`npm test`). |
+| RNF-09 | **Despliegue:** Vercel, con despliegue automático desde `main`. |
 
 ---
 
-## 5. Fuera del alcance (v1)
-- Chat en tiempo real entre estudiante y propietario.
-- Sistema de pagos o reservas.
-- Notificaciones push.
-- Aplicación móvil nativa.
+## 5. Fuera del alcance (por ahora)
+
+- Chat en tiempo real (los mensajes se actualizan cada 20 segundos).
+- Aplicación móvil nativa y notificaciones push.
+- Verificación legal de identidad o de la propiedad de los inmuebles.
+
+## 6. Partes demostrativas
+
+- **Firma del contrato:** aceptación con nombre escrito, fecha, hora y huella SHA-256 del documento. No es una
+  firma electrónica con validez legal; requiere integrar un proveedor certificado.
+- **Pagos, desembolsos y devoluciones:** simulados y rotulados como tales. No se mueve dinero real ni se guardan
+  datos de tarjetas o cuentas. Requiere un proveedor de pagos autorizado que permita desembolsos a terceros.

@@ -1,66 +1,55 @@
-# Roumix — Plan de Pruebas
+# Roumix — Pruebas
 
-## 1. Pruebas de conectividad (Manual)
+## 1. Pruebas automatizadas (`npm test`)
 
-| ID | Prueba | Comando | Resultado esperado |
-|----|--------|---------|-------------------|
-| P-01 | Health check backend | `GET http://localhost:3000/api/health` | `{ "status": "ok" }` |
-| P-02 | Listar inmuebles | `GET http://localhost:3000/api/inmuebles` | Array JSON con los inmuebles |
-| P-03 | Inmueble por ID | `GET http://localhost:3000/api/inmuebles/<uuid>` | Objeto del inmueble |
-| P-04 | Ruta no existente | `GET http://localhost:3000/api/nada` | `404` |
+Son **pruebas de integración**: llaman a los controladores reales del backend contra la base de datos
+configurada en `DATABASE_URL`. Cada archivo crea sus propios usuarios, inmuebles, solicitudes, contratos y pagos
+(con correos `@roumix.test`), los usa y **los borra al terminar**. Los correos van a un transporte simulado
+(no se envía nada real) y los registros de auditoría que generan quedan marcados como de prueba y también se
+borran.
 
----
+```bash
+ROUMIX_PRUEBAS_BD=si npm test             # Git Bash / macOS / Linux (desde la raíz o desde backend/)
+$env:ROUMIX_PRUEBAS_BD="si"; npm test     # PowerShell
+npm test -- 03 06                         # solo los archivos que empiezan por 03 y 06
+```
 
-## 2. Pruebas de autenticación (Etapa 3)
+`ROUMIX_PRUEBAS_BD=si` es obligatorio porque las pruebas escriben en la base de datos. Lo ideal es usar un
+proyecto de Supabase **separado** para pruebas (con su propio `DATABASE_URL`) y aplicarle `npm run migrate`.
 
-| ID | Prueba | Entrada | Resultado esperado |
-|----|--------|---------|-------------------|
-| A-01 | Registro exitoso | correo nuevo + contraseña válida + rol | `201 { token, usuario }` |
-| A-02 | Correo ya registrado | correo duplicado | `409 "El correo ya está en uso"` |
-| A-03 | Contraseña corta | menos de 6 caracteres | `400 "Contraseña inválida"` |
-| A-04 | Login correcto | correo + contraseña válidos | `200 { token, usuario }` |
-| A-05 | Login incorrecto | contraseña errónea | `401 "Credenciales incorrectas"` |
-| A-06 | Token vencido | JWT expirado | `401 "Token inválido"` |
+El ejecutor (`backend/tests/ejecutar.js`) corre los archivos en orden, muestra cada comprobación y termina con
+un resumen; devuelve código de salida 1 si algo falla (útil para integración continua).
 
----
+### Cobertura (226 comprobaciones)
 
-## 3. Pruebas de autorización (Etapa 4)
+| Archivo | Comprobaciones | Qué verifica |
+|---------|:--------------:|--------------|
+| `01-verificacion-propietarios` | 25 | Perfil incompleto no publica; validaciones del perfil (comisión, celular); estados pendiente / requiere información / rechazado / aprobado; correos; un admin no se revisa a sí mismo; las publicaciones de un propietario rechazado se ocultan; historial. |
+| `02-publicaciones` | 23 | Capacidad válida (1–20) y CHECK de la BD; "retirado" no se elige a mano; pausa temporal de Roumix con reportes abiertos; retirar conserva la fila y las fotos; una retirada no se edita ni se reactiva; no se retira lo ajeno; la búsqueda pública la excluye. |
+| `03-solicitudes` | 42 | El teléfono del propietario no sale en la API; validaciones (fecha, duración, capacidad); una solicitud abierta por inmueble; el propietario no la ve hasta que Roumix la comparte y nunca ve datos del estudiante; transiciones inválidas y estados reservados (pagado, contrato formalizado) rechazados; notas separadas por destinatario; cancelación; correos. |
+| `04-mensajes` | 33 | Aislamiento total entre usuarios; el usuario nunca ve notas internas; pendiente / atendida; un solo correo al pasar a pendiente; avisos que se marcan leídos; Roumix escribe a una parte de la solicitud (al propietario solo si ya la conoce) y reutiliza el hilo; límite diario. |
+| `05-contratos` | 36 | Solo en "Contrato pendiente"; un contrato vigente; las partes no ven el borrador; enviado = sellado (no se edita); permisos de lectura y aceptación; contenido alterado → huella inválida y no se acepta; paso automático a "Contrato formalizado"; cancelación automática al volver a negociación; expiración. |
+| `06-pagos-simulados` | 41 | Sin condiciones de comisión aceptadas no hay pago; al aceptarlas se habilita solo; reparto 800.000 = 80.000 + 720.000; el estudiante no ve la comisión; rechazo y reintento; la BD impide `simulado = false`; disputa retiene el desembolso; desembolso → completada; devolución anula comisión y desembolso; cancelación; totales del panel. |
+| `07-auditoria` | 26 | Monta las **rutas reales del panel** en un servidor local y hace peticiones HTTP: cada acción queda auditada con su admin, sin guardar textos privados y con la IP en hash; consultas y acciones fallidas no se registran; un no-admin queda registrado como acceso denegado; resumen con las 8 cifras; filtros y paginación; la BD bloquea modificar o borrar la auditoría. |
 
-| ID | Prueba | Actor | Resultado esperado |
-|----|--------|-------|-------------------|
-| Z-01 | Publicar sin token | Sin sesión | `401 "Se requiere autenticación"` |
-| Z-02 | Publicar como estudiante | Token con rol=estudiante | `403 "No autorizado"` |
-| Z-03 | Publicar como propietario | Token con rol=propietario | `201` inmueble creado |
-| Z-04 | Editar publicación ajena | Propietario B edita de A | `403` |
-| Z-05 | Ver mis publicaciones sin token | Sin sesión | `401` |
+## 2. Pruebas manuales recomendadas (en el navegador)
 
----
+| ID | Flujo | Resultado esperado |
+|----|-------|--------------------|
+| M-01 | Abrir una página interna sin sesión | Redirige a iniciar sesión y luego vuelve a la página |
+| M-02 | Registrarse como propietario y entrar sin aprobación | Lo lleva a "Mi verificación"; "Publicar" muestra el bloqueo |
+| M-03 | Admin aprueba al propietario | Llega el correo; ya puede publicar |
+| M-04 | Estudiante busca, abre una publicación y toca "Solicitar arriendo" | La solicitud aparece en "Mis solicitudes" y en el panel; llega el correo al equipo |
+| M-05 | Admin pasa la solicitud a "En revisión" con un mensaje para cada parte | Cada uno ve solo su mensaje; el propietario ve solo el primer nombre del estudiante |
+| M-06 | Estudiante escribe a Roumix; admin responde y deja una nota interna | El estudiante ve la respuesta y el contador en "Mensajes", nunca la nota interna |
+| M-07 | Admin prepara y envía el contrato; ambas partes lo aceptan | El contrato queda formalizado y la solicitud pasa a "Pago pendiente" (si el propietario aceptó la comisión) |
+| M-08 | Estudiante paga con "rechazado" y luego con "aprobado" | Primero "Pago rechazado", luego "Pagado" con referencia `SIM-…` |
+| M-09 | Admin registra el desembolso | La solicitud queda "Completada"; el propietario ve su desembolso |
+| M-10 | Revisar la pestaña "Auditoría" | Aparecen las acciones anteriores con responsable y fecha |
+| M-11 | Probar en celular y en modo oscuro | Sin desbordes horizontales; textos legibles |
 
-## 4. Pruebas de inmuebles (Etapa 2 en adelante)
+## 3. Herramientas
 
-| ID | Prueba | Descripción |
-|----|--------|-------------|
-| I-01 | Publicar inmueble sin `propietario_id` | El backend debe rechazar o inyectarlo del token |
-| I-02 | Campos vacíos en formulario | El frontend valida antes de enviar |
-| I-03 | Imagen mayor a 5 MB | El frontend rechaza el archivo |
-| I-04 | Mis publicaciones muestra solo las propias | Verificar con dos propietarios distintos |
-
----
-
-## 5. Pruebas de UI / Navegación
-
-| ID | Prueba | Descripción |
-|----|--------|-------------|
-| U-01 | Logo en `frontend/pages/*.html` | Al hacer click lleva a `../index.html` |
-| U-02 | Cerrar sesión | Elimina token, redirige a index |
-| U-03 | Acceso directo a `publicar.html` sin sesión | Redirige a `index.html?redirigir=publicar.html` |
-| U-04 | Comparador con 0 inmuebles | Muestra mensaje "No has seleccionado inmuebles" |
-| U-05 | Comparador con 3 inmuebles | Muestra tabla con 3 columnas correctas |
-
----
-
-## 6. Herramientas recomendadas
-
-- **Postman** o **Thunder Client (VS Code):** para probar endpoints del backend.
-- **Navegador DevTools:** para inspeccionar Network, localStorage y errores de consola.
-- **Supabase Dashboard:** para verificar filas insertadas en las tablas.
+- **Navegador (DevTools):** red, consola y almacenamiento local.
+- **Supabase Dashboard:** revisar filas de las tablas y la auditoría.
+- **Thunder Client / Postman:** probar la API con el token de una sesión (`Authorization: Bearer …`).
