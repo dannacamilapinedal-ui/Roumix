@@ -200,7 +200,10 @@
               ${nota && nota.estado !== "recibida" ? `<div class="solicitud-nota"><strong>Mensaje del equipo de Roumix</strong><p>${escaparHTML(nota.nota)}</p></div>` : ""}
               <div class="solicitud-pie">
                 ${historial(s.historial || [])}
+                <div class="solicitud-acciones">
+                  <a href="mensajes.html?solicitud=${s.id}" class="btn-card-action">Escribir a Roumix</a>
                 ${cancelable ? `<button type="button" class="btn-card-action btn-card-danger" data-cancelar="${s.id}">Cancelar solicitud</button>` : ""}
+                </div>
               </div>
             </article>`;
         }).join("");

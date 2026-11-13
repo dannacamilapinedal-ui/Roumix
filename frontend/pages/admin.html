@@ -58,6 +58,7 @@
       <div class="admin-tabs" role="tablist" aria-label="Secciones del panel">
         <button type="button" role="tab" class="admin-tab activa" aria-selected="true" aria-controls="panel-resumen" id="tab-resumen" data-panel="resumen">Resumen</button>
         <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-solicitudes" id="tab-solicitudes" data-panel="solicitudes">Solicitudes <span class="admin-contador" id="contador-solicitudes" hidden></span></button>
+        <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-mensajes" id="tab-mensajes" data-panel="mensajes">Mensajes <span class="admin-contador" id="contador-mensajes" hidden></span></button>
         <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-reportes" id="tab-reportes" data-panel="reportes">Reportes <span class="admin-contador" id="contador-reportes" hidden></span></button>
         <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-propietarios" id="tab-propietarios" data-panel="propietarios">Propietarios <span class="admin-contador" id="contador-propietarios" hidden></span></button>
         <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-inmuebles" id="tab-inmuebles" data-panel="inmuebles">Publicaciones</button>
@@ -100,6 +101,26 @@
           <input type="search" id="buscar-solicitudes" placeholder="N.º, inmueble, estudiante o propietario" maxlength="100">
         </div>
         <div id="lista-solicitudes-admin" class="admin-lista"></div>
+      </section>
+
+      <section class="admin-panel" id="panel-mensajes" role="tabpanel" aria-labelledby="tab-mensajes" hidden>
+        <div class="admin-filtros">
+          <label for="filtro-mensajes">Estado</label>
+          <select id="filtro-mensajes">
+            <option value="pendiente" selected>Pendientes de respuesta</option>
+            <option value="atendida">Atendidas</option>
+            <option value="todas">Todas</option>
+          </select>
+          <label for="filtro-mensajes-rol">Usuario</label>
+          <select id="filtro-mensajes-rol">
+            <option value="">Todos</option>
+            <option value="estudiante">Estudiantes</option>
+            <option value="propietario">Propietarios</option>
+          </select>
+          <label for="buscar-mensajes" class="sr-only">Buscar conversaciones</label>
+          <input type="search" id="buscar-mensajes" placeholder="Asunto, usuario o vivienda" maxlength="100">
+        </div>
+        <div id="lista-mensajes-admin" class="admin-lista"></div>
       </section>
 
       <section class="admin-panel" id="panel-propietarios" role="tabpanel" aria-labelledby="tab-propietarios" hidden>
@@ -173,6 +194,12 @@
   <dialog id="dialogo-solicitud" class="admin-dialogo" aria-labelledby="dialogo-solicitud-titulo">
     <button type="button" class="visor-cerrar admin-cerrar" data-cerrar aria-label="Cerrar">×</button>
     <div id="dialogo-solicitud-contenido"></div>
+  </dialog>
+
+  <!-- Conversación con un usuario -->
+  <dialog id="dialogo-conversacion" class="admin-dialogo" aria-labelledby="dialogo-conversacion-titulo">
+    <button type="button" class="visor-cerrar admin-cerrar" data-cerrar aria-label="Cerrar">×</button>
+    <div id="dialogo-conversacion-contenido"></div>
   </dialog>
 
   <!-- Revisión de un propietario -->

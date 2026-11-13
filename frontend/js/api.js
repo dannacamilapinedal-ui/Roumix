@@ -175,6 +175,33 @@ const RoumixAPI = {
   /**
    * Verificación del propietario (estado, datos del perfil y condiciones)
    */
+  // ---- Comunicación con el equipo de Roumix ----
+  getConversaciones: async function() {
+    const json = await this._request('/conversaciones');
+    return json.data;
+  },
+
+  getConversacion: async function(id) {
+    const json = await this._request(`/conversaciones/${encodeURIComponent(id)}`);
+    return json.data;
+  },
+
+  crearConversacion: async function(datos) {
+    return this._request('/conversaciones', { method: 'POST', body: JSON.stringify(datos) });
+  },
+
+  enviarMensaje: async function(id, mensaje) {
+    return this._request(`/conversaciones/${encodeURIComponent(id)}/mensajes`, { method: 'POST', body: JSON.stringify({ mensaje }) });
+  },
+
+  getAvisos: async function() {
+    return this._request('/notificaciones');
+  },
+
+  marcarAvisosLeidos: async function(ids) {
+    return this._request('/notificaciones/leidas', { method: 'POST', body: JSON.stringify(ids ? { ids } : {}) });
+  },
+
   // ---- Solicitudes de arriendo ----
   crearSolicitud: async function(datos) {
     return this._request('/solicitudes', { method: 'POST', body: JSON.stringify(datos) });

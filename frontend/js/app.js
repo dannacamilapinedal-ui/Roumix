@@ -229,7 +229,7 @@ async function abrirModalContacto(id) {
       <div class="contacto-sin-telefono solicitud-aviso">
         <strong>Las solicitudes de arriendo las envían los estudiantes.</strong>
         <span>${usuario
-          ? 'Si tienes preguntas sobre esta publicación, escríbele al equipo de Roumix: <a href="mailto:roumix04@gmail.com">roumix04@gmail.com</a>.'
+          ? (usuario.rol === "admin" ? "Tu cuenta es de administración." : `Si tienes preguntas sobre esta publicación, <a href="mensajes.html?inmueble=${inmueble.id}">escríbele al equipo de Roumix</a>.`)
           : "Inicia sesión con tu cuenta de estudiante para enviar una solicitud."}</span>
       </div>`;
     return abrir();
@@ -342,6 +342,18 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") cerrarModalContacto();
 });
 
+// Novedades sin leer (respuestas de Roumix, cambios en solicitudes): se muestran junto a "Mensajes"
+let roumixAvisosSinLeer = 0;
+async function actualizarInsigniaAvisos() {
+  try {
+    const { noLeidas } = await RoumixAPI.getAvisos();
+    if (noLeidas !== roumixAvisosSinLeer) {
+      roumixAvisosSinLeer = noLeidas;
+      sincronizarBarraNavegacion();
+    }
+  } catch (e) { /* el contador es informativo */ }
+}
+
 // 5. Renderizado inteligente y homogéneo de la barra de navegación según el rol
 function sincronizarBarraNavegacion() {
   const header = document.querySelector(".main-header");
@@ -384,8 +396,16 @@ function sincronizarBarraNavegacion() {
       enlaces.push(enlace("publicar.html", "Publicar"), enlace("mis-publicaciones.html", "Mis publicaciones"), enlace("solicitudes.html", "Solicitudes"));
     }
     if (usuario && usuario.rol === "estudiante") enlaces.push(enlace("solicitudes.html", "Mis solicitudes"));
+    if (usuario && (usuario.rol === "estudiante" || usuario.rol === "propietario")) {
+      const insignia = roumixAvisosSinLeer > 0
+        ? ` <span class="nav-insignia" aria-label="${roumixAvisosSinLeer} novedades sin leer">${roumixAvisosSinLeer > 9 ? "9+" : roumixAvisosSinLeer}</span>`
+        : "";
+      enlaces.push(enlace("mensajes.html", `Mensajes${insignia}`));
+    }
     if (usuario && usuario.rol === "admin") enlaces.push(enlace("admin.html", "Administración"));
     navContainer.innerHTML = enlaces.join("");
+    // En celular el menú está plegado: un punto en el botón avisa que hay novedades
+    header.classList.toggle("con-avisos", roumixAvisosSinLeer > 0);
   }
 
   if (rightContainer) {
@@ -598,6 +618,7 @@ async function protegerPagina(rolesPermitidos) {
 
   sincronizarBarraNavegacion();
   document.body.style.visibility = "";
+  if (usuario.rol === "estudiante" || usuario.rol === "propietario") actualizarInsigniaAvisos();
   return usuario;
 }
 

@@ -501,6 +501,57 @@ async function notificarSolicitudPropietario({ propietarioId, solicitud, estado,
   }
 }
 
+// ---------------------------------------------------------------------------
+// Comunicación gestionada
+// ---------------------------------------------------------------------------
+const recorte = (valor, max = 600) => {
+  const limpio = String(valor || '').trim();
+  return limpio.length > max ? `${limpio.slice(0, max - 1)}…` : limpio;
+};
+
+async function notificarMensajeAdministracion({ conversacion, usuario, mensaje, nueva, urlBase }) {
+  try {
+    return await enviar({
+      para: await correosAdministradores(),
+      asunto: `${nueva ? 'Nueva consulta' : 'Nuevo mensaje'} de ${usuario.nombre}: ${conversacion.asunto}`,
+      contenido: {
+        titulo: nueva ? 'Llegó una consulta nueva' : 'Un usuario respondió una conversación',
+        parrafos: [
+          `<strong>${escapar(usuario.nombre)}</strong> (${escapar(usuario.rol)}) escribió en <strong>${escapar(conversacion.asunto)}</strong>:`,
+          `<em>${escapar(recorte(mensaje)).replace(/\n/g, '<br>')}</em>`
+        ],
+        boton: { texto: 'Responder en el panel', url: `${urlBase}/pages/admin.html` }
+      }
+    });
+  } catch (error) {
+    console.error('⚠️ Notificación de mensaje a la administración:', error.message);
+    return false;
+  }
+}
+
+async function notificarRespuestaRoumix({ usuarioId, conversacion, mensaje, urlBase }) {
+  try {
+    const { rows } = await db.query("SELECT email, nombre FROM usuarios WHERE id = $1 AND estado = 'activo'", [usuarioId]);
+    if (!rows.length) return false;
+    return await enviar({
+      para: rows[0].email,
+      asunto: `Roumix te respondió: ${conversacion.asunto}`,
+      contenido: {
+        titulo: 'Tienes un mensaje del equipo de Roumix',
+        parrafos: [
+          `Hola ${escapar(String(rows[0].nombre || '').split(' ')[0])}, te escribimos sobre <strong>${escapar(conversacion.asunto)}</strong>:`,
+          escapar(recorte(mensaje)).replace(/\n/g, '<br>')
+        ],
+        boton: { texto: 'Ver y responder', url: `${urlBase}/pages/mensajes.html?c=${conversacion.id}` },
+        nota: 'Responde desde Roumix: así queda todo registrado. Nunca pagues nada por fuera de la plataforma.'
+      }
+    });
+  } catch (error) {
+    console.error('⚠️ Notificación de respuesta de Roumix:', error.message);
+    return false;
+  }
+}
+
 /**
  * Dirección pública de la aplicación para los enlaces de los correos.
  */
@@ -521,6 +572,8 @@ module.exports = {
   notificarSolicitudCanceladaAdmin,
   notificarSolicitudEstudiante,
   notificarSolicitudPropietario,
+  notificarMensajeAdministracion,
+  notificarRespuestaRoumix,
   enviarRecuperacion,
   urlBase,
   usarTransporte,

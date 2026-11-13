@@ -136,7 +136,8 @@
             <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="m9 15 2 2 4-4"/></svg>
             Solicitar arriendo
           </button>
-          <p class="detalle-gestion">Roumix habla con el propietario por ti. No pagas nada para solicitar.</p>
+          <p class="detalle-gestion">Roumix habla con el propietario por ti. No pagas nada para solicitar.<br>
+            <a href="mensajes.html" id="det-preguntar">¿Tienes una pregunta? Escríbele a Roumix</a></p>
 
           <!-- Botón Guardar Inmueble -->
           <button type="button" class="btn-save-property" id="btn-comparar-inmueble" aria-pressed="false" disabled>
@@ -482,6 +483,7 @@
       visor.addEventListener("close", () => mostrarPrincipal(fotoActual));
 
       // ---------- Solicitud y comparación ----------
+      document.getElementById("det-preguntar").href = `mensajes.html?inmueble=${item.id}`;
       document.getElementById("btn-wa-directo").addEventListener("click", () => abrirModalContacto(item.id));
 
       // Barra fija (solo celular): aparece cuando el botón de solicitud sale de la pantalla

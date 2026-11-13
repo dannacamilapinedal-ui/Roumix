@@ -9,6 +9,7 @@
  */
 const db = require('../config/db');
 const notificaciones = require('../services/notificacionesService');
+const { crearAviso } = require('../services/avisosService');
 const { CONDICION_PUBLICA } = require('./inmueblesController');
 
 const ESTADOS = {
@@ -261,6 +262,7 @@ async function cancelarSolicitud(req, res) {
   const urlBase = notificaciones.urlBase(req);
   await notificaciones.notificarSolicitudCanceladaAdmin({ solicitud: { id, inmuebleTitulo: fila.inmueble_titulo }, motivo, urlBase });
   if (fila.compartida_propietario_en) {
+    await crearAviso({ usuarioId: fila.propietario_id, tipo: 'solicitud', titulo: `Solicitud #${id}: Cancelada`, cuerpo: 'El estudiante canceló la solicitud.', enlace: 'solicitudes.html' });
     await notificaciones.notificarSolicitudPropietario({
       propietarioId: fila.propietario_id, solicitud: { id, inmuebleTitulo: fila.inmueble_titulo },
       estado: 'cancelada', etiqueta: ESTADOS.cancelada, nota: 'El estudiante canceló la solicitud.', urlBase
@@ -416,6 +418,17 @@ async function actualizarAdmin(req, res) {
 
   const urlBase = notificaciones.urlBase(req);
   const solicitud = { id, inmuebleTitulo: fila.inmueble_titulo };
+  const tituloAviso = nuevo ? `Solicitud #${id}: ${ESTADOS[nuevo]}` : `Novedad en la solicitud #${id}`;
+  if (nuevo || notaEstudiante) {
+    await crearAviso({ usuarioId: fila.estudiante_id, tipo: 'solicitud', titulo: tituloAviso, cuerpo: notaEstudiante || fila.inmueble_titulo, enlace: 'solicitudes.html' });
+  }
+  if ((fila.compartida_propietario_en || compartidaAhora) && (nuevo || notaPropietario)) {
+    await crearAviso({
+      usuarioId: fila.propietario_id, tipo: 'solicitud',
+      titulo: compartidaAhora ? `Nueva solicitud para ${fila.inmueble_titulo}` : tituloAviso,
+      cuerpo: notaPropietario || fila.inmueble_titulo, enlace: 'solicitudes.html'
+    });
+  }
   if (nuevo || notaEstudiante) {
     await notificaciones.notificarSolicitudEstudiante({
       estudianteId: fila.estudiante_id, solicitud, estado: nuevo, etiqueta: nuevo ? ESTADOS[nuevo] : null, nota: notaEstudiante, urlBase

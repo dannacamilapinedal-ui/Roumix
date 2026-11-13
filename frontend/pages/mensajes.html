@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Habla con el equipo de Roumix sobre una vivienda o una solicitud.">
+  <title>Mensajes — Roumix</title>
+  <script>try{if(localStorage.getItem("roumix_tema")==="oscuro"){document.documentElement.dataset.tema="oscuro";}}catch(e){}</script>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#142219">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="../css/style.css">
+  <script>(function(d){d.classList.add("rx-cargando");setTimeout(function(){if(d.classList.contains("rx-cargando"))d.classList.add("rx-mostrar")},300);setTimeout(function(){d.classList.remove("rx-mostrar","rx-cargando")},6000)})(document.documentElement)</script>
+</head>
+
+<body>
+  <header class="main-header">
+    <div class="header-inner">
+      <div class="header-left">
+        <a href="buscar.html" class="logo">
+          <span class="logo-text">roumix</span><span class="logo-dot">.</span>
+        </a>
+      </div>
+
+      <nav class="main-nav" aria-label="Navegación principal">
+        <ul class="nav-links">
+          <li><a href="buscar.html" class="nav-link">Buscar</a></li>
+          <li><a href="mensajes.html" class="nav-link active" aria-current="page">Mensajes</a></li>
+        </ul>
+      </nav>
+
+      <div class="header-right">
+        <a href="../ingresar.html" class="btn-logout-pill" id="btn-logout">Cerrar sesión</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="my-publications-container">
+      <div class="my-publications-header-row">
+        <div>
+          <h1 class="my-publications-title">Mensajes</h1>
+          <p class="my-publications-subtitle">Habla con el equipo de Roumix. Nosotros coordinamos todo con <span id="msg-otra-parte">el propietario</span> por ti.</p>
+        </div>
+        <button type="button" class="btn-publish-new-property" id="btn-nueva">
+          <svg class="svg-plus-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Nueva consulta
+        </button>
+      </div>
+
+      <section class="msg-novedades" id="msg-novedades" hidden aria-labelledby="msg-novedades-titulo">
+        <div class="msg-novedades-cabeza">
+          <h2 id="msg-novedades-titulo">Novedades <span class="nav-insignia" id="msg-novedades-cuenta" hidden></span></h2>
+          <button type="button" class="msg-enlace" id="msg-leer-todo" hidden>Marcar todo como leído</button>
+        </div>
+        <ul id="msg-novedades-lista"></ul>
+      </section>
+
+      <div class="msg-layout" id="msg-layout">
+        <aside class="msg-lista-col" aria-label="Conversaciones">
+          <ul class="msg-lista" id="msg-lista">
+            <li class="solicitud-cargando" role="status">Cargando…</li>
+          </ul>
+        </aside>
+
+        <section class="msg-hilo-col" id="msg-hilo" aria-live="polite">
+          <div class="msg-vacio">
+            <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <strong>Elige una conversación</strong>
+            <span>o escribe una consulta nueva al equipo de Roumix.</span>
+          </div>
+        </section>
+      </div>
+
+      <p class="msg-seguridad">🔒 Por seguridad, en Roumix estudiantes y propietarios no intercambian teléfonos ni correos: todo pasa por nuestro equipo. Nunca pagues nada por fuera de la plataforma.</p>
+    </div>
+  </main>
+
+  <footer class="app-footer">
+    <div class="footer-container">
+      <div class="footer-col">
+        <div class="footer-logo">
+          <span>roumix</span><span class="dot-orange">.</span>
+        </div>
+        <p class="footer-desc">
+          Plataforma de vivienda universitaria para la comunidad estudiantil de Villavicencio.
+        </p>
+      </div>
+
+      <div class="footer-col">
+        <h4>Roumix</h4>
+        <ul>
+          <li><a href="buscar.html" class="footer-link">Buscar vivienda</a></li>
+          <li><a href="solicitudes.html" class="footer-link">Solicitudes</a></li>
+          <li><a href="mensajes.html" class="footer-link">Mensajes</a></li>
+          <li><a href="../ingresar.html" class="footer-link">Cerrar sesión</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Contacto Académico</h4>
+        <address>
+          Universidad Santo Tomás, Villavicencio<br>
+          Facultad de Ingeniería de Sistemas<br>
+          <a href="mailto:roumix04@gmail.com">roumix04@gmail.com</a>
+        </address>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <small>© 2026 Roumix · Construcción de Software · Villavicencio, Colombia</small>
+    </div>
+  </footer>
+
+  <script src="../js/app.js"></script>
+  <script src="../js/api.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+      const usuario = await protegerPagina(["estudiante", "propietario"]);
+      if (!usuario) return;
+      if (usuario.rol === "propietario") document.getElementById("msg-otra-parte").textContent = "los estudiantes";
+
+      const layout = document.getElementById("msg-layout");
+      const lista = document.getElementById("msg-lista");
+      const hilo = document.getElementById("msg-hilo");
+      const params = new URLSearchParams(location.search);
+      let conversaciones = [];
+      let abierta = null; // id de la conversación abierta
+
+      const hora = (valor) => {
+        const d = new Date(valor);
+        const hoy = new Date();
+        return d.toDateString() === hoy.toDateString()
+          ? d.toLocaleTimeString("es-CO", { hour: "numeric", minute: "2-digit" })
+          : d.toLocaleDateString("es-CO", { day: "numeric", month: "short" });
+      };
+      const conSaltos = (texto) => escaparHTML(texto).replace(/\n/g, "<br>");
+
+      // ---------- Novedades ----------
+      async function cargarNovedades() {
+        try {
+          const { data, noLeidas } = await RoumixAPI.getAvisos();
+          const seccion = document.getElementById("msg-novedades");
+          const recientes = data.filter((a) => !a.leida_en || Date.now() - new Date(a.created_at) < 7 * 86400e3).slice(0, 6);
+          seccion.hidden = recientes.length === 0;
+          const cuenta = document.getElementById("msg-novedades-cuenta");
+          cuenta.textContent = noLeidas;
+          cuenta.hidden = noLeidas === 0;
+          document.getElementById("msg-leer-todo").hidden = noLeidas === 0;
+          document.getElementById("msg-novedades-lista").innerHTML = recientes.map((a) => `
+            <li class="${a.leida_en ? "" : "sin-leer"}">
+              <a href="${escaparHTML(a.enlace || "#")}" data-aviso="${a.id}">
+                <strong>${escaparHTML(a.titulo)}</strong>
+                ${a.cuerpo ? `<span>${escaparHTML(a.cuerpo)}</span>` : ""}
+                <time datetime="${escaparHTML(a.created_at)}">${hora(a.created_at)}</time>
+              </a>
+            </li>`).join("");
+        } catch (e) { /* las novedades son informativas */ }
+      }
+      document.getElementById("msg-novedades-lista").addEventListener("click", (e) => {
+        const enlace = e.target.closest("a[data-aviso]");
+        if (enlace) RoumixAPI.marcarAvisosLeidos([Number(enlace.dataset.aviso)]).catch(() => {});
+      });
+      document.getElementById("msg-leer-todo").addEventListener("click", async () => {
+        await RoumixAPI.marcarAvisosLeidos().catch(() => {});
+        await cargarNovedades();
+        actualizarInsigniaAvisos();
+      });
+
+      // ---------- Lista de conversaciones ----------
+      function renderLista() {
+        if (conversaciones.length === 0) {
+          lista.innerHTML = `<li class="msg-lista-vacia">Aún no tienes conversaciones.<br>Usa "Nueva consulta" para escribirle a Roumix.</li>`;
+          return;
+        }
+        lista.innerHTML = conversaciones.map((c) => `
+          <li>
+            <button type="button" class="msg-item${c.id === abierta ? " activa" : ""}${c.sin_leer ? " sin-leer" : ""}" data-conversacion="${c.id}"${c.id === abierta ? ' aria-current="true"' : ""}>
+              <span class="msg-item-fila">
+                <strong>${escaparHTML(c.asunto)}</strong>
+                <time datetime="${escaparHTML(c.ultimo_mensaje_en)}">${hora(c.ultimo_mensaje_en)}</time>
+              </span>
+              ${c.inmueble_titulo ? `<span class="msg-item-ref">${c.solicitud_id ? `Solicitud #${c.solicitud_id} · ` : ""}${escaparHTML(c.inmueble_titulo)}</span>` : ""}
+              <span class="msg-item-ultimo">${escaparHTML(c.ultimo_mensaje || "")}</span>
+              ${c.sin_leer ? '<span class="msg-punto" aria-label="Respuesta nueva"></span>' : ""}
+            </button>
+          </li>`).join("");
+      }
+
+      async function cargarLista() {
+        try {
+          conversaciones = await RoumixAPI.getConversaciones();
+          renderLista();
+        } catch (error) {
+          lista.innerHTML = `<li class="pub-mensaje pub-mensaje-error" role="alert">${escaparHTML(error.message)}</li>`;
+        }
+      }
+
+      lista.addEventListener("click", (e) => {
+        const boton = e.target.closest("button[data-conversacion]");
+        if (boton) abrirConversacion(Number(boton.dataset.conversacion));
+      });
+
+      // ---------- Hilo ----------
+      function volver() {
+        abierta = null;
+        layout.classList.remove("viendo-hilo");
+        history.replaceState(null, "", "mensajes.html");
+        renderLista();
+      }
+
+      async function abrirConversacion(id, { silencioso = false } = {}) {
+        let c;
+        try {
+          c = await RoumixAPI.getConversacion(id);
+        } catch (error) {
+          if (!silencioso) RoumixAvisos.mostrar(error.message, "error", 5000);
+          return;
+        }
+        const yaAbierta = abierta === id;
+        const borrador = yaAbierta ? (hilo.querySelector("textarea") || {}).value || "" : "";
+        abierta = id;
+        layout.classList.add("viendo-hilo");
+        if (!silencioso) history.replaceState(null, "", `mensajes.html?c=${id}`);
+
+        hilo.innerHTML = `
+          <div class="msg-hilo-cabeza">
+            <button type="button" class="msg-volver" aria-label="Volver a la lista">←</button>
+            <div>
+              <h2>${escaparHTML(c.asunto)}</h2>
+              <span>${c.solicitud_id ? `<a href="solicitudes.html">Solicitud #${c.solicitud_id}</a> · ` : ""}${c.inmueble_id ? `<a href="detalle.html?id=${c.inmueble_id}">${escaparHTML(c.inmueble_titulo || "Vivienda")}</a>` : "Consulta general"}</span>
+            </div>
+            <span class="solicitud-chip solicitud-chip-${c.estado === "pendiente" ? "proceso" : "ok"}">${c.estado === "pendiente" ? "Esperando respuesta" : "Respondida"}</span>
+          </div>
+          <ol class="msg-burbujas">
+            ${c.mensajes.map((m) => `
+              <li class="msg-burbuja ${m.autor_rol === "admin" ? "de-roumix" : "mia"}">
+                ${m.autor_rol === "admin" ? '<span class="msg-autor">Equipo Roumix</span>' : ""}
+                <p>${conSaltos(m.cuerpo)}</p>
+                <time datetime="${escaparHTML(m.created_at)}">${new Date(m.created_at).toLocaleString("es-CO", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</time>
+              </li>`).join("")}
+          </ol>
+          <form class="msg-responder" id="msg-responder" novalidate>
+            <label for="msg-texto" class="sr-only">Tu mensaje</label>
+            <textarea id="msg-texto" rows="2" maxlength="2000" placeholder="Escribe tu mensaje para Roumix…" required></textarea>
+            <button type="submit" class="btn-search-action">Enviar</button>
+          </form>`;
+
+        const burbujas = hilo.querySelector(".msg-burbujas");
+        burbujas.scrollTop = burbujas.scrollHeight;
+        const area = hilo.querySelector("#msg-texto");
+        area.value = borrador;
+        hilo.querySelector(".msg-volver").addEventListener("click", volver);
+        // Enter envía; Shift+Enter hace salto de línea
+        area.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); hilo.querySelector("#msg-responder").requestSubmit(); }
+        });
+        hilo.querySelector("#msg-responder").addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const texto = area.value.trim();
+          if (!texto) return area.focus();
+          const boton = e.target.querySelector("button");
+          boton.disabled = true;
+          try {
+            await RoumixAPI.enviarMensaje(id, texto);
+            area.value = "";
+            await abrirConversacion(id, { silencioso: true });
+            await cargarLista();
+          } catch (error) {
+            RoumixAvisos.mostrar(error.message, "error", 5000);
+            boton.disabled = false;
+          }
+        });
+
+        // La conversación queda leída: se actualizan la lista y el contador
+        const enLista = conversaciones.find((x) => x.id === id);
+        if (enLista && enLista.sin_leer) { enLista.sin_leer = false; actualizarInsigniaAvisos(); cargarNovedades(); }
+        renderLista();
+        if (!silencioso) area.focus({ preventScroll: true });
+      }
+
+      // ---------- Nueva consulta ----------
+      async function nuevaConsulta({ inmuebleId = null, solicitudId = null } = {}) {
+        abierta = null;
+        renderLista();
+        layout.classList.add("viendo-hilo");
+        let referencia = "";
+        let asunto = "";
+        try {
+          if (solicitudId) {
+            const s = (await RoumixAPI.getMisSolicitudes()).find((x) => x.id === solicitudId);
+            if (s) { referencia = `Solicitud #${s.id} · ${s.inmueble_titulo}`; asunto = `Solicitud #${s.id}: ${s.inmueble_titulo}`; }
+          } else if (inmuebleId) {
+            const i = await RoumixAPI.getInmueblePorId(inmuebleId);
+            if (i) { referencia = i.titulo; asunto = `Pregunta sobre ${i.titulo}`; }
+          }
+        } catch (e) { /* sin referencia visible: el servidor igual la valida */ }
+
+        hilo.innerHTML = `
+          <div class="msg-hilo-cabeza">
+            <button type="button" class="msg-volver" aria-label="Volver a la lista">←</button>
+            <div><h2>Nueva consulta a Roumix</h2>${referencia ? `<span>Sobre: ${escaparHTML(referencia)}</span>` : "<span>Pregunta lo que necesites</span>"}</div>
+          </div>
+          <form class="msg-nueva" id="msg-nueva" novalidate>
+            <label for="msg-asunto" class="contacto-paso">Asunto</label>
+            <input type="text" id="msg-asunto" class="form-control" maxlength="150" required value="${escaparHTML(asunto.slice(0, 150))}" placeholder="Ej: ¿Puedo llevar mi bicicleta?">
+            <label for="msg-cuerpo" class="contacto-paso">Mensaje</label>
+            <textarea id="msg-cuerpo" class="form-control form-textarea" rows="6" maxlength="2000" required placeholder="Cuéntanos tu pregunta. El equipo de Roumix te responde aquí y te avisa por correo."></textarea>
+            <p class="pub-mensaje pub-mensaje-error" id="msg-error" role="alert" hidden></p>
+            <button type="submit" class="btn-search-action">Enviar a Roumix</button>
+          </form>`;
+        hilo.querySelector(".msg-volver").addEventListener("click", volver);
+        hilo.querySelector(asunto ? "#msg-cuerpo" : "#msg-asunto").focus({ preventScroll: true });
+
+        hilo.querySelector("#msg-nueva").addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const error = hilo.querySelector("#msg-error");
+          const datos = {
+            asunto: hilo.querySelector("#msg-asunto").value.trim(),
+            mensaje: hilo.querySelector("#msg-cuerpo").value.trim(),
+            inmuebleId: inmuebleId || undefined,
+            solicitudId: solicitudId || undefined
+          };
+          if (datos.asunto.length < 3) { error.textContent = "Escribe un asunto de al menos 3 caracteres."; error.hidden = false; return; }
+          if (datos.mensaje.length < 2) { error.textContent = "Escribe tu mensaje."; error.hidden = false; return; }
+          const boton = e.target.querySelector("button");
+          boton.disabled = true;
+          try {
+            const respuesta = await RoumixAPI.crearConversacion(datos);
+            RoumixAvisos.mostrar("Mensaje enviado a Roumix", "exito");
+            await cargarLista();
+            abrirConversacion(respuesta.data.id);
+          } catch (err) {
+            error.textContent = err.message;
+            error.hidden = false;
+            boton.disabled = false;
+          }
+        });
+      }
+      document.getElementById("btn-nueva").addEventListener("click", () => nuevaConsulta());
+
+      // ---------- Arranque ----------
+      await Promise.all([cargarLista(), cargarNovedades()]);
+      const idParam = Number(params.get("c"));
+      if (idParam) abrirConversacion(idParam);
+      else if (params.get("solicitud")) nuevaConsulta({ solicitudId: Number(params.get("solicitud")) });
+      else if (params.get("inmueble")) nuevaConsulta({ inmuebleId: Number(params.get("inmueble")) });
+
+      // Revisa respuestas nuevas cada 20 s mientras la pestaña está visible
+      setInterval(async () => {
+        if (document.hidden) return;
+        await cargarLista();
+        if (abierta) {
+          const c = conversaciones.find((x) => x.id === abierta);
+          if (c && c.sin_leer) abrirConversacion(abierta, { silencioso: true });
+        }
+      }, 20000);
+    });
+  </script>
+</body>
+</html>

@@ -68,7 +68,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // La página solo se muestra si el servidor confirma el rol admin
   if (!(await protegerPagina(["admin"]))) return;
 
-  const paneles = { resumen: cargarResumen, solicitudes: cargarSolicitudes, reportes: cargarReportes, propietarios: cargarPropietarios, inmuebles: cargarInmuebles, usuarios: cargarUsuarios, historial: cargarHistorial };
+  const paneles = { resumen: cargarResumen, solicitudes: cargarSolicitudes, mensajes: cargarMensajes, reportes: cargarReportes, propietarios: cargarPropietarios, inmuebles: cargarInmuebles, usuarios: cargarUsuarios, historial: cargarHistorial };
 
   function abrirPanel(nombre) {
     document.querySelectorAll(".admin-tab").forEach(tab => {
@@ -92,7 +92,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       contador.hidden = data.reportes.pendientes === 0;
       actualizarContadorPropietarios(data);
       actualizarContadorSolicitudes(data);
+      actualizarContadorMensajes(data);
       const metricas = [
+        ["Mensajes por responder", data.conversaciones.pendientes, data.conversaciones.pendientes ? "alerta" : "neutro", "mensajes"],
         ["Solicitudes nuevas", data.solicitudes.nuevas, data.solicitudes.nuevas ? "alerta" : "neutro", "solicitudes"],
         ["Solicitudes en curso", data.solicitudes.abiertas, "neutro", "solicitudes"],
         ["Propietarios por revisar", data.verificaciones.porRevisar, data.verificaciones.porRevisar ? "alerta" : "neutro", "propietarios"],
@@ -234,6 +236,20 @@ document.addEventListener("DOMContentLoaded", async () => {
           </li>`).join("")}
       </ol>
 
+      <form class="admin-decision" id="form-escribir-parte" novalidate>
+        <h3>Escribir a una de las partes</h3>
+        <p class="fotos-ayuda">El mensaje llega a la bandeja "Mensajes" del usuario y a su correo. Cada parte solo habla con Roumix.</p>
+        <fieldset class="admin-decisiones">
+          <legend class="sr-only">Destinatario</legend>
+          <label><input type="radio" name="para-parte" value="estudiante" checked> Al estudiante</label>
+          <label><input type="radio" name="para-parte" value="propietario" ${compartida ? "" : "disabled"}> Al propietario${compartida ? "" : " (primero pásala a \"En revisión\")"}</label>
+        </fieldset>
+        <label for="sol-parte-mensaje" class="reporte-label">Mensaje</label>
+        <textarea id="sol-parte-mensaje" rows="3" maxlength="2000" placeholder="Ej: Hola, ¿qué día te queda bien para la visita?"></textarea>
+        <p class="pub-mensaje" id="sol-parte-resultado" role="alert" hidden></p>
+        <button type="submit" class="btn-search-action">Enviar mensaje</button>
+      </form>
+
       <form class="admin-decision" id="form-solicitud-admin" novalidate>
         <h3>${cerrada ? "Agregar nota interna" : "Actualizar la solicitud"}</h3>
         ${cerrada ? "" : `
@@ -252,6 +268,32 @@ document.addEventListener("DOMContentLoaded", async () => {
         <p class="pub-mensaje" id="sol-admin-resultado" role="alert" hidden></p>
         <button type="submit" class="btn-search-action">Guardar</button>
       </form>`;
+
+    document.getElementById("form-escribir-parte").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const resultado = document.getElementById("sol-parte-resultado");
+      const mensaje = document.getElementById("sol-parte-mensaje").value.trim();
+      const para = (e.target.querySelector('input[name="para-parte"]:checked') || {}).value;
+      if (mensaje.length < 2) {
+        resultado.textContent = "Escribe el mensaje.";
+        resultado.className = "pub-mensaje pub-mensaje-error";
+        resultado.hidden = false;
+        return;
+      }
+      const boton = e.target.querySelector('button[type="submit"]');
+      boton.disabled = true;
+      try {
+        const respuesta = await RoumixAPI.admin("/conversaciones", { method: "POST", body: { solicitudId: s.id, para, mensaje } });
+        RoumixAvisos.mostrar(respuesta.message, "exito");
+        dialogoSolicitud.close();
+        abrirConversacion(respuesta.data.id);
+      } catch (error) {
+        resultado.textContent = error.message;
+        resultado.className = "pub-mensaje pub-mensaje-error";
+        resultado.hidden = false;
+        boton.disabled = false;
+      }
+    });
 
     const form = document.getElementById("form-solicitud-admin");
     form.addEventListener("submit", async (e) => {
@@ -280,6 +322,128 @@ document.addEventListener("DOMContentLoaded", async () => {
         abrirSolicitud(s.id);
       } catch (error) {
         mostrar(error.message);
+        boton.disabled = false;
+      }
+    });
+  }
+
+  function actualizarContadorMensajes(data) {
+    const contador = document.getElementById("contador-mensajes");
+    contador.textContent = data.conversaciones.pendientes;
+    contador.hidden = data.conversaciones.pendientes === 0;
+  }
+
+  // ---------------- Mensajes (comunicación gestionada) ----------------
+  const ROL = { estudiante: "Estudiante", propietario: "Propietario" };
+
+  async function cargarMensajes() {
+    const contenedor = document.getElementById("lista-mensajes-admin");
+    mostrarCarga(contenedor);
+    const params = new URLSearchParams({ estado: document.getElementById("filtro-mensajes").value });
+    const rol = document.getElementById("filtro-mensajes-rol").value;
+    if (rol) params.set("rol", rol);
+    const q = document.getElementById("buscar-mensajes").value.trim();
+    if (q) params.set("q", q);
+    try {
+      const { data } = await RoumixAPI.admin(`/conversaciones?${params}`);
+      if (data.length === 0) return vacio(contenedor, "No hay conversaciones con estos filtros.");
+      contenedor.innerHTML = `
+        <table class="admin-tabla">
+          <thead><tr><th scope="col">Último mensaje</th><th scope="col">Usuario</th><th scope="col">Asunto</th><th scope="col">Sobre</th><th scope="col">Estado</th><th scope="col"><span class="sr-only">Acciones</span></th></tr></thead>
+          <tbody>${data.map(c => `
+            <tr${c.sin_leer ? ' class="admin-fila-nueva"' : ""}>
+              <td>${fecha(c.ultimo_mensaje_en)}${c.sin_leer ? "<br>" + chip("Sin leer", "pendiente") : ""}</td>
+              <td>${escaparHTML(c.usuario_nombre || "Cuenta eliminada")}<br><small>${escaparHTML(ROL[c.usuario_rol] || "")} · ${escaparHTML(c.usuario_email || "")}</small></td>
+              <td><strong>${escaparHTML(c.asunto)}</strong><br><small class="admin-texto-largo">${escaparHTML((c.ultimo_mensaje || "").slice(0, 120))}</small></td>
+              <td>${c.solicitud_id ? `Solicitud #${c.solicitud_id}<br>` : ""}<small>${escaparHTML(c.inmueble_titulo || "Consulta general")}</small></td>
+              <td>${chip(c.estado === "pendiente" ? "Pendiente" : "Atendida", c.estado === "pendiente" ? "en_revision" : "aprobada")}</td>
+              <td><button type="button" class="btn-card-action" data-conversacion="${c.id}">${c.estado === "pendiente" ? "Responder" : "Ver"}</button></td>
+            </tr>`).join("")}
+          </tbody>
+        </table>`;
+    } catch (error) {
+      mostrarError(contenedor, error);
+    }
+  }
+  document.getElementById("filtro-mensajes").addEventListener("change", cargarMensajes);
+  document.getElementById("filtro-mensajes-rol").addEventListener("change", cargarMensajes);
+  document.getElementById("buscar-mensajes").addEventListener("input", () => {
+    clearTimeout(temporizador);
+    temporizador = setTimeout(cargarMensajes, 350);
+  });
+
+  const dialogoConversacion = document.getElementById("dialogo-conversacion");
+  const contenidoConversacion = document.getElementById("dialogo-conversacion-contenido");
+  dialogoConversacion.querySelector("[data-cerrar]").addEventListener("click", () => dialogoConversacion.close());
+  document.getElementById("lista-mensajes-admin").addEventListener("click", (e) => {
+    const boton = e.target.closest("button[data-conversacion]");
+    if (boton) abrirConversacion(Number(boton.dataset.conversacion));
+  });
+
+  async function abrirConversacion(id) {
+    contenidoConversacion.innerHTML = '<p class="admin-cargando" role="status">Cargando…</p>';
+    if (!dialogoConversacion.open) dialogoConversacion.showModal();
+    let c;
+    try {
+      ({ data: c } = await RoumixAPI.admin(`/conversaciones/${id}`));
+    } catch (error) {
+      return mostrarError(contenidoConversacion, error);
+    }
+    contenidoConversacion.innerHTML = `
+      <h2 id="dialogo-conversacion-titulo">${escaparHTML(c.asunto)}</h2>
+      <p>${chip(c.estado === "pendiente" ? "Pendiente de respuesta" : "Atendida", c.estado === "pendiente" ? "en_revision" : "aprobada")}
+         ${chip(ROL[c.usuario_rol] || c.usuario_rol, "neutro")}
+         ${c.solicitud_id ? chip(`Solicitud #${c.solicitud_id} · ${ETIQUETAS.solicitud[c.solicitud_estado] || ""}`, "neutro") : ""}</p>
+      <dl class="admin-datos admin-datos-linea">
+        <dt>Usuario</dt><dd>${escaparHTML(c.usuario_nombre || "Cuenta eliminada")} · ${escaparHTML(c.usuario_email || "")}${c.usuario_telefono ? " · " + escaparHTML(c.usuario_telefono) : ""}</dd>
+        <dt>Sobre</dt><dd>${c.inmueble_id ? `<a href="detalle.html?id=${c.inmueble_id}" target="_blank" rel="noopener">${escaparHTML(c.inmueble_titulo || "Vivienda #" + c.inmueble_id)}</a>` : "Consulta general"}</dd>
+      </dl>
+      <ol class="admin-chat">
+        ${c.mensajes.map(m => `
+          <li class="admin-chat-msg ${m.tipo === "nota_interna" ? "interna" : m.autor_rol === "admin" ? "roumix" : "usuario"}">
+            <span class="admin-historial-meta">${m.tipo === "nota_interna" ? "🔒 Nota interna · " : ""}${m.autor_rol === "admin" ? `Roumix · ${escaparHTML(m.autor_nombre || "admin")}` : escaparHTML(c.usuario_nombre || ROL[m.autor_rol])} · ${fecha(m.created_at)}</span>
+            <p>${escaparHTML(m.cuerpo).replace(/\n/g, "<br>")}</p>
+          </li>`).join("")}
+      </ol>
+      <form class="admin-decision" id="form-conversacion-admin" novalidate>
+        <label for="conv-respuesta" class="reporte-label">Respuesta</label>
+        <textarea id="conv-respuesta" rows="3" maxlength="2000" placeholder="Escribe tu respuesta. No compartas teléfonos ni correos de la otra parte."></textarea>
+        <label class="admin-check"><input type="checkbox" id="conv-interna"> Guardar como nota interna (el usuario no la ve)</label>
+        <p class="pub-mensaje" id="conv-resultado" role="alert" hidden></p>
+        <div class="admin-botones">
+          <button type="submit" class="btn-search-action">Enviar</button>
+          <button type="button" class="btn-card-action" id="conv-estado">${c.estado === "pendiente" ? "Marcar como atendida" : "Marcar como pendiente"}</button>
+        </div>
+      </form>`;
+    const chat = contenidoConversacion.querySelector(".admin-chat");
+    chat.scrollTop = chat.scrollHeight;
+
+    const resultado = document.getElementById("conv-resultado");
+    const error = (texto) => { resultado.textContent = texto; resultado.className = "pub-mensaje pub-mensaje-error"; resultado.hidden = false; };
+    document.getElementById("conv-estado").addEventListener("click", async () => {
+      try {
+        const r = await RoumixAPI.admin(`/conversaciones/${c.id}/estado`, { method: "POST", body: { estado: c.estado === "pendiente" ? "atendida" : "pendiente" } });
+        RoumixAvisos.mostrar(r.message, "exito");
+        cargarMensajes();
+        cargarContador();
+        abrirConversacion(c.id);
+      } catch (err) { error(err.message); }
+    });
+    document.getElementById("form-conversacion-admin").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const mensaje = document.getElementById("conv-respuesta").value.trim();
+      const interna = document.getElementById("conv-interna").checked;
+      if (!mensaje) return error("Escribe el mensaje.");
+      const boton = e.target.querySelector('button[type="submit"]');
+      boton.disabled = true;
+      try {
+        const r = await RoumixAPI.admin(`/conversaciones/${c.id}/mensajes`, { method: "POST", body: { mensaje, interna } });
+        RoumixAvisos.mostrar(r.message, "exito");
+        cargarMensajes();
+        cargarContador();
+        abrirConversacion(c.id);
+      } catch (err) {
+        error(err.message);
         boton.disabled = false;
       }
     });
@@ -728,6 +892,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       contador.hidden = data.reportes.pendientes === 0;
       actualizarContadorPropietarios(data);
       actualizarContadorSolicitudes(data);
+      actualizarContadorMensajes(data);
     } catch (e) { /* el contador es informativo */ }
   }
 
