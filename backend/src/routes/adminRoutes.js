@@ -3,6 +3,7 @@ const router = express.Router();
 const adminController = require('../controllers/adminController');
 const solicitudesController = require('../controllers/solicitudesController');
 const mensajesController = require('../controllers/mensajesController');
+const contratosController = require('../controllers/contratosController');
 const { requireAuth, requireRol } = require('../middleware/auth');
 
 // Todas las rutas exigen sesión válida y rol admin leído de la base de datos.
@@ -27,5 +28,11 @@ router.post('/conversaciones', mensajesController.iniciarAdmin);
 router.get('/conversaciones/:id', mensajesController.detalleAdmin);
 router.post('/conversaciones/:id/mensajes', mensajesController.responderAdmin);
 router.post('/conversaciones/:id/estado', mensajesController.cambiarEstadoAdmin);
+router.get('/contratos', contratosController.listarAdmin);
+router.get('/solicitudes/:id/contratos', contratosController.contratosDeSolicitud);
+router.post('/solicitudes/:id/contrato', contratosController.crearBorrador);
+router.put('/contratos/:id', contratosController.editarBorrador);
+router.post('/contratos/:id/enviar', contratosController.enviarContrato);
+router.post('/contratos/:id/cancelar', contratosController.cancelarContrato);
 
 module.exports = router;

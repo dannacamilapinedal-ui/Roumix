@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Contrato de arrendamiento gestionado por Roumix (flujo demostrativo).">
+  <title>Contrato — Roumix</title>
+  <script>try{if(localStorage.getItem("roumix_tema")==="oscuro"){document.documentElement.dataset.tema="oscuro";}}catch(e){}</script>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#142219">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="../css/style.css">
+  <script>(function(d){d.classList.add("rx-cargando");setTimeout(function(){if(d.classList.contains("rx-cargando"))d.classList.add("rx-mostrar")},300);setTimeout(function(){d.classList.remove("rx-mostrar","rx-cargando")},6000)})(document.documentElement)</script>
+</head>
+
+<body>
+  <header class="main-header">
+    <div class="header-inner">
+      <div class="header-left">
+        <a href="buscar.html" class="logo">
+          <span class="logo-text">roumix</span><span class="logo-dot">.</span>
+        </a>
+      </div>
+
+      <nav class="main-nav" aria-label="Navegación principal">
+        <ul class="nav-links">
+          <li><a href="buscar.html" class="nav-link">Buscar</a></li>
+          <li><a href="solicitudes.html" class="nav-link">Solicitudes</a></li>
+        </ul>
+      </nav>
+
+      <div class="header-right">
+        <a href="../ingresar.html" class="btn-logout-pill" id="btn-logout">Cerrar sesión</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="contrato-contenedor" id="contrato">
+      <p class="solicitud-cargando" role="status">Cargando…</p>
+    </div>
+  </main>
+
+  <footer class="app-footer">
+    <div class="footer-container">
+      <div class="footer-col">
+        <div class="footer-logo">
+          <span>roumix</span><span class="dot-orange">.</span>
+        </div>
+        <p class="footer-desc">
+          Plataforma de vivienda universitaria para la comunidad estudiantil de Villavicencio.
+        </p>
+      </div>
+
+      <div class="footer-col">
+        <h4>Roumix</h4>
+        <ul>
+          <li><a href="solicitudes.html" class="footer-link">Solicitudes</a></li>
+          <li><a href="mensajes.html" class="footer-link">Mensajes</a></li>
+          <li><a href="privacidad.html" class="footer-link">Privacidad</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Contacto Académico</h4>
+        <address>
+          Universidad Santo Tomás, Villavicencio<br>
+          Facultad de Ingeniería de Sistemas<br>
+          <a href="mailto:roumix04@gmail.com">roumix04@gmail.com</a>
+        </address>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <small>© 2026 Roumix · Construcción de Software · Villavicencio, Colombia</small>
+    </div>
+  </footer>
+
+  <script src="../js/app.js"></script>
+  <script src="../js/api.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+      const usuario = await protegerPagina(["estudiante", "propietario", "admin"]);
+      if (!usuario) return;
+      const contenedor = document.getElementById("contrato");
+      const id = Number(new URLSearchParams(location.search).get("id"));
+
+      const ESTADOS = {
+        borrador: { texto: "Borrador", tono: "neutro" },
+        enviado: { texto: "Esperando aceptación", tono: "proceso" },
+        pendiente_aceptacion: { texto: "Falta una aceptación", tono: "proceso" },
+        formalizado: { texto: "Formalizado", tono: "ok" },
+        cancelado: { texto: "Cancelado", tono: "cerrada" },
+        expirado: { texto: "Expirado", tono: "cerrada" }
+      };
+      const dia = (valor) => valor ? new Date(String(valor).slice(0, 10) + "T12:00:00").toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" }) : "—";
+      const momento = (valor) => new Date(valor).toLocaleString("es-CO", { dateStyle: "long", timeStyle: "short" });
+      const pesos = (valor) => valor === null || valor === undefined ? "No aplica" : formatearPrecioCOP(valor);
+
+      function error(texto) {
+        contenedor.innerHTML = "";
+        const p = document.createElement("p");
+        p.className = "pub-mensaje pub-mensaje-error";
+        p.setAttribute("role", "alert");
+        p.textContent = texto;
+        contenedor.appendChild(p);
+      }
+
+      async function cargar() {
+        if (!id) return error("Falta el número del contrato.");
+        let c;
+        try {
+          ({ data: c } = await RoumixAPI._request(`/contratos/${id}`));
+        } catch (e) {
+          return error(e.message);
+        }
+        document.title = `Contrato #${c.id} — Roumix`;
+        const estado = ESTADOS[c.estado] || { texto: c.estado, tono: "neutro" };
+        const aceptacion = (fecha, firma) => fecha
+          ? `<span class="contrato-acepto">✓ Aceptado por <strong>${escaparHTML(firma)}</strong><br><small>${momento(fecha)}</small></span>`
+          : `<span class="contrato-pendiente">Pendiente de aceptación</span>`;
+        const volver = usuario.rol === "admin" ? "admin.html" : "solicitudes.html";
+
+        contenedor.innerHTML = `
+          <div class="contrato-barra no-imprimir">
+            <a href="${volver}" class="msg-enlace">← Volver</a>
+            <button type="button" class="btn-card-action" id="btn-imprimir">Imprimir o guardar en PDF</button>
+          </div>
+
+          <div class="contrato-demo" role="note">
+            <strong>Documento demostrativo.</strong>
+            La aceptación en Roumix registra tu nombre, la fecha y la hora, pero <strong>no es una firma electrónica con validez legal</strong>.
+            Para un contrato con efectos legales, Roumix deberá integrar un proveedor de firma electrónica certificado.
+          </div>
+
+          <article class="contrato-documento">
+            <header class="contrato-cabeza">
+              <div>
+                <span class="solicitud-numero">Contrato N.º ${c.id} · Solicitud #${c.solicitud_id}</span>
+                <h1>Contrato de arrendamiento de vivienda</h1>
+              </div>
+              <span class="solicitud-chip solicitud-chip-${estado.tono}">${escaparHTML(estado.texto)}</span>
+            </header>
+
+            <section class="contrato-seccion">
+              <h2>1. Partes</h2>
+              <dl class="contrato-datos">
+                <dt>Arrendador (propietario)</dt><dd>${escaparHTML(c.propietario_nombre)}</dd>
+                <dt>Arrendatario (estudiante)</dt><dd>${escaparHTML(c.estudiante_nombre)}</dd>
+              </dl>
+              <p class="contrato-nota">Roumix actúa únicamente como intermediario: prepara este documento y coordina el proceso. No es propietario del inmueble ni parte del contrato.</p>
+            </section>
+
+            <section class="contrato-seccion">
+              <h2>2. Inmueble</h2>
+              <dl class="contrato-datos">
+                <dt>Publicación</dt><dd>${escaparHTML(c.inmueble_titulo)}</dd>
+                <dt>Barrio</dt><dd>${escaparHTML(c.barrio || "Villavicencio")}, Villavicencio (Meta)</dd>
+                <dt>Dirección</dt><dd>${escaparHTML(c.inmueble_direccion || "Se informará al coordinar la entrega")}</dd>
+              </dl>
+            </section>
+
+            <section class="contrato-seccion">
+              <h2>3. Condiciones económicas y duración</h2>
+              <dl class="contrato-datos">
+                <dt>Canon mensual</dt><dd><strong>${pesos(c.canon_mensual)}</strong></dd>
+                <dt>Depósito</dt><dd>${pesos(c.deposito)}</dd>
+                <dt>Día de pago</dt><dd>El ${c.dia_pago} de cada mes</dd>
+                <dt>Inicio</dt><dd>${dia(c.fecha_inicio)}</dd>
+                <dt>Finalización</dt><dd>${dia(c.fecha_fin)} (${c.duracion_meses} ${c.duracion_meses === 1 ? "mes" : "meses"})</dd>
+                <dt>Servicios incluidos</dt><dd>${escaparHTML(c.servicios_incluidos || "No se incluyen servicios en el canon")}</dd>
+              </dl>
+            </section>
+
+            <section class="contrato-seccion">
+              <h2>4. Condiciones acordadas</h2>
+              <p class="contrato-texto">${escaparHTML(c.condiciones || "Sin condiciones adicionales.")}</p>
+            </section>
+
+            <section class="contrato-seccion">
+              <h2>5. Pago del primer mes</h2>
+              <p class="contrato-texto">El primer canon se paga a través de Roumix, y solo después de que este contrato quede formalizado por ambas partes. Roumix cobra al propietario una comisión del 10 % del primer canon, una sola vez; esa comisión no se suma a lo que paga el estudiante. Los siguientes cánones se pagan según lo acordado entre las partes.</p>
+            </section>
+
+            <section class="contrato-seccion">
+              <h2>6. Aceptación de las partes</h2>
+              <div class="contrato-firmas">
+                <div><span class="contrato-rol">Arrendador</span>${aceptacion(c.aceptado_propietario_en, c.firma_propietario)}</div>
+                <div><span class="contrato-rol">Arrendatario</span>${aceptacion(c.aceptado_estudiante_en, c.firma_estudiante)}</div>
+              </div>
+              ${c.estado === "formalizado" ? `<p class="contrato-nota">Formalizado el ${momento(c.formalizado_en)}.</p>` : ""}
+              ${c.estado === "cancelado" ? `<p class="contrato-nota">Cancelado${c.cancelado_en ? ` el ${momento(c.cancelado_en)}` : ""}.</p>` : ""}
+              ${c.estado === "expirado" ? '<p class="contrato-nota">Venció el plazo para aceptarlo. Escríbele a Roumix si aún te interesa.</p>' : ""}
+              ${c.vence_en && ["enviado", "pendiente_aceptacion"].includes(c.estado) ? `<p class="contrato-nota">Plazo para aceptar: hasta el ${momento(c.vence_en)}.</p>` : ""}
+            </section>
+
+            ${c.huella ? `
+            <footer class="contrato-huella">
+              Huella del documento (SHA-256): <code>${escaparHTML(c.huella)}</code>
+              ${c.huella_valida ? '<span class="contrato-huella-ok">✓ El contenido no ha cambiado desde que se envió</span>' : '<span class="contrato-huella-mal">⚠ El contenido no coincide con el enviado</span>'}
+            </footer>` : ""}
+          </article>
+
+          ${c.puedo_aceptar ? `
+          <form class="contrato-aceptar no-imprimir" id="form-aceptar" novalidate>
+            <h2>Aceptar el contrato</h2>
+            <p>Revisa que todo coincida con lo que acordaste. Si algo no está bien, <a href="mensajes.html?solicitud=${c.solicitud_id}">escríbele a Roumix</a> antes de aceptar.</p>
+            <label for="firma" class="contacto-paso">Escribe tu nombre completo</label>
+            <input type="text" id="firma" class="form-control" maxlength="120" autocomplete="name" placeholder="${escaparHTML(c.mi_rol === "estudiante" ? c.estudiante_nombre : c.propietario_nombre)}">
+            <label class="admin-check"><input type="checkbox" id="confirmo"> Leí las condiciones y entiendo que esta aceptación es demostrativa, no una firma electrónica con validez legal.</label>
+            <p class="pub-mensaje pub-mensaje-error" id="aceptar-error" role="alert" hidden></p>
+            <button type="submit" class="btn-contact-wa-large">Aceptar contrato</button>
+          </form>` : ""}
+
+          ${!c.puedo_aceptar && c.acepte && c.estado === "pendiente_aceptacion" ? `<p class="contrato-estado-msg no-imprimir">Ya aceptaste este contrato. Te avisaremos cuando la otra parte lo acepte.</p>` : ""}
+          ${c.estado === "formalizado" && c.mi_rol === "estudiante" ? `<p class="contrato-estado-msg no-imprimir">🎉 Contrato formalizado. El siguiente paso es el pago del primer mes a través de Roumix; te avisaremos cuando esté habilitado.</p>` : ""}`;
+
+        document.getElementById("btn-imprimir").addEventListener("click", () => window.print());
+        const form = document.getElementById("form-aceptar");
+        if (!form) return;
+        form.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const aviso = document.getElementById("aceptar-error");
+          const mostrar = (t) => { aviso.textContent = t; aviso.hidden = false; };
+          const firma = document.getElementById("firma").value.trim();
+          if (firma.length < 5) return mostrar("Escribe tu nombre completo.");
+          if (!document.getElementById("confirmo").checked) return mostrar("Confirma que leíste las condiciones.");
+          const boton = form.querySelector("button");
+          boton.disabled = true;
+          try {
+            const r = await RoumixAPI._request(`/contratos/${c.id}/aceptar`, { method: "POST", body: JSON.stringify({ firma, confirmo: true }) });
+            RoumixAvisos.mostrar(r.message, "exito", 5000);
+            if (r.data.estado === "formalizado" && typeof lanzarConfeti === "function") lanzarConfeti();
+            await cargar();
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          } catch (err) {
+            mostrar(err.message);
+            boton.disabled = false;
+          }
+        });
+      }
+
+      cargar();
+    });
+  </script>
+</body>
+</html>

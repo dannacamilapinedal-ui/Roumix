@@ -552,6 +552,67 @@ async function notificarRespuestaRoumix({ usuarioId, conversacion, mensaje, urlB
   }
 }
 
+// ---------------------------------------------------------------------------
+// Contratos (flujo demostrativo: la aceptación no es una firma electrónica legal)
+// ---------------------------------------------------------------------------
+async function notificarContrato({ contrato, evento, parte, urlBase }) {
+  try {
+    const { rows } = await db.query(
+      "SELECT id, email, nombre FROM usuarios WHERE id = ANY($1) AND estado = 'activo'",
+      [[contrato.estudiante_id, contrato.propietario_id].filter(Boolean)]
+    );
+    const boton = { texto: 'Ver el contrato', url: `${urlBase}/pages/contrato.html?id=${contrato.id}` };
+    const nota = 'Contrato demostrativo: la aceptación en Roumix no es una firma electrónica con validez legal.';
+    const enviados = [];
+    if (evento === 'enviado' || evento === 'formalizado') {
+      for (const u of rows) {
+        enviados.push(await enviar({
+          para: u.email,
+          asunto: evento === 'enviado' ? `Tu contrato #${contrato.id} está listo para revisar` : `Contrato #${contrato.id} formalizado`,
+          contenido: {
+            titulo: evento === 'enviado' ? 'Revisa y acepta tu contrato' : '¡El contrato quedó formalizado!',
+            parrafos: [
+              `Hola ${escapar(String(u.nombre || '').split(' ')[0])}, ${evento === 'enviado'
+                ? `Roumix preparó el contrato de <strong>${escapar(contrato.inmueble_titulo)}</strong> con las condiciones acordadas. Revísalo y acéptalo dentro de los próximos 7 días.`
+                : `ambas partes aceptaron el contrato de <strong>${escapar(contrato.inmueble_titulo)}</strong>.`}`,
+              evento === 'formalizado' && u.id === contrato.estudiante_id
+                ? 'El siguiente paso es el pago del primer mes, que se hará a través de Roumix. Te avisaremos cuando esté habilitado.'
+                : 'Si algo no coincide con lo acordado, escríbele al equipo de Roumix antes de aceptarlo.'
+            ],
+            boton,
+            nota
+          }
+        }));
+      }
+      if (evento === 'formalizado') {
+        await enviar({
+          para: await correosAdministradores(),
+          asunto: `Contrato #${contrato.id} formalizado`,
+          contenido: { titulo: 'Un contrato quedó formalizado', parrafos: [`Ambas partes aceptaron el contrato #${contrato.id} (${escapar(contrato.inmueble_titulo)}). La solicitud pasó a "Contrato formalizado".`], boton: { texto: 'Abrir el panel', url: `${urlBase}/pages/admin.html` } }
+        });
+      }
+      return enviados.some(Boolean);
+    }
+    // Aceptación parcial: se avisa a la otra parte
+    const otraId = parte === 'estudiante' ? contrato.propietario_id : contrato.estudiante_id;
+    const otra = rows.find((u) => u.id === otraId);
+    if (!otra) return false;
+    return await enviar({
+      para: otra.email,
+      asunto: `Falta tu aceptación del contrato #${contrato.id}`,
+      contenido: {
+        titulo: 'Solo falta tu aceptación',
+        parrafos: [`${parte === 'estudiante' ? 'El estudiante' : 'El propietario'} ya aceptó el contrato de <strong>${escapar(contrato.inmueble_titulo)}</strong>. Revísalo y acéptalo para formalizarlo.`],
+        boton,
+        nota
+      }
+    });
+  } catch (error) {
+    console.error('⚠️ Notificación de contrato:', error.message);
+    return false;
+  }
+}
+
 /**
  * Dirección pública de la aplicación para los enlaces de los correos.
  */
@@ -574,6 +635,7 @@ module.exports = {
   notificarSolicitudPropietario,
   notificarMensajeAdministracion,
   notificarRespuestaRoumix,
+  notificarContrato,
   enviarRecuperacion,
   urlBase,
   usarTransporte,

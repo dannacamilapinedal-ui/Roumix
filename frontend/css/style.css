@@ -3122,7 +3122,10 @@ a.insignia:focus-visible {
 
 .modal-reporte textarea,
 .admin-dialogo textarea,
-.admin-dialogo input[type="text"] {
+.admin-dialogo input[type="text"],
+.admin-dialogo input[type="number"],
+.admin-dialogo input[type="date"],
+.admin-dialogo select {
   width: 100%;
   border: 1px solid var(--borde-arena);
   border-radius: var(--radio-md);
@@ -7130,4 +7133,169 @@ html[data-tema="oscuro"] .msg-burbuja.mia { background: #2f5a3d; }
   border-radius: 50%;
   background: var(--acento-naranja);
   box-shadow: 0 0 0 2px var(--verde-950);
+}
+
+/* =========================================================================
+   Contratos (módulo 5, flujo demostrativo)
+   ========================================================================= */
+.contrato-contenedor { max-width: 860px; margin: 0 auto; padding: 28px 20px 48px; }
+
+.contrato-barra { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
+.contrato-barra .msg-enlace { text-decoration: none; }
+
+.contrato-demo {
+  margin-bottom: 18px;
+  padding: 12px 16px;
+  border-radius: var(--radio-md);
+  border: 1px dashed #d8b45a;
+  background: #fff6df;
+  color: #6b4a00;
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.contrato-documento {
+  padding: 34px 38px;
+  border-radius: var(--radio-lg);
+  background: var(--superficie);
+  border: 1px solid var(--borde-suave);
+  box-shadow: 0 10px 28px -18px rgba(20, 34, 25, 0.35);
+}
+
+.contrato-cabeza {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+  padding-bottom: 18px;
+  margin-bottom: 8px;
+  border-bottom: 2px solid var(--tinta-fuerte);
+}
+
+.contrato-cabeza h1 { margin: 4px 0 0; font-size: 1.45rem; line-height: 1.25; color: var(--tinta-fuerte); }
+
+.contrato-seccion { padding: 16px 0; border-bottom: 1px solid var(--borde-suave); }
+.contrato-seccion:last-of-type { border-bottom: 0; }
+.contrato-seccion h2 { margin: 0 0 10px; font-size: 0.98rem; color: var(--tinta-fuerte); }
+
+.contrato-datos {
+  display: grid;
+  grid-template-columns: minmax(150px, 220px) 1fr;
+  gap: 6px 16px;
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.contrato-datos dt { color: var(--tinta-tenue); }
+.contrato-datos dd { margin: 0; color: var(--tinta-fuerte); }
+
+.contrato-texto { margin: 0; font-size: 0.92rem; line-height: 1.6; color: var(--tinta-media); white-space: pre-line; }
+.contrato-nota { margin: 10px 0 0; font-size: 0.82rem; color: var(--tinta-tenue); }
+
+.contrato-firmas { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+.contrato-firmas > div {
+  padding: 14px;
+  border-radius: var(--radio-md);
+  border: 1px solid var(--borde-suave);
+  background: var(--fondo-crema);
+  font-size: 0.88rem;
+}
+
+.contrato-rol {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--tinta-tenue);
+}
+
+.contrato-acepto { color: #1f6b3a; }
+.contrato-acepto small { color: var(--tinta-tenue); }
+.contrato-pendiente { color: #8a4f0f; font-weight: 600; }
+
+.contrato-huella {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--borde-arena);
+  font-size: 0.74rem;
+  color: var(--tinta-tenue);
+  overflow-wrap: anywhere;
+}
+
+.contrato-huella code { font-family: "JetBrains Mono", monospace; font-size: 0.7rem; }
+.contrato-huella span { display: block; margin-top: 4px; font-weight: 700; }
+.contrato-huella-ok { color: #1f6b3a; }
+.contrato-huella-mal { color: #b3261e; }
+
+.contrato-aceptar {
+  margin-top: 20px;
+  padding: 22px;
+  border-radius: var(--radio-lg);
+  background: var(--superficie);
+  border: 2px solid var(--verde-800);
+}
+
+.contrato-aceptar h2 { margin: 0 0 6px; font-size: 1.1rem; color: var(--tinta-fuerte); }
+.contrato-aceptar p { margin: 0 0 12px; font-size: 0.88rem; color: var(--tinta-media); }
+.contrato-aceptar a { color: var(--texto-verde-oscuro); font-weight: 700; }
+.contrato-aceptar .form-control { width: 100%; margin-bottom: 10px; }
+.contrato-aceptar .admin-check { display: flex; gap: 8px; align-items: flex-start; font-size: 0.86rem; color: var(--tinta-media); }
+.contrato-aceptar .btn-contact-wa-large { margin-top: 14px; }
+
+.contrato-estado-msg {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border-radius: var(--radio-md);
+  background: var(--fondo-crema-alt);
+  font-size: 0.9rem;
+  color: var(--tinta-fuerte);
+}
+
+.btn-contrato.destacado { background: var(--verde-800); border-color: var(--verde-800); color: #fff; }
+
+/* Panel de administración */
+.admin-seccion-contrato h3 small { font-weight: 500; color: var(--tinta-tenue); }
+
+.admin-contrato-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.admin-contrato-grid label,
+.admin-contrato-form .reporte-label { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; font-weight: 600; color: var(--tinta-media); }
+.admin-contrato-form input,
+.admin-contrato-form textarea { width: 100%; }
+.admin-contrato-form a.btn-card-action { text-decoration: none; }
+
+.admin-cancelar-contrato { margin-top: 10px; }
+.admin-cancelar-contrato summary { cursor: pointer; font-size: 0.84rem; font-weight: 700; color: #b3261e; }
+.admin-cancelar-contrato textarea { width: 100%; margin-bottom: 8px; }
+
+html[data-tema="oscuro"] .contrato-demo { background: rgba(240, 190, 90, 0.1); color: #f0d39a; border-color: rgba(240, 190, 90, 0.4); }
+html[data-tema="oscuro"] .contrato-acepto { color: #9fd8ac; }
+html[data-tema="oscuro"] .contrato-pendiente { color: #f0bf85; }
+
+@media (max-width: 640px) {
+  .contrato-documento { padding: 22px 18px; }
+  .contrato-cabeza { flex-direction: column; }
+  .contrato-cabeza h1 { font-size: 1.2rem; }
+  .contrato-datos { grid-template-columns: 1fr; gap: 2px; }
+  .contrato-datos dd { margin-bottom: 8px; }
+  .contrato-firmas { grid-template-columns: 1fr; }
+  .admin-contrato-grid { grid-template-columns: 1fr 1fr; }
+}
+
+/* Impresión: solo el documento, en blanco y negro */
+@media print {
+  .main-header, .app-footer, .no-imprimir, .rx-avisos { display: none !important; }
+  body { background: #fff !important; }
+  .contrato-contenedor { max-width: none; padding: 0; }
+  .contrato-documento { box-shadow: none; border: 0; padding: 0; }
+  .contrato-demo { background: #fff; color: #000; }
+  .contrato-firmas > div { background: #fff; }
 }

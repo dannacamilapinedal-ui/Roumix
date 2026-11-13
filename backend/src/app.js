@@ -15,6 +15,7 @@ const tareasRoutes = require('./routes/tareasRoutes');
 const solicitudesRoutes = require('./routes/solicitudesRoutes');
 const mensajesRoutes = require('./routes/mensajesRoutes');
 const avisosRoutes = require('./routes/avisosRoutes');
+const contratosRoutes = require('./routes/contratosRoutes');
 const errorHandler = require('./middleware/errorHandler');
 const { cabecerasSeguridad, opcionesCors } = require('./config/seguridad');
 
@@ -41,6 +42,7 @@ app.use('/api/propietario', propietarioRoutes);
 app.use('/api/solicitudes', solicitudesRoutes);
 app.use('/api/conversaciones', mensajesRoutes);
 app.use('/api/notificaciones', avisosRoutes);
+app.use('/api/contratos', contratosRoutes);
 app.use('/api/mapa', mapaRoutes);
 app.use('/api/config', configRoutes);
 app.use('/api/tareas', tareasRoutes);

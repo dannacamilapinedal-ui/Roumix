@@ -68,7 +68,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // La página solo se muestra si el servidor confirma el rol admin
   if (!(await protegerPagina(["admin"]))) return;
 
-  const paneles = { resumen: cargarResumen, solicitudes: cargarSolicitudes, mensajes: cargarMensajes, reportes: cargarReportes, propietarios: cargarPropietarios, inmuebles: cargarInmuebles, usuarios: cargarUsuarios, historial: cargarHistorial };
+  const paneles = { resumen: cargarResumen, solicitudes: cargarSolicitudes, contratos: cargarContratos, mensajes: cargarMensajes, reportes: cargarReportes, propietarios: cargarPropietarios, inmuebles: cargarInmuebles, usuarios: cargarUsuarios, historial: cargarHistorial };
 
   function abrirPanel(nombre) {
     document.querySelectorAll(".admin-tab").forEach(tab => {
@@ -93,7 +93,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       actualizarContadorPropietarios(data);
       actualizarContadorSolicitudes(data);
       actualizarContadorMensajes(data);
+      actualizarContadorContratos(data);
       const metricas = [
+        ["Contratos por aceptar", data.contratos.por_aceptar, "neutro", "contratos"],
+        ["Contratos formalizados", data.contratos.formalizados, "ok", "contratos"],
         ["Mensajes por responder", data.conversaciones.pendientes, data.conversaciones.pendientes ? "alerta" : "neutro", "mensajes"],
         ["Solicitudes nuevas", data.solicitudes.nuevas, data.solicitudes.nuevas ? "alerta" : "neutro", "solicitudes"],
         ["Solicitudes en curso", data.solicitudes.abiertas, "neutro", "solicitudes"],
@@ -195,6 +198,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (error) {
       return mostrarError(contenidoSolicitud, error);
     }
+    let contratos = [];
+    try {
+      ({ data: contratos } = await RoumixAPI.admin(`/solicitudes/${id}/contratos`));
+    } catch (e) { /* la sección de contrato muestra el error al usarla */ }
     const compartida = Boolean(s.compartida_propietario_en);
     const cerrada = ["rechazada", "completada", "cancelada"].includes(s.estado);
     const autor = (h) => h.autor_rol === "admin" ? `Roumix · ${escaparHTML(h.autor_nombre || "admin")}` : h.autor_rol === "estudiante" ? "Estudiante" : "Sistema";
@@ -236,6 +243,8 @@ document.addEventListener("DOMContentLoaded", async () => {
           </li>`).join("")}
       </ol>
 
+      <div id="sol-contrato">${seccionContrato(s, contratos)}</div>
+
       <form class="admin-decision" id="form-escribir-parte" novalidate>
         <h3>Escribir a una de las partes</h3>
         <p class="fotos-ayuda">El mensaje llega a la bandeja "Mensajes" del usuario y a su correo. Cada parte solo habla con Roumix.</p>
@@ -268,6 +277,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         <p class="pub-mensaje" id="sol-admin-resultado" role="alert" hidden></p>
         <button type="submit" class="btn-search-action">Guardar</button>
       </form>`;
+
+    activarSeccionContrato(s, contratos);
 
     document.getElementById("form-escribir-parte").addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -331,6 +342,193 @@ document.addEventListener("DOMContentLoaded", async () => {
     const contador = document.getElementById("contador-mensajes");
     contador.textContent = data.conversaciones.pendientes;
     contador.hidden = data.conversaciones.pendientes === 0;
+  }
+
+  // ---------------- Contratos (flujo demostrativo) ----------------
+  const ETIQUETA_CONTRATO = {
+    borrador: "Borrador", enviado: "Enviado", pendiente_aceptacion: "Falta una aceptación",
+    formalizado: "Formalizado", cancelado: "Cancelado", expirado: "Expirado"
+  };
+  const CHIP_CONTRATO = {
+    borrador: "pendiente", enviado: "en_revision", pendiente_aceptacion: "en_revision",
+    formalizado: "aprobada", cancelado: "neutro", expirado: "rechazada"
+  };
+  const chipContrato = (estado) => chip(ETIQUETA_CONTRATO[estado] || estado, CHIP_CONTRATO[estado] || "neutro");
+  const VIGENTES = ["borrador", "enviado", "pendiente_aceptacion"];
+  const isoDia = (valor) => valor ? String(valor).slice(0, 10) : "";
+  const hoyLocal = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
+
+  function actualizarContadorContratos(data) {
+    const contador = document.getElementById("contador-contratos");
+    contador.textContent = data.contratos.borradores;
+    contador.hidden = data.contratos.borradores === 0;
+  }
+
+  async function cargarContratos() {
+    const contenedor = document.getElementById("lista-contratos-admin");
+    mostrarCarga(contenedor);
+    try {
+      const { data } = await RoumixAPI.admin(`/contratos?estado=${document.getElementById("filtro-contratos").value}`);
+      if (data.length === 0) return vacio(contenedor, "No hay contratos con este estado.");
+      contenedor.innerHTML = `
+        <table class="admin-tabla">
+          <thead><tr><th scope="col">Contrato</th><th scope="col">Inmueble</th><th scope="col">Partes</th><th scope="col">Condiciones</th><th scope="col">Aceptaciones</th><th scope="col">Estado</th><th scope="col"><span class="sr-only">Acciones</span></th></tr></thead>
+          <tbody>${data.map(c => `
+            <tr>
+              <td><strong>#${c.id}</strong><br><small>Solicitud #${c.solicitud_id}</small></td>
+              <td>${escaparHTML(c.inmueble_titulo)}</td>
+              <td><small>Arrendador:</small> ${escaparHTML(c.propietario_nombre)}<br><small>Arrendatario:</small> ${escaparHTML(c.estudiante_nombre)}</td>
+              <td>${formatearPrecioCOP(c.canon_mensual)}/mes<br><small>Desde ${fechaDia(c.fecha_inicio)} · ${c.duracion_meses} mes(es)</small></td>
+              <td><small>Propietario: ${c.aceptado_propietario_en ? "✓" : "—"}<br>Estudiante: ${c.aceptado_estudiante_en ? "✓" : "—"}</small></td>
+              <td>${chipContrato(c.estado)}${c.vence_en && ["enviado", "pendiente_aceptacion"].includes(c.estado) ? `<br><small>Vence ${fecha(c.vence_en)}</small>` : ""}</td>
+              <td><button type="button" class="btn-card-action" data-solicitud-contrato="${c.solicitud_id}">Gestionar</button></td>
+            </tr>`).join("")}
+          </tbody>
+        </table>`;
+    } catch (error) {
+      mostrarError(contenedor, error);
+    }
+  }
+  document.getElementById("filtro-contratos").addEventListener("change", cargarContratos);
+  document.getElementById("lista-contratos-admin").addEventListener("click", (e) => {
+    const boton = e.target.closest("button[data-solicitud-contrato]");
+    if (boton) abrirSolicitud(Number(boton.dataset.solicitudContrato));
+  });
+
+  function formularioContrato(s, c) {
+    const v = c || {
+      canon_mensual: s.canon_mensual, deposito: "", dia_pago: 5, duracion_meses: s.duracion_meses,
+      fecha_inicio: isoDia(s.fecha_ingreso) < hoyLocal() ? hoyLocal() : isoDia(s.fecha_ingreso),
+      inmueble_direccion: "", servicios_incluidos: "", condiciones: ""
+    };
+    return `
+      <form id="form-contrato" class="admin-contrato-form" novalidate>
+        <div class="admin-contrato-grid">
+          <label>Canon mensual (COP)<input type="number" id="ct-canon" min="1" step="1000" value="${escaparHTML(v.canon_mensual)}"></label>
+          <label>Depósito (COP, opcional)<input type="number" id="ct-deposito" min="0" step="1000" value="${escaparHTML(v.deposito ?? "")}"></label>
+          <label>Fecha de inicio<input type="date" id="ct-inicio" value="${escaparHTML(isoDia(v.fecha_inicio))}"></label>
+          <label>Duración (meses)<input type="number" id="ct-duracion" min="1" max="24" value="${escaparHTML(v.duracion_meses)}"></label>
+          <label>Día de pago (1–28)<input type="number" id="ct-dia" min="1" max="28" value="${escaparHTML(v.dia_pago)}"></label>
+          <label>Dirección del inmueble<input type="text" id="ct-direccion" maxlength="200" value="${escaparHTML(v.inmueble_direccion || "")}" placeholder="Ej: Calle 40 # 30-15, apto 201"></label>
+        </div>
+        <label class="reporte-label" for="ct-servicios">Servicios incluidos</label>
+        <input type="text" id="ct-servicios" maxlength="500" value="${escaparHTML(v.servicios_incluidos || "")}" placeholder="Ej: Agua, luz, gas e internet">
+        <label class="reporte-label" for="ct-condiciones">Condiciones acordadas</label>
+        <textarea id="ct-condiciones" rows="4" maxlength="5000" placeholder="Ej: No se permiten mascotas. Visitas hasta las 10 p. m. El depósito se devuelve al entregar el inmueble en buen estado.">${escaparHTML(v.condiciones || "")}</textarea>
+        <p class="pub-mensaje" id="ct-resultado" role="alert" hidden></p>
+        <div class="admin-botones">
+          <button type="submit" class="btn-search-action">${c ? "Guardar borrador" : "Crear borrador"}</button>
+          ${c ? `<button type="button" class="btn-card-action" id="ct-enviar">Enviar a las partes</button>` : ""}
+          ${c ? `<a class="btn-card-action" href="contrato.html?id=${c.id}" target="_blank" rel="noopener">Vista previa</a>` : ""}
+        </div>
+      </form>`;
+  }
+
+  function seccionContrato(s, contratos) {
+    const vigente = contratos.find(c => VIGENTES.includes(c.estado));
+    const formalizado = contratos.find(c => c.estado === "formalizado");
+    const historial = contratos.filter(c => c !== vigente && c !== formalizado);
+    let cuerpo;
+    if (formalizado) {
+      cuerpo = `<p>${chipContrato("formalizado")} Contrato <a href="contrato.html?id=${formalizado.id}" target="_blank" rel="noopener">#${formalizado.id}</a> aceptado por ambas partes el ${fecha(formalizado.formalizado_en)}.</p>`;
+    } else if (vigente && vigente.estado === "borrador") {
+      cuerpo = `<p>${chipContrato("borrador")} Contrato #${vigente.id}: las partes todavía no lo ven. Al enviarlo ya no se podrá editar.</p>${formularioContrato(s, vigente)}`;
+    } else if (vigente) {
+      cuerpo = `
+        <p>${chipContrato(vigente.estado)} Contrato <a href="contrato.html?id=${vigente.id}" target="_blank" rel="noopener">#${vigente.id}</a> enviado el ${fecha(vigente.enviado_en)} · vence ${fecha(vigente.vence_en)}</p>
+        <p><small>Propietario: ${vigente.aceptado_propietario_en ? `✓ aceptó (${escaparHTML(vigente.firma_propietario)})` : "pendiente"} · Estudiante: ${vigente.aceptado_estudiante_en ? `✓ aceptó (${escaparHTML(vigente.firma_estudiante)})` : "pendiente"}</small></p>`;
+    } else if (s.estado === "contrato_pendiente") {
+      cuerpo = `<p class="fotos-ayuda">Prepara el contrato con las condiciones que acordaron las partes. Los datos de la solicitud ya vienen llenos.</p>${formularioContrato(s, null)}`;
+    } else {
+      cuerpo = `<p class="fotos-ayuda">El contrato se prepara cuando la solicitud está en "Contrato pendiente".</p>`;
+    }
+    const cancelar = vigente ? `
+      <details class="admin-cancelar-contrato">
+        <summary>Cancelar este contrato</summary>
+        <label class="reporte-label" for="ct-motivo">Motivo (queda en el historial)</label>
+        <textarea id="ct-motivo" rows="2" maxlength="500"></textarea>
+        <button type="button" class="btn-card-action btn-card-danger" id="ct-cancelar">Cancelar contrato #${vigente.id}</button>
+      </details>` : "";
+    return `
+      <section class="admin-decision admin-seccion-contrato">
+        <h3>Contrato <small>(demostrativo)</small></h3>
+        ${cuerpo}
+        ${cancelar}
+        ${historial.length ? `<p class="fotos-ayuda">Anteriores: ${historial.map(c => `<a href="contrato.html?id=${c.id}" target="_blank" rel="noopener">#${c.id}</a> ${escaparHTML(ETIQUETA_CONTRATO[c.estado])}`).join(" · ")}</p>` : ""}
+      </section>`;
+  }
+
+  function activarSeccionContrato(s, contratos) {
+    const vigente = contratos.find(c => VIGENTES.includes(c.estado));
+    const recargar = async (mensaje) => {
+      RoumixAvisos.mostrar(mensaje, "exito");
+      cargarSolicitudes();
+      cargarContador();
+      if (!document.getElementById("panel-contratos").hidden) cargarContratos();
+      abrirSolicitud(s.id);
+    };
+    const mostrarError = (texto) => {
+      const r = document.getElementById("ct-resultado");
+      if (r) { r.textContent = texto; r.className = "pub-mensaje pub-mensaje-error"; r.hidden = false; }
+      else RoumixAvisos.mostrar(texto, "error", 5000);
+    };
+    const datos = () => ({
+      canonMensual: Number(document.getElementById("ct-canon").value),
+      deposito: document.getElementById("ct-deposito").value === "" ? null : Number(document.getElementById("ct-deposito").value),
+      fechaInicio: document.getElementById("ct-inicio").value,
+      duracionMeses: Number(document.getElementById("ct-duracion").value),
+      diaPago: Number(document.getElementById("ct-dia").value),
+      inmuebleDireccion: document.getElementById("ct-direccion").value,
+      serviciosIncluidos: document.getElementById("ct-servicios").value,
+      condiciones: document.getElementById("ct-condiciones").value
+    });
+
+    const form = document.getElementById("form-contrato");
+    if (form) {
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const boton = form.querySelector('button[type="submit"]');
+        boton.disabled = true;
+        try {
+          const r = vigente
+            ? await RoumixAPI.admin(`/contratos/${vigente.id}`, { method: "PUT", body: datos() })
+            : await RoumixAPI.admin(`/solicitudes/${s.id}/contrato`, { method: "POST", body: datos() });
+          recargar(r.message);
+        } catch (err) {
+          mostrarError(err.message);
+          boton.disabled = false;
+        }
+      });
+    }
+    const enviar = document.getElementById("ct-enviar");
+    if (enviar) {
+      enviar.addEventListener("click", async () => {
+        if (!confirm(`¿Enviar el contrato #${vigente.id} al estudiante y al propietario?\n\nSe guarda lo que está en el formulario y, una vez enviado, ya no se podrá editar.`)) return;
+        enviar.disabled = true;
+        try {
+          await RoumixAPI.admin(`/contratos/${vigente.id}`, { method: "PUT", body: datos() });
+          const r = await RoumixAPI.admin(`/contratos/${vigente.id}/enviar`, { method: "POST" });
+          recargar(r.message);
+        } catch (err) {
+          mostrarError(err.message);
+          enviar.disabled = false;
+        }
+      });
+    }
+    const cancelar = document.getElementById("ct-cancelar");
+    if (cancelar) {
+      cancelar.addEventListener("click", async () => {
+        const motivo = document.getElementById("ct-motivo").value.trim();
+        if (motivo.length < 5) return RoumixAvisos.mostrar("Escribe el motivo de la cancelación.", "error");
+        if (!confirm(`¿Cancelar el contrato #${vigente.id}? Las partes ya no podrán aceptarlo.`)) return;
+        try {
+          const r = await RoumixAPI.admin(`/contratos/${vigente.id}/cancelar`, { method: "POST", body: { motivo } });
+          recargar(r.message);
+        } catch (err) {
+          RoumixAvisos.mostrar(err.message, "error", 5000);
+        }
+      });
+    }
   }
 
   // ---------------- Mensajes (comunicación gestionada) ----------------
@@ -893,6 +1091,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       actualizarContadorPropietarios(data);
       actualizarContadorSolicitudes(data);
       actualizarContadorMensajes(data);
+      actualizarContadorContratos(data);
     } catch (e) { /* el contador es informativo */ }
   }
 

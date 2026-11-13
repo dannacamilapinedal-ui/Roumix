@@ -58,6 +58,7 @@
       <div class="admin-tabs" role="tablist" aria-label="Secciones del panel">
         <button type="button" role="tab" class="admin-tab activa" aria-selected="true" aria-controls="panel-resumen" id="tab-resumen" data-panel="resumen">Resumen</button>
         <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-solicitudes" id="tab-solicitudes" data-panel="solicitudes">Solicitudes <span class="admin-contador" id="contador-solicitudes" hidden></span></button>
+        <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-contratos" id="tab-contratos" data-panel="contratos">Contratos <span class="admin-contador" id="contador-contratos" hidden></span></button>
         <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-mensajes" id="tab-mensajes" data-panel="mensajes">Mensajes <span class="admin-contador" id="contador-mensajes" hidden></span></button>
         <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-reportes" id="tab-reportes" data-panel="reportes">Reportes <span class="admin-contador" id="contador-reportes" hidden></span></button>
         <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-propietarios" id="tab-propietarios" data-panel="propietarios">Propietarios <span class="admin-contador" id="contador-propietarios" hidden></span></button>
@@ -101,6 +102,24 @@
           <input type="search" id="buscar-solicitudes" placeholder="N.º, inmueble, estudiante o propietario" maxlength="100">
         </div>
         <div id="lista-solicitudes-admin" class="admin-lista"></div>
+      </section>
+
+      <section class="admin-panel" id="panel-contratos" role="tabpanel" aria-labelledby="tab-contratos" hidden>
+        <div class="admin-filtros">
+          <label for="filtro-contratos">Estado</label>
+          <select id="filtro-contratos">
+            <option value="vigentes" selected>Vigentes (borrador o por aceptar)</option>
+            <option value="borrador">Borradores</option>
+            <option value="enviado">Enviados</option>
+            <option value="pendiente_aceptacion">Falta una aceptación</option>
+            <option value="formalizado">Formalizados</option>
+            <option value="cancelado">Cancelados</option>
+            <option value="expirado">Expirados</option>
+            <option value="todos">Todos</option>
+          </select>
+        </div>
+        <p class="fotos-ayuda">Flujo demostrativo: la aceptación de las partes no es una firma electrónica con validez legal. Los contratos se preparan desde la solicitud, cuando está en "Contrato pendiente".</p>
+        <div id="lista-contratos-admin" class="admin-lista"></div>
       </section>
 
       <section class="admin-panel" id="panel-mensajes" role="tabpanel" aria-labelledby="tab-mensajes" hidden>

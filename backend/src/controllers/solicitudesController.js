@@ -10,6 +10,7 @@
 const db = require('../config/db');
 const notificaciones = require('../services/notificacionesService');
 const { crearAviso } = require('../services/avisosService');
+const { cancelarVigenteDeSolicitud } = require('./contratosController');
 const { CONDICION_PUBLICA } = require('./inmueblesController');
 
 const ESTADOS = {
@@ -200,6 +201,8 @@ async function misSolicitudes(req, res) {
     const { rows } = await db.query(
       `SELECT s.id, s.inmueble_id, s.inmueble_titulo, s.canon_mensual, s.estado, s.fecha_ingreso,
               s.duracion_meses, s.personas, s.mensaje, s.created_at, s.updated_at,
+              (SELECT json_build_object('id', ct.id, 'estado', ct.estado) FROM contratos ct
+                WHERE ct.solicitud_id = s.id AND ct.estado <> 'borrador' ORDER BY ct.created_at DESC LIMIT 1) AS contrato,
               i.imagen_principal, i.barrio, ${HISTORIAL.estudiante} AS historial
        FROM solicitudes s JOIN inmuebles i ON i.id = s.inmueble_id
        WHERE s.estudiante_id = $1
@@ -213,7 +216,9 @@ async function misSolicitudes(req, res) {
     `SELECT s.id, s.inmueble_id, s.inmueble_titulo, s.canon_mensual, s.estado, s.fecha_ingreso,
             s.duracion_meses, s.personas, s.compartida_propietario_en, s.updated_at,
             split_part(COALESCE(e.nombre, 'Estudiante'), ' ', 1) AS estudiante_nombre,
-            i.imagen_principal, i.barrio, ${HISTORIAL.propietario} AS historial
+            (SELECT json_build_object('id', ct.id, 'estado', ct.estado) FROM contratos ct
+                WHERE ct.solicitud_id = s.id AND ct.estado <> 'borrador' ORDER BY ct.created_at DESC LIMIT 1) AS contrato,
+              i.imagen_principal, i.barrio, ${HISTORIAL.propietario} AS historial
      FROM solicitudes s
      JOIN inmuebles i ON i.id = s.inmueble_id
      LEFT JOIN usuarios e ON e.id = s.estudiante_id
@@ -245,6 +250,7 @@ async function cancelarSolicitud(req, res) {
       throw errorHttp(409, `Esta solicitud está "${ESTADOS[fila.estado]}" y ya no se puede cancelar desde aquí. Escríbele al equipo de Roumix.`);
     }
     await cliente.query("UPDATE solicitudes SET estado = 'cancelada', cerrada_en = now() WHERE id = $1", [id]);
+    await cancelarVigenteDeSolicitud(cliente, id, 'El estudiante canceló la solicitud.');
     await registrarHistorial(cliente, {
       solicitudId: id, anterior: fila.estado, nuevo: 'cancelada', autor: req.usuario.id, rol: 'estudiante',
       notaEstudiante: 'Cancelaste la solicitud.',
@@ -401,6 +407,9 @@ async function actualizarAdmin(req, res) {
          WHERE id = $1`,
         [id, nuevo, compartidaAhora]
       );
+      if (['en_negociacion', 'rechazada', 'cancelada'].includes(nuevo)) {
+        await cancelarVigenteDeSolicitud(cliente, id, `La solicitud pasó a "${ESTADOS[nuevo]}".`);
+      }
     } else {
       await cliente.query('UPDATE solicitudes SET updated_at = now() WHERE id = $1', [id]);
     }

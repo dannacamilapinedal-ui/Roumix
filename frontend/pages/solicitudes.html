@@ -201,6 +201,7 @@
               <div class="solicitud-pie">
                 ${historial(s.historial || [])}
                 <div class="solicitud-acciones">
+                  ${s.contrato ? `<a href="contrato.html?id=${s.contrato.id}" class="btn-card-action btn-contrato${["enviado", "pendiente_aceptacion"].includes(s.contrato.estado) ? " destacado" : ""}">${["enviado", "pendiente_aceptacion"].includes(s.contrato.estado) ? "Revisar contrato" : "Ver contrato"}</a>` : ""}
                   <a href="mensajes.html?solicitud=${s.id}" class="btn-card-action">Escribir a Roumix</a>
                 ${cancelable ? `<button type="button" class="btn-card-action btn-card-danger" data-cancelar="${s.id}">Cancelar solicitud</button>` : ""}
                 </div>
