@@ -9,6 +9,8 @@ const MODERACIONES = ['aprobada', 'en_revision', 'requiere_cambios', 'rechazada'
 // Decisión del administrador -> nueva moderación y resultado de los reportes pendientes
 const DECISIONES = {
   aprobar: { moderacion: 'aprobada', reportes: 'no_procede', mensaje: 'Roumix revisó tu publicación y está aprobada.' },
+  // Pausa temporal: se oculta mientras Roumix revisa; los reportes pendientes siguen abiertos
+  pausar: { moderacion: 'en_revision', reportes: null, mensaje: 'Roumix pausó temporalmente tu publicación mientras la revisa. Te avisaremos cuando termine la revisión.' },
   solicitar_cambios: { moderacion: 'requiere_cambios', reportes: 'procedente', mensaje: 'Roumix necesita que corrijas tu publicación antes de mostrarla de nuevo.' },
   rechazar: { moderacion: 'rechazada', reportes: 'procedente', mensaje: 'Tu publicación no cumple las reglas de Roumix y no se mostrará.' },
   retirar: { moderacion: 'retirada', reportes: 'procedente', mensaje: 'Roumix retiró tu publicación de forma definitiva.' }
@@ -237,11 +239,14 @@ async function moderarInmueble(req, res) {
       );
     }
 
-    const { rowCount: reportesResueltos } = await client.query(
-      `UPDATE reportes SET estado = $2, resuelto_en = now(), resuelto_por = $3
-       WHERE inmueble_id = $1 AND estado = 'pendiente'`,
-      [id, config.reportes, req.usuario.id]
-    );
+    // Una pausa temporal no resuelve los reportes: siguen pendientes hasta la decisión final
+    const { rowCount: reportesResueltos } = config.reportes
+      ? await client.query(
+        `UPDATE reportes SET estado = $2, resuelto_en = now(), resuelto_por = $3
+         WHERE inmueble_id = $1 AND estado = 'pendiente'`,
+        [id, config.reportes, req.usuario.id]
+      )
+      : { rowCount: 0 };
 
     await client.query(
       `INSERT INTO moderacion_historial

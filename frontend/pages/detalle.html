@@ -80,6 +80,7 @@
             <span class="detail-badge badge-green" id="det-disponible" hidden>DISPONIBLE</span>
             <span class="detail-badge" id="det-tipo"></span>
             <span class="detail-badge" id="det-estrato"></span>
+            <span class="detail-badge" id="det-capacidad" hidden></span>
           </div>
 
           <h1 class="detail-headline" id="det-titulo">Cargando inmueble…</h1>
@@ -273,6 +274,11 @@
       document.getElementById("det-ubicacion").textContent = `Barrio ${item.barrio}, Villavicencio · ${item.distanciaTexto}`;
       document.getElementById("det-tipo").textContent = item.tipoLabel;
       document.getElementById("det-estrato").textContent = item.estrato ? `Estrato ${item.estrato}` : "Estrato sin informar";
+      if (item.capacidad) {
+        const capacidad = document.getElementById("det-capacidad");
+        capacidad.textContent = `Hasta ${item.capacidad} persona${item.capacidad === 1 ? "" : "s"}`;
+        capacidad.hidden = false;
+      }
       document.getElementById("det-precio").innerHTML = `${item.precioFormato} <small>/mes</small>`;
       document.getElementById("det-descripcion").textContent = item.descripcion || "El propietario no agregó una descripción.";
       document.getElementById("det-deposito").textContent = item.deposito || "Sin informar";

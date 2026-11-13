@@ -6492,3 +6492,17 @@ html[data-tema="oscuro"] .verif-aviso {
   .verif-comprobaciones ul { grid-template-columns: 1fr; }
   .verif-aviso { flex-direction: column; align-items: flex-start; }
 }
+
+/* Publicación retirada por el propietario: se ve atenuada, solo como registro */
+.my-property-card.my-property-retirada {
+  opacity: 0.72;
+}
+
+.my-property-card.my-property-retirada .my-prop-img {
+  filter: grayscale(0.7);
+}
+
+.badge-published.badge-estado-retirado {
+  background: #5f5f5f;
+  color: #fff;
+}

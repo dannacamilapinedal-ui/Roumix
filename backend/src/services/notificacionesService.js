@@ -232,6 +232,12 @@ const TEXTOS_DECISION = {
     boton: 'Ver mis publicaciones',
     ruta: 'mis-publicaciones.html'
   },
+  pausar: {
+    titulo: 'Tu publicación está en revisión',
+    explicacion: 'Mientras el equipo de Roumix la revisa, la publicación no aparece en las búsquedas. No tienes que hacer nada por ahora: te avisaremos cuando termine la revisión.',
+    boton: 'Ver mis publicaciones',
+    ruta: 'mis-publicaciones.html'
+  },
   solicitar_cambios: {
     titulo: 'Necesitamos que corrijas tu publicación',
     explicacion: 'Tu publicación no se mostrará hasta que hagas los cambios solicitados. Cuando la edites y guardes, volverá automáticamente a revisión.',
@@ -240,13 +246,13 @@ const TEXTOS_DECISION = {
   },
   rechazar: {
     titulo: 'Tu publicación fue rechazada',
-    explicacion: 'La publicación no cumple las reglas de Roumix y no se mostrará. Puedes eliminarla desde "Mis publicaciones".',
+    explicacion: 'La publicación no cumple las reglas de Roumix y no se mostrará. Queda guardada en "Mis publicaciones" como registro.',
     boton: 'Ver mis publicaciones',
     ruta: 'mis-publicaciones.html'
   },
   retirar: {
     titulo: 'Tu publicación fue retirada',
-    explicacion: 'Roumix retiró la publicación de forma definitiva y no volverá a mostrarse. Puedes eliminarla desde "Mis publicaciones".',
+    explicacion: 'Roumix retiró la publicación de forma definitiva y no volverá a mostrarse. Queda guardada en "Mis publicaciones" como registro.',
     boton: 'Ver mis publicaciones',
     ruta: 'mis-publicaciones.html'
   }

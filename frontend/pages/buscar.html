@@ -430,6 +430,7 @@
 
                 <div class="property-tags">
                   ${item.estrato ? `<span class="tag-pill">Estrato ${item.estrato}</span>` : ""}
+                  ${item.capacidad ? `<span class="tag-pill">Hasta ${item.capacidad} persona${item.capacidad === 1 ? "" : "s"}</span>` : ""}
                   ${item.transporte ? `<span class="tag-pill">${escaparHTML(item.transporte)}</span>` : ""}
                 </div>
 

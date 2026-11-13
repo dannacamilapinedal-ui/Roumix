@@ -13,10 +13,10 @@ function selectInmueble({ exacto }) {
     : 'ROUND(i.latitud, 3) AS latitud, ROUND(i.longitud, 3) AS longitud';
   return `
     SELECT i.id, i.propietario_id, i.titulo, i.tipo, i.tipo_label, i.precio, i.barrio,
-           i.universidad, i.distancia_texto, i.distancia_metros, i.tiempo_pie, i.estrato,
+           i.universidad, i.distancia_texto, i.distancia_metros, i.tiempo_pie, i.estrato, i.capacidad,
            i.area, i.transporte, i.amenidades, i.descripcion, i.deposito, i.contrato_minimo,
            i.disponible_desde, ${coordenadas}, i.imagen_principal, i.galeria,
-           i.estado, i.moderacion, i.revisado_en, i.revision_alcance, i.created_at, i.updated_at,
+           i.estado, i.retirado_en, i.moderacion, i.revisado_en, i.revision_alcance, i.created_at, i.updated_at,
            ${exacto ? 'i.moderacion_mensaje,' : ''}
            u.nombre AS propietario_nombre, u.telefono AS propietario_telefono,
            (a.email_confirmed_at IS NOT NULL) AS propietario_correo_confirmado
@@ -118,6 +118,7 @@ function validarInmueble(body) {
     distanciaMetros: enteroOpcional(body.distanciaMetros, 'distanciaMetros', 0, 100000),
     tiempoPie: textoOpcional(body.tiempoPie, 'tiempoPie', 50),
     estrato: enteroOpcional(body.estrato, 'estrato', 1, 6),
+    capacidad: enteroOpcional(body.capacidad, 'capacidad', 1, 20),
     area: textoOpcional(body.area, 'area', 30),
     transporte: textoOpcional(body.transporte, 'transporte', 150),
     amenidades: listaTextos(body.amenidades, 'amenidades', 20, 50),
@@ -243,13 +244,20 @@ async function getMisInmuebles(req, res) {
 }
 
 
+// Estados comerciales que el propietario puede elegir con el selector.
+// "retirado" solo se pone con "Retirar" (DELETE) y es definitivo.
 const ESTADOS = ['disponible', 'pausado', 'arrendado'];
 
-// Una publicación rechazada o retirada por Roumix ya no se puede editar ni reactivar
-// (el propietario sí puede eliminarla).
-function verificarEditable(moderacion) {
+// Una publicación rechazada o retirada por Roumix, o retirada por el propietario,
+// ya no se puede editar ni reactivar (se conserva para el historial).
+function verificarEditable(moderacion, estado) {
+  if (estado === 'retirado') {
+    const err = new Error('Retiraste esta publicación y ya no se puede modificar. Si quieres volver a ofrecer el inmueble, crea una publicación nueva.');
+    err.status = 409;
+    throw err;
+  }
   if (moderacion === 'rechazada' || moderacion === 'retirada') {
-    const err = new Error(`Esta publicación fue ${moderacion} por Roumix y no se puede modificar. Puedes eliminarla.`);
+    const err = new Error(`Esta publicación fue ${moderacion} por Roumix y no se puede modificar.`);
     err.status = 409;
     throw err;
   }
@@ -294,18 +302,18 @@ async function crearInmueble(req, res) {
          propietario_id, titulo, tipo, tipo_label, precio, barrio, universidad,
          distancia_texto, distancia_metros, tiempo_pie, estrato, area,
          transporte, amenidades, descripcion, deposito, contrato_minimo, disponible_desde,
-         latitud, longitud, imagen_principal, galeria, estado
+         latitud, longitud, imagen_principal, galeria, estado, capacidad
        ) VALUES (
          $1, $2, $3, $4, $5, $6, $7,
          $8, $9, $10, $11, $12,
          $13, $14, $15, $16, $17, $18,
-         $19, $20, $21, $22, 'disponible'
+         $19, $20, $21, $22, 'disponible', $23
        ) RETURNING id`,
       [
         req.usuario.id, d.titulo, d.tipo, d.tipoLabel, d.precio, d.barrio, d.universidad,
         d.distanciaTexto, d.distanciaMetros, d.tiempoPie, d.estrato, d.area,
         d.transporte, d.amenidades, d.descripcion, d.deposito, d.contratoMinimo, d.disponibleDesde,
-        d.latitud, d.longitud, urls[0], urls
+        d.latitud, d.longitud, urls[0], urls, d.capacidad
       ]
     );
     id = result.rows[0].id;
@@ -332,12 +340,12 @@ async function actualizarInmueble(req, res) {
   const d = validarInmueble(req.body || {});
 
   const actual = await db.query(
-    'SELECT galeria, moderacion, titulo FROM inmuebles WHERE id = $1 AND propietario_id = $2',
+    'SELECT galeria, moderacion, titulo, estado FROM inmuebles WHERE id = $1 AND propietario_id = $2',
     [id, req.usuario.id]
   );
   if (actual.rows.length === 0) return noEncontrado(res, id);
   const { galeria: galeriaActual, moderacion } = actual.rows[0];
-  verificarEditable(moderacion);
+  verificarEditable(moderacion, actual.rows[0].estado);
 
   const conservar = Array.isArray(req.body.fotosConservar) ? req.body.fotosConservar : galeriaActual;
   if (conservar.some((url) => !galeriaActual.includes(url))) {
@@ -358,13 +366,14 @@ async function actualizarInmueble(req, res) {
          titulo = $3, tipo = $4, tipo_label = $5, precio = $6, barrio = $7, universidad = $8,
          distancia_texto = $9, distancia_metros = $10, tiempo_pie = $11, estrato = $12, area = $13,
          transporte = $14, amenidades = $15, descripcion = $16, deposito = $17, contrato_minimo = $18,
-         disponible_desde = $19, latitud = $20, longitud = $21, imagen_principal = $22, galeria = $23
-       WHERE id = $1 AND propietario_id = $2`,
+         disponible_desde = $19, latitud = $20, longitud = $21, imagen_principal = $22, galeria = $23,
+         capacidad = $24
+       WHERE id = $1 AND propietario_id = $2 AND estado <> 'retirado'`,
       [
         id, req.usuario.id, d.titulo, d.tipo, d.tipoLabel, d.precio, d.barrio, d.universidad,
         d.distanciaTexto, d.distanciaMetros, d.tiempoPie, d.estrato, d.area,
         d.transporte, d.amenidades, d.descripcion, d.deposito, d.contratoMinimo,
-        d.disponibleDesde, d.latitud, d.longitud, galeria[0], galeria
+        d.disponibleDesde, d.latitud, d.longitud, galeria[0], galeria, d.capacidad
       ]
     );
     if (result.rowCount === 0) {
@@ -405,14 +414,14 @@ async function cambiarEstado(req, res) {
   const estado = (req.body || {}).estado;
   if (!ESTADOS.includes(estado)) throw errorValidacion(`estado debe ser uno de: ${ESTADOS.join(', ')}.`);
 
-  const actual = await db.query('SELECT moderacion FROM inmuebles WHERE id = $1 AND propietario_id = $2', [id, req.usuario.id]);
+  const actual = await db.query('SELECT moderacion, estado FROM inmuebles WHERE id = $1 AND propietario_id = $2', [id, req.usuario.id]);
   if (actual.rows.length === 0) return noEncontrado(res, id);
-  verificarEditable(actual.rows[0].moderacion);
+  verificarEditable(actual.rows[0].moderacion, actual.rows[0].estado);
 
   // El estado comercial se puede cambiar aunque esté en revisión: seguirá oculta
   // hasta que Roumix la apruebe, porque la moderación es independiente.
   const result = await db.query(
-    'UPDATE inmuebles SET estado = $3 WHERE id = $1 AND propietario_id = $2 RETURNING id, estado, moderacion',
+    "UPDATE inmuebles SET estado = $3 WHERE id = $1 AND propietario_id = $2 AND estado <> 'retirado' RETURNING id, estado, moderacion",
     [id, req.usuario.id, estado]
   );
   if (result.rowCount === 0) return noEncontrado(res, id);
@@ -421,18 +430,31 @@ async function cambiarEstado(req, res) {
 
 /**
  * DELETE /api/inmuebles/:id
- * Elimina un inmueble propio y sus fotos
+ * Retira un inmueble propio: deja de mostrarse para siempre, pero se CONSERVA (con sus
+ * fotos) para no perder el historial de solicitudes, contratos y pagos asociados.
  */
 async function eliminarInmueble(req, res) {
   const id = idDeRuta(req);
   const result = await db.query(
-    'DELETE FROM inmuebles WHERE id = $1 AND propietario_id = $2 RETURNING galeria',
+    `UPDATE inmuebles SET estado = 'retirado', retirado_en = now()
+     WHERE id = $1 AND propietario_id = $2 AND estado <> 'retirado'
+     RETURNING id, titulo`,
     [id, req.usuario.id]
   );
-  if (result.rowCount === 0) return noEncontrado(res, id);
+  if (result.rowCount === 0) {
+    const existe = await db.query('SELECT estado FROM inmuebles WHERE id = $1 AND propietario_id = $2', [id, req.usuario.id]);
+    if (existe.rows.length && existe.rows[0].estado === 'retirado') {
+      return res.status(409).json({ status: 'error', message: 'Esta publicación ya está retirada.' });
+    }
+    return noEncontrado(res, id);
+  }
 
-  await fotos.borrarFotos(req.token, result.rows[0].galeria);
-  res.status(200).json({ status: 'success', message: 'Inmueble eliminado' });
+  await db.query(
+    `INSERT INTO moderacion_historial (inmueble_id, inmueble_titulo, usuario_afectado_id, admin_id, accion, justificacion)
+     VALUES ($1, $2, $3, NULL, 'retirada_por_propietario', 'El propietario retiró la publicación.')`,
+    [id, result.rows[0].titulo, req.usuario.id]
+  );
+  res.status(200).json({ status: 'success', message: 'Publicación retirada. Ya no se mostrará a los estudiantes.' });
 }
 
 module.exports = {

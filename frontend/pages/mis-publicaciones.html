@@ -178,7 +178,8 @@
       const ESTADOS = {
         disponible: { badge: "PUBLICADO", clase: "", color: "#2e7d32", texto: "Visible para estudiantes" },
         pausado: { badge: "PAUSADO", clase: "badge-estado-pausado", color: "#b26a00", texto: "Pausado: no aparece en búsquedas" },
-        arrendado: { badge: "ARRENDADO", clase: "badge-estado-arrendado", color: "#283593", texto: "Arrendado: no aparece en búsquedas" }
+        arrendado: { badge: "ARRENDADO", clase: "badge-estado-arrendado", color: "#283593", texto: "Arrendado: no aparece en búsquedas" },
+        retirado: { badge: "RETIRADA", clase: "badge-estado-retirado", color: "#6b6b6b", texto: "Retiraste esta publicación: ya no se muestra (se guarda como registro)" }
       };
 
       // La moderación de Roumix tiene prioridad sobre el estado comercial al mostrar la publicación
@@ -190,9 +191,8 @@
       };
 
       function botonesAcciones(item) {
-        if (item.moderacion === "rechazada" || item.moderacion === "retirada") {
-          return `<button type="button" class="btn-card-action btn-card-danger" data-accion="eliminar" data-id="${item.id}">Eliminar</button>`;
-        }
+        // Retiradas (por el propietario o por Roumix) y rechazadas: solo quedan como registro
+        if (item.estado === "retirado" || item.moderacion === "rechazada" || item.moderacion === "retirada") return "";
         const botones = [`<a href="publicar.html?editar=${item.id}" class="btn-card-action">Editar</a>`];
         if (item.estado === "disponible") {
           botones.push(`<a href="detalle.html?id=${item.id}" class="btn-card-action">Ver</a>`);
@@ -201,13 +201,15 @@
         } else {
           botones.push(`<button type="button" class="btn-card-action" data-accion="disponible" data-id="${item.id}">${item.estado === "pausado" ? "Reactivar" : "Volver a publicar"}</button>`);
         }
-        botones.push(`<button type="button" class="btn-card-action btn-card-danger" data-accion="eliminar" data-id="${item.id}">Eliminar</button>`);
+        botones.push(`<button type="button" class="btn-card-action btn-card-danger" data-accion="retirar" data-id="${item.id}">Retirar</button>`);
         return botones.join("");
       }
 
       function render() {
-        contenedor.innerHTML = misInmuebles.map(item => {
-          const estado = MODERACION[item.moderacion] || ESTADOS[item.estado] || ESTADOS.disponible;
+        // Las retiradas van al final
+        const ordenadas = [...misInmuebles].sort((a, b) => (a.estado === "retirado") - (b.estado === "retirado"));
+        contenedor.innerHTML = ordenadas.map(item => {
+          const estado = (item.estado === "retirado" ? ESTADOS.retirado : null) || MODERACION[item.moderacion] || ESTADOS[item.estado] || ESTADOS.disponible;
           // Mensaje de Roumix para el propietario (nunca incluye datos de quien reportó)
           const aviso = item.moderacion !== "aprobada" && item.moderacion_mensaje
             ? `<p class="aviso-moderacion" role="note"><strong>Mensaje de Roumix:</strong> ${escaparHTML(item.moderacion_mensaje)}</p>` : "";
@@ -215,13 +217,14 @@
             ? `<p class="aviso-revisada">✓ Revisada por Roumix el ${new Date(item.revisado_en).toLocaleDateString("es-CO")}</p>` : "";
           const tags = [
             item.estrato ? `<span class="tag-pill">Estrato ${item.estrato}</span>` : "",
+            item.capacidad ? `<span class="tag-pill">Hasta ${item.capacidad} persona${item.capacidad === 1 ? "" : "s"}</span>` : "",
             `<span class="tag-pill">${item.amenidades.length} comodidades</span>`,
             `<span class="tag-pill">${item.galeria.length} foto${item.galeria.length === 1 ? "" : "s"}</span>`,
             item.area ? `<span class="tag-pill">${escaparHTML(item.area)}</span>` : ""
           ].join("");
 
           return `
-            <article class="my-property-card">
+            <article class="my-property-card${item.estado === "retirado" ? " my-property-retirada" : ""}">
               <div class="my-prop-image-wrap">
                 <img src="${escaparHTML(item.imagen)}" alt="${escaparHTML(item.titulo)}" class="my-prop-img">
                 <span class="badge-published ${estado.clase}">${estado.badge}</span>
@@ -260,14 +263,16 @@
         const accion = boton.dataset.accion;
         const item = misInmuebles.find(i => i.id === id);
 
-        if (accion === "eliminar" && !confirm(`¿Eliminar "${item.titulo}" y sus fotos? Esta acción no se puede deshacer.`)) return;
+        if (accion === "retirar" && !confirm(`¿Retirar "${item.titulo}"?\n\nDejará de mostrarse a los estudiantes y ya no podrás editarla ni reactivarla. Se guardará como registro en tu cuenta.`)) return;
         if (accion === "arrendado" && !confirm(`¿Marcar "${item.titulo}" como arrendado? Dejará de aparecer en las búsquedas.`)) return;
 
         boton.disabled = true;
         try {
-          if (accion === "eliminar") {
-            await RoumixAPI.eliminarInmueble(id);
-            misInmuebles = misInmuebles.filter(i => i.id !== id);
+          if (accion === "retirar") {
+            await RoumixAPI.retirarInmueble(id);
+            item.estado = "retirado";
+            item.retirado_en = new Date().toISOString();
+            RoumixAvisos.mostrar("Publicación retirada", "info");
           } else {
             const actualizado = await RoumixAPI.cambiarEstado(id, accion);
             item.estado = actualizado.estado;

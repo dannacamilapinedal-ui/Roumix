@@ -269,6 +269,11 @@ const RoumixAPI = {
     return this._request(`/admin${ruta}`, opciones);
   },
 
+  // Retirar: la publicación deja de mostrarse pero se conserva como registro
+  retirarInmueble: async function(id) {
+    return this.eliminarInmueble(id);
+  },
+
   eliminarInmueble: async function(id) {
     await this._request(`/inmuebles/${encodeURIComponent(id)}`, { method: 'DELETE' });
   },

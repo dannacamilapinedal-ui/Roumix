@@ -20,9 +20,10 @@ const ETIQUETAS = {
     rechazada: "Rechazada", retirada: "Retirada"
   },
   reporte: { pendiente: "Pendiente", procedente: "Procedente", no_procede: "No procede" },
-  estado: { disponible: "Disponible", pausado: "Pausado por el propietario", arrendado: "Arrendado" },
+  estado: { disponible: "Disponible", pausado: "Pausado por el propietario", arrendado: "Arrendado", retirado: "Retirado por el propietario" },
   accion: {
-    pausa_preventiva: "Pausa preventiva por reporte", aprobar: "Aprobada", solicitar_cambios: "Cambios solicitados",
+    pausa_preventiva: "Pausa preventiva por reporte", aprobar: "Aprobada", pausar: "Pausada por Roumix para revisión",
+    retirada_por_propietario: "Retirada por el propietario", solicitar_cambios: "Cambios solicitados",
     rechazar: "Rechazada", retirar: "Retirada", correcciones_enviadas: "Correcciones enviadas por el propietario",
     cuenta_suspendida: "Cuenta suspendida", cuenta_reactivada: "Cuenta reactivada",
     rol_admin_asignado: "Rol de administrador asignado", rol_admin_retirado: "Rol de administrador retirado",
@@ -374,10 +375,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       <form class="admin-decision" id="form-decision" novalidate>
         <h3>Registrar decisión</h3>
-        <p class="fotos-ayuda">La decisión no cambia el estado comercial que eligió el propietario (disponible, pausado o arrendado). Los reportes pendientes se resolverán con esta decisión.</p>
+        <p class="fotos-ayuda">La decisión no cambia el estado comercial que eligió el propietario (disponible, pausado, arrendado o retirado). Salvo la pausa temporal, los reportes pendientes se resuelven con esta decisión.</p>
         <fieldset class="admin-decisiones">
           <legend class="sr-only">Decisión</legend>
           <label><input type="radio" name="decision" value="aprobar"> Aprobar (vuelve a mostrarse y recibe la insignia "Revisada por Roumix")</label>
+          <label><input type="radio" name="decision" value="pausar"> Pausar temporalmente mientras se revisa (los reportes siguen abiertos)</label>
           <label><input type="radio" name="decision" value="solicitar_cambios"> Solicitar correcciones al propietario</label>
           <label><input type="radio" name="decision" value="rechazar"> Rechazar (no cumple las reglas)</label>
           <label><input type="radio" name="decision" value="retirar"> Retirar de forma definitiva</label>
