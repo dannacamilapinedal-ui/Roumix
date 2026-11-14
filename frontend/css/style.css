@@ -7650,3 +7650,107 @@ html[data-tema="oscuro"] .btn-ver-estudiante { color: #9fd8ac; }
 
 /* "Cargar más" se oculta de verdad cuando no hay más registros (display:block le ganaba a [hidden]) */
 .admin-cargar-mas[hidden] { display: none; }
+
+/* =========================================================================
+   Área del propietario con barra lateral (UI-4)
+   ========================================================================= */
+.prop-layout {
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: grid;
+  grid-template-columns: 236px minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+.prop-contenido { min-width: 0; }
+/* Los contenedores de cada página ya traen su margen; dentro del área se alinean a la izquierda */
+.prop-contenido > div { margin-left: 0; margin-right: auto; padding-left: 0; padding-right: 0; }
+
+.prop-lateral {
+  position: sticky;
+  top: 88px;
+  margin-top: 36px;
+  background: var(--superficie);
+  border: 1px solid var(--borde-arena);
+  border-radius: var(--radio-lg);
+  padding: 16px 10px;
+  box-shadow: var(--sombra-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.prop-lateral-cabeza {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+  padding: 0 10px 12px; border-bottom: 1px solid var(--borde-suave);
+}
+.prop-lateral-titulo { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--tinta-tenue); }
+.prop-lateral-nombre { font-size: 0.98rem; color: var(--tinta-fuerte); overflow-wrap: anywhere; }
+.prop-lateral-estado {
+  margin-top: 2px; font-size: 0.74rem; font-weight: 700; padding: 2px 10px; border-radius: var(--radio-pill);
+  text-decoration: none; border: 1px solid transparent;
+}
+.prop-estado-aprobada { background: #e3f1e5; color: #1f6b3a; border-color: #b9dcc0; }
+.prop-estado-revision, .prop-estado-pendiente { background: #fdf1de; color: #8a5a12; border-color: #f0d3a3; }
+.prop-estado-rechazada { background: #fbe5e5; color: #8a1c1c; border-color: #efbcbc; }
+html[data-tema="oscuro"] .prop-estado-aprobada { background: rgba(110, 190, 130, 0.14); color: #9fd8ac; border-color: rgba(110, 190, 130, 0.35); }
+html[data-tema="oscuro"] .prop-estado-revision,
+html[data-tema="oscuro"] .prop-estado-pendiente { background: rgba(240, 190, 90, 0.12); color: #f0d39a; border-color: rgba(240, 190, 90, 0.35); }
+html[data-tema="oscuro"] .prop-estado-rechazada { background: rgba(230, 110, 110, 0.12); color: #f2aaaa; border-color: rgba(230, 110, 110, 0.35); }
+
+.prop-lateral ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.prop-lateral-enlace {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px; border-radius: var(--radio-sm); border-left: 3px solid transparent;
+  color: var(--tinta-media); font-size: 0.92rem; font-weight: 600; text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+.prop-lateral-enlace span:first-of-type { flex: 1; }
+.prop-lateral-enlace:hover { background: var(--fondo-crema-alt); color: var(--tinta-fuerte); }
+.prop-lateral-enlace.activo {
+  background: var(--verde-badge-bg); color: var(--verde-badge-text); border-left-color: var(--acento-naranja); font-weight: 700;
+}
+.prop-lateral-enlace:focus-visible { outline: 2px solid var(--acento-naranja); outline-offset: 1px; }
+.prop-lateral-contador {
+  flex: none; background: #8a1c1c; color: #ffffff; font-size: 0.72rem; font-weight: 700;
+  border-radius: var(--radio-pill); padding: 1px 7px;
+}
+.prop-lateral-punto { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--acento-naranja); }
+.prop-lateral-vista {
+  display: flex; align-items: center; gap: 8px; margin: 4px 10px 0; padding-top: 12px;
+  border-top: 1px solid var(--borde-suave);
+  font-size: 0.85rem; font-weight: 600; color: var(--texto-verde-medio); text-decoration: none;
+}
+.prop-lateral-vista:hover { text-decoration: underline; }
+
+/* En computador la barra lateral reemplaza los enlaces del menú superior */
+@media (min-width: 901px) {
+  body.con-lateral-propietario .main-header .main-nav { visibility: hidden; }
+}
+/* En celular y tableta: sin barra lateral; el menú ☰ sigue teniendo todas las secciones */
+@media (max-width: 900px) {
+  .prop-layout { display: block; padding: 0; }
+  .prop-lateral { display: none; }
+  .prop-contenido > div { margin: 0 auto; padding-left: 24px; padding-right: 24px; }
+}
+
+/* Resumen del propietario (Mis publicaciones) */
+.prop-resumen {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 0 0 22px;
+}
+.prop-resumen-item {
+  display: flex; flex-direction: column; gap: 4px; padding: 14px 16px;
+  background: var(--superficie); border: 1px solid var(--borde-arena); border-radius: var(--radio-lg);
+  text-decoration: none; color: inherit; box-shadow: var(--sombra-sm);
+}
+a.prop-resumen-item:hover { border-color: var(--verde-pastilla-borde); }
+.prop-resumen-valor { font-size: 1.35rem; font-weight: 800; color: var(--tinta-fuerte); line-height: 1.2; }
+.prop-resumen-valor.texto { font-size: 1rem; }
+.prop-resumen-titulo { font-size: 0.8rem; color: var(--tinta-media); }
+.prop-resumen-item.atencion { box-shadow: inset 4px 0 0 var(--acento-naranja), var(--sombra-sm); }
+.prop-resumen-item.atencion .prop-resumen-valor { color: #b46a14; }
+html[data-tema="oscuro"] .prop-resumen-item.atencion .prop-resumen-valor { color: #f0b86a; }
+@media (max-width: 640px) {
+  .prop-resumen { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .prop-resumen-item { padding: 12px 14px; }
+}

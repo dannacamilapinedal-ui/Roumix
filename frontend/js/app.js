@@ -402,6 +402,87 @@ function mostrarAvisoVistaEstudiante(usuario, paginaActual) {
   if (header) header.insertAdjacentElement("afterend", aviso);
 }
 
+// Estado de la cuenta del propietario: texto y tono del chip
+const ROUMIX_ETAPA_PROPIETARIO = {
+  incompleto: ["Perfil por completar", "pendiente"],
+  pendiente: ["En revisión", "revision"],
+  requiere_informacion: ["Requiere información", "pendiente"],
+  rechazado: ["Rechazada", "rechazada"],
+  aprobado: ["Cuenta aprobada", "aprobada"]
+};
+
+// Área del propietario: barra lateral compartida por sus páginas (en computador reemplaza al menú
+// superior; en celular se oculta y el menú ☰ sigue siendo la navegación)
+const PAGINAS_AREA_PROPIETARIO = ["verificacion.html", "mis-publicaciones.html", "publicar.html", "solicitudes.html", "mensajes.html"];
+let roumixSolicitudesEnCurso = null;
+
+function instalarLateralPropietario(usuario) {
+  const paginaActual = window.location.pathname.split("/").pop();
+  const main = document.querySelector("main");
+  if (!usuario || usuario.rol !== "propietario" || !PAGINAS_AREA_PROPIETARIO.includes(paginaActual) || !main) return;
+
+  if (!document.getElementById("prop-lateral")) {
+    const layout = document.createElement("div");
+    layout.className = "prop-layout";
+    const contenido = document.createElement("div");
+    contenido.className = "prop-contenido";
+    while (main.firstChild) contenido.appendChild(main.firstChild);
+    const lateral = document.createElement("aside");
+    lateral.id = "prop-lateral";
+    lateral.className = "prop-lateral";
+    lateral.setAttribute("aria-label", "Mi área de propietario");
+    layout.append(lateral, contenido);
+    main.appendChild(layout);
+    document.body.classList.add("con-lateral-propietario");
+
+    // Solicitudes en curso (compartidas con el propietario y aún abiertas)
+    RoumixAPI.getMisSolicitudes().then((lista) => {
+      roumixSolicitudesEnCurso = lista.filter((s) => !ROUMIX_SOLICITUD_CERRADA.includes(s.estado)).length;
+      pintarLateralPropietario(usuario);
+    }).catch(() => {});
+  }
+  pintarLateralPropietario(usuario);
+}
+
+function pintarLateralPropietario(usuario) {
+  const lateral = document.getElementById("prop-lateral");
+  if (!lateral) return;
+  const paginaActual = window.location.pathname.split("/").pop();
+  const [estadoTexto, estadoTono] = ROUMIX_ETAPA_PROPIETARIO[usuario.verificacion] || ROUMIX_ETAPA_PROPIETARIO.incompleto;
+  const contador = (n, etiqueta) => n > 0
+    ? `<span class="prop-lateral-contador" aria-label="${n} ${etiqueta}">${n > 9 ? "9+" : n}</span>` : "";
+  const ICONOS = {
+    "verificacion.html": '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/>',
+    "mis-publicaciones.html": '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/>',
+    "publicar.html": '<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>',
+    "solicitudes.html": '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="m9 15 2 2 4-4"/>',
+    "mensajes.html": '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>'
+  };
+  const enlaces = [
+    ["mis-publicaciones.html", "Mis publicaciones", ""],
+    ["publicar.html", "Publicar inmueble", ""],
+    ["solicitudes.html", "Solicitudes", contador(roumixSolicitudesEnCurso || 0, "solicitudes en curso")],
+    ["mensajes.html", "Mensajes", contador(roumixAvisosSinLeer, "novedades sin leer")],
+    ["verificacion.html", "Mi cuenta y verificación", usuario.verificacion !== "aprobado" ? '<span class="prop-lateral-punto" aria-label="Requiere tu atención"></span>' : ""]
+  ];
+  lateral.innerHTML = `
+    <div class="prop-lateral-cabeza">
+      <span class="prop-lateral-titulo">Mi área</span>
+      <strong class="prop-lateral-nombre">${escaparHTML(usuario.nombre || "Propietario")}</strong>
+      <a href="verificacion.html" class="prop-lateral-estado prop-estado-${estadoTono}">${estadoTexto}</a>
+    </div>
+    <nav aria-label="Secciones del propietario">
+      <ul>${enlaces.map(([pagina, texto, extra]) => `
+        <li><a href="${pagina}" class="prop-lateral-enlace${pagina === paginaActual ? " activo" : ""}"${pagina === paginaActual ? ' aria-current="page"' : ""}>
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONOS[pagina]}</svg>
+          <span>${texto}</span>${extra}</a></li>`).join("")}
+      </ul>
+    </nav>
+    <a href="buscar.html" class="prop-lateral-vista">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      Ver como estudiante</a>`;
+}
+
 // 5. Renderizado inteligente y homogéneo de la barra de navegación según el rol
 function sincronizarBarraNavegacion() {
   const header = document.querySelector(".main-header");
@@ -510,6 +591,7 @@ function sincronizarBarraNavegacion() {
   ["estudiante", "propietario", "admin"].forEach((rol) => document.body.classList.toggle(`rol-${rol}`, !!usuario && usuario.rol === rol));
   document.body.classList.toggle("vista-no-estudiante", !!usuario && usuario.rol !== "estudiante");
   mostrarAvisoVistaEstudiante(usuario, paginaActual);
+  if (usuario && usuario.rol === "propietario") pintarLateralPropietario(usuario);
 
   // Al confirmar la sesión la barra se redibuja: el botón de tema (☾/☀) se vuelve a poner
   if (typeof RoumixTema !== "undefined") RoumixTema.instalar();
@@ -681,6 +763,7 @@ async function protegerPagina(rolesPermitidos) {
   }
 
   sincronizarBarraNavegacion();
+  instalarLateralPropietario(usuario);
   document.body.style.visibility = "";
   if (usuario.rol === "estudiante" || usuario.rol === "propietario") actualizarInsigniaAvisos();
   return usuario;

@@ -66,6 +66,9 @@
         </a>
       </div>
 
+      <!-- Resumen del área del propietario (se llena con los datos de la cuenta) -->
+      <div class="prop-resumen" id="prop-resumen" aria-label="Tu resumen" hidden></div>
+
       <div class="verif-aviso" id="aviso-verificacion" hidden>
         <div><strong id="aviso-verificacion-titulo"></strong><p id="aviso-verificacion-texto"></p></div>
         <a href="verificacion.html" class="btn-card-action">Ver mi verificación</a>
@@ -123,7 +126,8 @@
       if (!(await protegerPagina(["propietario"]))) return;
 
       // Aviso si la cuenta aún no está aprobada para publicar
-      RoumixAPI.getVerificacion().then((verif) => {
+      const verifPromesa = RoumixAPI.getVerificacion();
+      verifPromesa.then((verif) => {
         if (verif.puedePublicar && !verif.aceptaComision) {
           document.getElementById("aviso-verificacion-titulo").textContent = "Acepta las condiciones de la comisión";
           document.getElementById("aviso-verificacion-texto").textContent = "Es necesario para que Roumix pueda habilitar el pago del primer mes cuando arriendes uno de tus inmuebles.";
@@ -153,6 +157,7 @@
       try {
         contenedor.innerHTML = RoumixUI.skeletonTarjetas(2);
         misInmuebles = await RoumixAPI.getMisInmuebles();
+        pintarResumen(misInmuebles);
       } catch (error) {
         contenedor.innerHTML = `
           <div role="alert" class="rx-vacio">
@@ -161,6 +166,40 @@
         `;
         contenedor.querySelector("p").textContent = `No pudimos cargar tus publicaciones: ${error.message}`;
         return;
+      }
+
+      // Resumen: estado de la cuenta, publicaciones visibles, solicitudes en curso y comisión
+      async function pintarResumen(inmuebles) {
+        const [verif, solicitudes] = await Promise.all([
+          verifPromesa.catch(() => null),
+          RoumixAPI.getMisSolicitudes().catch(() => null)
+        ]);
+        const visibles = inmuebles.filter(i => i.estado === "disponible" && i.moderacion === "aprobada").length;
+        const vigentes = inmuebles.filter(i => i.estado !== "retirado").length;
+        const items = [];
+        if (verif) {
+          const [texto] = ROUMIX_ETAPA_PROPIETARIO[verif.etapa] || ["—"];
+          items.push({ valor: texto, titulo: "Estado de la cuenta", enlace: "verificacion.html", texto: true, atencion: !verif.puedePublicar });
+        }
+        items.push({ valor: visibles, titulo: `Publicaciones visibles de ${vigentes}`, enlace: "", atencion: false });
+        if (solicitudes) {
+          const enCurso = solicitudes.filter(x => !ROUMIX_SOLICITUD_CERRADA.includes(x.estado)).length;
+          items.push({ valor: enCurso, titulo: "Solicitudes en curso", enlace: "solicitudes.html", atencion: false });
+        }
+        if (verif && verif.puedePublicar) {
+          items.push(verif.aceptaComision
+            ? { valor: "Aceptada", titulo: "Comisión del 10 %", enlace: "verificacion.html#condiciones", texto: true, atencion: false }
+            : { valor: "Por aceptar", titulo: "Comisión del 10 %", enlace: "verificacion.html#condiciones", texto: true, atencion: true });
+        }
+        const caja = document.getElementById("prop-resumen");
+        caja.innerHTML = items.map(it => {
+          const etiqueta = it.enlace ? "a" : "div";
+          return `<${etiqueta} class="prop-resumen-item${it.atencion ? " atencion" : ""}"${it.enlace ? ` href="${it.enlace}"` : ""}>
+              <span class="prop-resumen-valor${it.texto ? " texto" : ""}">${escaparHTML(String(it.valor))}</span>
+              <span class="prop-resumen-titulo">${escaparHTML(it.titulo)}</span>
+            </${etiqueta}>`;
+        }).join("");
+        caja.hidden = false;
       }
 
       function mostrarVacio() {
