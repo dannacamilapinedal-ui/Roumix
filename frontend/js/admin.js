@@ -58,6 +58,37 @@ function chip(texto, tipo) {
   return `<span class="admin-chip admin-chip-${tipo}">${escaparHTML(texto)}</span>`;
 }
 
+// Tarjeta de una lista del panel (reemplaza las filas de tabla). Todo lo que llega aquí ya viene
+// escapado por quien llama. Arriba: referencia, título y estado; en medio: datos clave con su
+// etiqueta; a la derecha (abajo en celular): la acción principal.
+//   ref, titulo, sub, estado, datos: [[etiqueta, valor]], texto, acciones, imagen, destacada, compacta
+function tarjeta(t) {
+  const datos = (t.datos || []).filter(([, valor]) => valor !== null && valor !== undefined && valor !== "");
+  return `
+    <article class="admin-card${t.destacada ? " admin-card-destacada" : ""}${t.compacta ? " admin-card-compacta" : ""}">
+      ${t.imagen ? `<img class="admin-card-foto" src="${t.imagen}" alt="" loading="lazy">` : ""}
+      <div class="admin-card-cuerpo">
+        <div class="admin-card-cabeza">
+          <div class="admin-card-identidad">
+            ${t.ref ? `<p class="admin-card-ref">${t.ref}</p>` : ""}
+            <h3 class="admin-card-titulo">${t.titulo}</h3>
+            ${t.sub ? `<p class="admin-card-sub">${t.sub}</p>` : ""}
+          </div>
+          ${t.estado ? `<div class="admin-card-estado">${t.estado}</div>` : ""}
+        </div>
+        ${datos.length ? `<dl class="admin-card-datos">${datos.map(([etiqueta, valor]) => `<div><dt>${etiqueta}</dt><dd>${valor}</dd></div>`).join("")}</dl>` : ""}
+        ${t.texto ? `<p class="admin-card-texto">${t.texto}</p>` : ""}
+      </div>
+      ${t.acciones ? `<div class="admin-card-acciones">${t.acciones}</div>` : ""}
+    </article>`;
+}
+
+const ROLES_USUARIO = { estudiante: "Estudiante", propietario: "Propietario", admin: "Administración" };
+
+function listaTarjetas(html) {
+  return `<div class="admin-tarjetas">${html}</div>`;
+}
+
 function mostrarCarga(contenedor) {
   contenedor.innerHTML = '<p class="admin-cargando" role="status">Cargando…</p>';
 }
@@ -247,20 +278,19 @@ document.addEventListener("DOMContentLoaded", async () => {
       const { data } = await RoumixAPI.admin(`/solicitudes?${params}`);
       if (data.length === 0) return vacio(contenedor, "No hay solicitudes con estos filtros.");
       contenedor.innerHTML = `
-        <table class="admin-tabla">
-          <thead><tr><th scope="col">Solicitud</th><th scope="col">Inmueble</th><th scope="col">Estudiante</th><th scope="col">Propietario</th><th scope="col">Ingreso</th><th scope="col">Estado</th><th scope="col"><span class="sr-only">Acciones</span></th></tr></thead>
-          <tbody>${data.map(s => `
-            <tr>
-              <td><strong>#${s.id}</strong><br><small>${fecha(s.created_at)}</small></td>
-              <td>${escaparHTML(s.inmueble_titulo)}<br><small>#${s.inmueble_id} · ${escaparHTML(s.barrio || "—")} · ${formatearPrecioCOP(s.canon_mensual)}</small></td>
-              <td>${escaparHTML(s.estudiante_nombre || "Cuenta eliminada")}<br><small>${escaparHTML(s.estudiante_email || "")}</small></td>
-              <td>${escaparHTML(s.propietario_nombre || "—")}<br><small>${escaparHTML(s.propietario_telefono || s.propietario_email || "")}</small></td>
-              <td>${fechaDia(s.fecha_ingreso)}<br><small>${s.duracion_meses} mes(es) · ${s.personas} pers.</small></td>
-              <td>${chipSolicitud(s.estado)}${s.compartida_propietario_en ? "" : "<br><small>Sin compartir al propietario</small>"}</td>
-              <td><button type="button" class="btn-card-action" data-solicitud="${s.id}">${s.estado === "recibida" ? "Revisar" : "Gestionar"}</button></td>
-            </tr>`).join("")}
-          </tbody>
-        </table>`;
+        ${listaTarjetas(data.map(s => tarjeta({
+          ref: `Solicitud #${s.id} · ${fecha(s.created_at)}`,
+          titulo: escaparHTML(s.inmueble_titulo),
+          sub: `Inmueble #${s.inmueble_id} · ${escaparHTML(s.barrio || "—")} · ${formatearPrecioCOP(s.canon_mensual)}/mes`,
+          estado: chipSolicitud(s.estado) + (s.compartida_propietario_en ? "" : "<small>Sin compartir al propietario</small>"),
+          destacada: s.estado === "recibida",
+          datos: [
+            ["Estudiante", `${escaparHTML(s.estudiante_nombre || "Cuenta eliminada")}<small>${escaparHTML(s.estudiante_email || "")}</small>`],
+            ["Propietario", `${escaparHTML(s.propietario_nombre || "—")}<small>${escaparHTML(s.propietario_telefono || s.propietario_email || "")}</small>`],
+            ["Ingreso", `${fechaDia(s.fecha_ingreso)}<small>${s.duracion_meses} mes(es) · ${s.personas} persona(s)</small>`]
+          ],
+          acciones: `<button type="button" class="btn-card-action${s.estado === "recibida" ? " btn-card-principal" : ""}" data-solicitud="${s.id}">${s.estado === "recibida" ? "Revisar" : "Gestionar"}</button>`
+        })).join(""))}`;
     } catch (error) {
       mostrarError(contenedor, error);
     }
@@ -461,20 +491,18 @@ document.addEventListener("DOMContentLoaded", async () => {
       const { data } = await RoumixAPI.admin(`/contratos?estado=${document.getElementById("filtro-contratos").value}`);
       if (data.length === 0) return vacio(contenedor, "No hay contratos con este estado.");
       contenedor.innerHTML = `
-        <table class="admin-tabla">
-          <thead><tr><th scope="col">Contrato</th><th scope="col">Inmueble</th><th scope="col">Partes</th><th scope="col">Condiciones</th><th scope="col">Aceptaciones</th><th scope="col">Estado</th><th scope="col"><span class="sr-only">Acciones</span></th></tr></thead>
-          <tbody>${data.map(c => `
-            <tr>
-              <td><strong>#${c.id}</strong><br><small>Solicitud #${c.solicitud_id}</small></td>
-              <td>${escaparHTML(c.inmueble_titulo)}</td>
-              <td><small>Arrendador:</small> ${escaparHTML(c.propietario_nombre)}<br><small>Arrendatario:</small> ${escaparHTML(c.estudiante_nombre)}</td>
-              <td>${formatearPrecioCOP(c.canon_mensual)}/mes<br><small>Desde ${fechaDia(c.fecha_inicio)} · ${c.duracion_meses} mes(es)</small></td>
-              <td><small>Propietario: ${c.aceptado_propietario_en ? "✓" : "—"}<br>Estudiante: ${c.aceptado_estudiante_en ? "✓" : "—"}</small></td>
-              <td>${chipContrato(c.estado)}${c.vence_en && ["enviado", "pendiente_aceptacion"].includes(c.estado) ? `<br><small>Vence ${fecha(c.vence_en)}</small>` : ""}</td>
-              <td><button type="button" class="btn-card-action" data-solicitud-contrato="${c.solicitud_id}">Gestionar</button></td>
-            </tr>`).join("")}
-          </tbody>
-        </table>`;
+        ${listaTarjetas(data.map(c => tarjeta({
+          ref: `Contrato #${c.id} · Solicitud #${c.solicitud_id}`,
+          titulo: escaparHTML(c.inmueble_titulo),
+          sub: `${formatearPrecioCOP(c.canon_mensual)}/mes · desde ${fechaDia(c.fecha_inicio)} · ${c.duracion_meses} mes(es)`,
+          estado: chipContrato(c.estado) + (c.vence_en && ["enviado", "pendiente_aceptacion"].includes(c.estado) ? `<small>Vence ${fecha(c.vence_en)}</small>` : ""),
+          destacada: c.estado === "borrador",
+          datos: [
+            ["Arrendador", `${escaparHTML(c.propietario_nombre)}<small>${c.aceptado_propietario_en ? "✓ Aceptó" : "Falta aceptar"}</small>`],
+            ["Arrendatario", `${escaparHTML(c.estudiante_nombre)}<small>${c.aceptado_estudiante_en ? "✓ Aceptó" : "Falta aceptar"}</small>`]
+          ],
+          acciones: `<button type="button" class="btn-card-action" data-solicitud-contrato="${c.solicitud_id}">Gestionar</button>`
+        })).join(""))}`;
     } catch (error) {
       mostrarError(contenedor, error);
     }
@@ -659,20 +687,21 @@ document.addEventListener("DOMContentLoaded", async () => {
         </div>` : "";
       if (r.data.length === 0) return vacio(contenedor, "No hay pagos con este filtro.");
       contenedor.innerHTML = `
-        <table class="admin-tabla">
-          <thead><tr><th scope="col">Pago</th><th scope="col">Inmueble</th><th scope="col">Partes</th><th scope="col">Monto</th><th scope="col">Comisión / neto</th><th scope="col">Estado</th><th scope="col"><span class="sr-only">Acciones</span></th></tr></thead>
-          <tbody>${r.data.map(p => `
-            <tr>
-              <td><strong>#${p.id}</strong><br><small>${escaparHTML(p.referencia || "Sin referencia")}</small></td>
-              <td>${escaparHTML(p.inmueble_titulo)}<br><small>Solicitud #${p.solicitud_id}</small></td>
-              <td><small>Estudiante:</small> ${escaparHTML(p.estudiante_nombre || "—")}<br><small>Propietario:</small> ${escaparHTML(p.propietario_nombre || "—")}</td>
-              <td>${formatearPrecioCOP(p.monto)}</td>
-              <td>${formatearPrecioCOP(p.comision)}<br><small>${formatearPrecioCOP(p.neto_propietario)} al propietario</small></td>
-              <td>${chipPago(p.estado)}${p.desembolso_estado ? `<br><small>${escaparHTML(ETIQUETA_DESEMBOLSO[p.desembolso_estado])}</small>` : ""}</td>
-              <td><button type="button" class="btn-card-action" data-pago="${p.id}">Gestionar</button></td>
-            </tr>`).join("")}
-          </tbody>
-        </table>`;
+        ${listaTarjetas(r.data.map(p => tarjeta({
+          ref: `Pago #${p.id} · ${escaparHTML(p.referencia || "Sin referencia")}`,
+          titulo: escaparHTML(p.inmueble_titulo),
+          sub: `Solicitud #${p.solicitud_id}`,
+          estado: chipPago(p.estado) + (p.desembolso_estado ? `<small>${escaparHTML(ETIQUETA_DESEMBOLSO[p.desembolso_estado])}</small>` : ""),
+          destacada: p.estado === "en_disputa" || p.desembolso_estado === "pendiente",
+          datos: [
+            ["Monto", `<strong>${formatearPrecioCOP(p.monto)}</strong>`],
+            ["Comisión Roumix", formatearPrecioCOP(p.comision)],
+            ["Al propietario", formatearPrecioCOP(p.neto_propietario)],
+            ["Estudiante", escaparHTML(p.estudiante_nombre || "—")],
+            ["Propietario", escaparHTML(p.propietario_nombre || "—")]
+          ],
+          acciones: `<button type="button" class="btn-card-action" data-pago="${p.id}">Gestionar</button>`
+        })).join(""))}`;
     } catch (error) {
       mostrarError(contenedor, error);
     }
@@ -791,19 +820,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       const { data } = await RoumixAPI.admin(`/conversaciones?${params}`);
       if (data.length === 0) return vacio(contenedor, "No hay conversaciones con estos filtros.");
       contenedor.innerHTML = `
-        <table class="admin-tabla">
-          <thead><tr><th scope="col">Último mensaje</th><th scope="col">Usuario</th><th scope="col">Asunto</th><th scope="col">Sobre</th><th scope="col">Estado</th><th scope="col"><span class="sr-only">Acciones</span></th></tr></thead>
-          <tbody>${data.map(c => `
-            <tr${c.sin_leer ? ' class="admin-fila-nueva"' : ""}>
-              <td>${fecha(c.ultimo_mensaje_en)}${c.sin_leer ? "<br>" + chip("Sin leer", "pendiente") : ""}</td>
-              <td>${escaparHTML(c.usuario_nombre || "Cuenta eliminada")}<br><small>${escaparHTML(ROL[c.usuario_rol] || "")} · ${escaparHTML(c.usuario_email || "")}</small></td>
-              <td><strong>${escaparHTML(c.asunto)}</strong><br><small class="admin-texto-largo">${escaparHTML((c.ultimo_mensaje || "").slice(0, 120))}</small></td>
-              <td>${c.solicitud_id ? `Solicitud #${c.solicitud_id}<br>` : ""}<small>${escaparHTML(c.inmueble_titulo || "Consulta general")}</small></td>
-              <td>${chip(c.estado === "pendiente" ? "Pendiente" : "Atendida", c.estado === "pendiente" ? "en_revision" : "aprobada")}</td>
-              <td><button type="button" class="btn-card-action" data-conversacion="${c.id}">${c.estado === "pendiente" ? "Responder" : "Ver"}</button></td>
-            </tr>`).join("")}
-          </tbody>
-        </table>`;
+        ${listaTarjetas(data.map(c => tarjeta({
+          ref: `${fecha(c.ultimo_mensaje_en)}${c.solicitud_id ? ` · Solicitud #${c.solicitud_id}` : ""}`,
+          titulo: escaparHTML(c.asunto),
+          sub: `${escaparHTML(c.usuario_nombre || "Cuenta eliminada")} · ${escaparHTML(ROL[c.usuario_rol] || "")} · ${escaparHTML(c.inmueble_titulo || "Consulta general")}`,
+          estado: (c.sin_leer ? chip("Sin leer", "pendiente") : "") + chip(c.estado === "pendiente" ? "Pendiente" : "Atendida", c.estado === "pendiente" ? "en_revision" : "aprobada"),
+          destacada: Boolean(c.sin_leer),
+          texto: c.ultimo_mensaje ? `“${escaparHTML(c.ultimo_mensaje.slice(0, 160))}${c.ultimo_mensaje.length > 160 ? "…" : ""}”` : "",
+          acciones: `<button type="button" class="btn-card-action${c.estado === "pendiente" ? " btn-card-principal" : ""}" data-conversacion="${c.id}">${c.estado === "pendiente" ? "Responder" : "Ver"}</button>`
+        })).join(""))}`;
     } catch (error) {
       mostrarError(contenedor, error);
     }
@@ -906,20 +931,20 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (data.length === 0) return vacio(contenedor, "No hay propietarios con este estado.");
       const tipoChip = { incompleto: "pendiente", pendiente: "en_revision", requiere_informacion: "requiere_cambios", aprobado: "aprobada", rechazado: "rechazada" };
       contenedor.innerHTML = `
-        <table class="admin-tabla">
-          <thead><tr><th scope="col">Propietario</th><th scope="col">Perfil</th><th scope="col">Contacto (solo Roumix)</th><th scope="col">Inmuebles</th><th scope="col">Verificación</th><th scope="col"><span class="sr-only">Acciones</span></th></tr></thead>
-          <tbody>${data.map(p => `
-            <tr>
-              <td><strong>${escaparHTML(p.nombre_completo || p.nombre)}</strong><br><small>${escaparHTML(p.email)}</small>
-                ${p.correo_confirmado ? "<br>" + chip("Correo confirmado", "aprobada") : ""}</td>
-              <td>${p.perfil_enviado_en ? `${escaparHTML(ETIQUETAS.relacion[p.relacion_inmueble] || "—")} · ${escaparHTML(p.ciudad || "—")}<br><small>${p.cantidad_inmuebles || "?"} inmueble(s) · enviado ${fecha(p.perfil_enviado_en)}</small>` : "<small>Aún no envía su perfil</small>"}</td>
-              <td>${escaparHTML(p.telefono || "—")}<br><small>${p.telefono_verificado_por_roumix ? "✓ verificado por Roumix" : "declarado"}</small></td>
-              <td>${p.inmuebles}</td>
-              <td>${chip(ETIQUETAS.verificacion[p.etapa], tipoChip[p.etapa])}${p.revisado_en ? `<br><small>${fecha(p.revisado_en)}${p.revisado_por_nombre ? " · " + escaparHTML(p.revisado_por_nombre) : ""}</small>` : ""}</td>
-              <td><button type="button" class="btn-card-action" data-propietario="${p.id}">${p.etapa === "pendiente" ? "Revisar" : "Ver"}</button></td>
-            </tr>`).join("")}
-          </tbody>
-        </table>`;
+        ${listaTarjetas(data.map(p => tarjeta({
+          ref: p.perfil_enviado_en ? `Perfil enviado ${fecha(p.perfil_enviado_en)}` : "Aún no envía su perfil",
+          titulo: escaparHTML(p.nombre_completo || p.nombre),
+          sub: escaparHTML(p.email),
+          estado: chip(ETIQUETAS.verificacion[p.etapa], tipoChip[p.etapa]) + (p.revisado_en ? `<small>${fecha(p.revisado_en)}${p.revisado_por_nombre ? " · " + escaparHTML(p.revisado_por_nombre) : ""}</small>` : ""),
+          destacada: p.etapa === "pendiente",
+          datos: [
+            ["Relación y ciudad", p.perfil_enviado_en ? `${escaparHTML(ETIQUETAS.relacion[p.relacion_inmueble] || "—")} · ${escaparHTML(p.ciudad || "—")}` : ""],
+            ["Teléfono (solo Roumix)", `${escaparHTML(p.telefono || "—")}<small>${p.telefono_verificado_por_roumix ? "✓ verificado por Roumix" : "declarado"}</small>`],
+            ["Inmuebles", `${p.inmuebles} publicado(s)${p.perfil_enviado_en ? `<small>${p.cantidad_inmuebles || "?"} declarado(s)</small>` : ""}`],
+            ["Correo", p.correo_confirmado ? chip("Confirmado", "aprobada") : chip("Sin confirmar", "pendiente")]
+          ],
+          acciones: `<button type="button" class="btn-card-action${p.etapa === "pendiente" ? " btn-card-principal" : ""}" data-propietario="${p.id}">${p.etapa === "pendiente" ? "Revisar" : "Ver"}</button>`
+        })).join(""))}`;
     } catch (error) {
       mostrarError(contenedor, error);
     }
@@ -1036,20 +1061,19 @@ document.addEventListener("DOMContentLoaded", async () => {
       const { data } = await RoumixAPI.admin(`/reportes?estado=${document.getElementById("filtro-reportes").value}`);
       if (data.length === 0) return vacio(contenedor, "No hay reportes con este estado.");
       contenedor.innerHTML = `
-        <table class="admin-tabla">
-          <thead><tr><th scope="col">Fecha</th><th scope="col">Publicación</th><th scope="col">Motivo</th><th scope="col">Explicación</th><th scope="col">Reportó</th><th scope="col">Estado</th><th scope="col"><span class="sr-only">Acciones</span></th></tr></thead>
-          <tbody>${data.map(r => `
-            <tr>
-              <td>${fecha(r.created_at)}</td>
-              <td><strong>#${r.inmueble_id}</strong> ${escaparHTML(r.inmueble_titulo)}<br>${chip(ETIQUETAS.moderacion[r.inmueble_moderacion], r.inmueble_moderacion)}</td>
-              <td>${escaparHTML(ETIQUETAS.motivo[r.motivo])}</td>
-              <td class="admin-texto-largo">${escaparHTML(r.descripcion || "—")}</td>
-              <td>${escaparHTML(r.reportante_email || "Cuenta eliminada")}</td>
-              <td>${chip(ETIQUETAS.reporte[r.estado], r.estado)}${r.resuelto_por_nombre ? `<br><small>por ${escaparHTML(r.resuelto_por_nombre)}</small>` : ""}</td>
-              <td><button type="button" class="btn-card-action" data-inmueble="${r.inmueble_id}">Revisar</button></td>
-            </tr>`).join("")}
-          </tbody>
-        </table>`;
+        ${listaTarjetas(data.map(r => tarjeta({
+          ref: `Reporte · ${fecha(r.created_at)}`,
+          titulo: escaparHTML(ETIQUETAS.motivo[r.motivo]),
+          sub: `Publicación #${r.inmueble_id} · ${escaparHTML(r.inmueble_titulo)}`,
+          estado: chip(ETIQUETAS.reporte[r.estado], r.estado) + (r.resuelto_por_nombre ? `<small>por ${escaparHTML(r.resuelto_por_nombre)}</small>` : ""),
+          destacada: r.estado === "pendiente",
+          datos: [
+            ["Publicación", chip(ETIQUETAS.moderacion[r.inmueble_moderacion], r.inmueble_moderacion)],
+            ["Reportó", escaparHTML(r.reportante_email || "Cuenta eliminada")]
+          ],
+          texto: r.descripcion ? `“${escaparHTML(r.descripcion)}”` : "",
+          acciones: `<button type="button" class="btn-card-action" data-inmueble="${r.inmueble_id}">Revisar</button>`
+        })).join(""))}`;
     } catch (error) {
       mostrarError(contenedor, error);
     }
@@ -1068,19 +1092,20 @@ document.addEventListener("DOMContentLoaded", async () => {
       const { data } = await RoumixAPI.admin(`/inmuebles?${params}`);
       if (data.length === 0) return vacio(contenedor, "No hay publicaciones con estos filtros.");
       contenedor.innerHTML = `
-        <table class="admin-tabla">
-          <thead><tr><th scope="col">Publicación</th><th scope="col">Propietario</th><th scope="col">Moderación</th><th scope="col">Estado comercial</th><th scope="col">Reportes</th><th scope="col"><span class="sr-only">Acciones</span></th></tr></thead>
-          <tbody>${data.map(i => `
-            <tr>
-              <td><div class="admin-celda-inmueble">${i.imagen_principal ? `<img src="${escaparHTML(i.imagen_principal)}" alt="">` : ""}<span><strong>#${i.id}</strong> ${escaparHTML(i.titulo)}<br><small>${escaparHTML(i.barrio)} · ${formatearPrecioCOP(i.precio)}</small></span></div></td>
-              <td>${escaparHTML(i.propietario_nombre || "Demostración (sin propietario)")}<br><small>${escaparHTML(i.propietario_email || "")}</small></td>
-              <td>${chip(ETIQUETAS.moderacion[i.moderacion], i.moderacion)}${i.revisado_en ? "<br><small>✓ revisada</small>" : ""}</td>
-              <td>${escaparHTML(ETIQUETAS.estado[i.estado])}</td>
-              <td>${i.reportes_pendientes ? chip(`${i.reportes_pendientes} pendiente(s)`, "pendiente") : "—"}</td>
-              <td><button type="button" class="btn-card-action" data-inmueble="${i.id}">Revisar</button></td>
-            </tr>`).join("")}
-          </tbody>
-        </table>`;
+        ${listaTarjetas(data.map(i => tarjeta({
+          imagen: i.imagen_principal ? escaparHTML(i.imagen_principal) : "",
+          ref: `Publicación #${i.id}`,
+          titulo: escaparHTML(i.titulo),
+          sub: `${escaparHTML(i.barrio)} · ${formatearPrecioCOP(i.precio)}/mes`,
+          estado: chip(ETIQUETAS.moderacion[i.moderacion], i.moderacion) + (i.revisado_en ? "<small>✓ revisada</small>" : ""),
+          destacada: i.moderacion === "en_revision" || i.reportes_pendientes > 0,
+          datos: [
+            ["Propietario", `${escaparHTML(i.propietario_nombre || "Demostración (sin propietario)")}<small>${escaparHTML(i.propietario_email || "")}</small>`],
+            ["Estado comercial", escaparHTML(ETIQUETAS.estado[i.estado])],
+            ["Reportes", i.reportes_pendientes ? chip(`${i.reportes_pendientes} pendiente(s)`, "pendiente") : "Ninguno pendiente"]
+          ],
+          acciones: `<button type="button" class="btn-card-action" data-inmueble="${i.id}">Revisar</button>`
+        })).join(""))}`;
     } catch (error) {
       mostrarError(contenedor, error);
     }
@@ -1230,23 +1255,21 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (data.length === 0) return vacio(contenedor, "No hay usuarios con estos filtros.");
       const yo = RoumixStorage.getUsuario();
       contenedor.innerHTML = `
-        <table class="admin-tabla">
-          <thead><tr><th scope="col">Usuario</th><th scope="col">Rol</th><th scope="col">Correo</th><th scope="col">Inmuebles</th><th scope="col">Reportes procedentes</th><th scope="col">Registro</th><th scope="col">Estado</th></tr></thead>
-          <tbody>${data.map(u => `
-            <tr>
-              <td><strong>${escaparHTML(u.nombre)}</strong><br><small>${escaparHTML(u.email)}</small></td>
-              <td>${escaparHTML(u.rol)}</td>
-              <td>${u.correo_confirmado ? chip("Confirmado", "aprobada") : chip("Sin confirmar", "pendiente")}</td>
-              <td>${u.inmuebles}</td>
-              <td>${u.reportes_procedentes ? chip(String(u.reportes_procedentes), "procedente") : "0"}</td>
-              <td>${fecha(u.created_at)}${u.acepto_politica_en ? "" : "<br><small>sin aceptación de política registrada</small>"}</td>
-              <td>${chip(u.estado, u.estado === "activo" ? "aprobada" : "rechazada")}
-                ${u.rol !== "admin" && (!yo || yo.id !== u.id)
-                  ? `<br><button type="button" class="btn-card-action ${u.estado === "activo" ? "btn-card-danger" : ""}" data-usuario="${u.id}" data-estado="${u.estado === "activo" ? "suspendido" : "activo"}" data-nombre="${escaparHTML(u.nombre)}">${u.estado === "activo" ? "Suspender" : "Reactivar"}</button>`
-                  : ""}</td>
-            </tr>`).join("")}
-          </tbody>
-        </table>`;
+        ${listaTarjetas(data.map(u => tarjeta({
+          ref: `${escaparHTML(ROLES_USUARIO[u.rol] || u.rol)} · desde ${fecha(u.created_at)}`,
+          titulo: escaparHTML(u.nombre),
+          sub: escaparHTML(u.email),
+          estado: chip(u.estado === "activo" ? "Activa" : "Suspendida", u.estado === "activo" ? "aprobada" : "rechazada"),
+          datos: [
+            ["Correo", u.correo_confirmado ? chip("Confirmado", "aprobada") : chip("Sin confirmar", "pendiente")],
+            ["Inmuebles", u.rol === "propietario" ? String(u.inmuebles) : ""],
+            ["Reportes procedentes", u.reportes_procedentes ? chip(String(u.reportes_procedentes), "procedente") : "0"],
+            ["Política", u.acepto_politica_en ? "Aceptada" : "<small>Sin aceptación registrada</small>"]
+          ],
+          acciones: u.rol !== "admin" && (!yo || yo.id !== u.id)
+            ? `<button type="button" class="btn-card-action ${u.estado === "activo" ? "btn-card-danger" : ""}" data-usuario="${u.id}" data-estado="${u.estado === "activo" ? "suspendido" : "activo"}" data-nombre="${escaparHTML(u.nombre)}">${u.estado === "activo" ? "Suspender" : "Reactivar"}</button>`
+            : ""
+        })).join(""))}`;
     } catch (error) {
       mostrarError(contenedor, error);
     }
@@ -1336,23 +1359,19 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (!masAntiguos && data.length === 0) { botonMas.hidden = true; return vacio(contenedor, "No hay registros con estos filtros."); }
       const filas = data.map(a => {
         const [quien, tono] = RESPONSABLE[a.actor_rol] || [a.actor_rol, "neutro"];
-        return `
-          <tr>
-            <td>${fecha(a.created_at)}</td>
-            <td>${chip(quien, tono)}<br><small>${escaparHTML(a.actor_nombre || "")}</small></td>
-            <td><strong>${escaparHTML(ETIQUETAS.accion[a.accion] || a.accion.replace(/_/g, " "))}</strong></td>
-            <td>${enlaceEntidad(a)}</td>
-            <td class="admin-texto-largo">${escaparHTML(a.resumen || "—")}${detallesAuditoria(a.datos)}</td>
-          </tr>`;
+        return tarjeta({
+          compacta: true,
+          ref: fecha(a.created_at),
+          titulo: escaparHTML(ETIQUETAS.accion[a.accion] || a.accion.replace(/_/g, " ")),
+          sub: `${escaparHTML(a.actor_nombre || quien)} · ${enlaceEntidad(a)}`,
+          estado: chip(quien, tono),
+          texto: `${escaparHTML(a.resumen || "—")}${detallesAuditoria(a.datos)}`
+        });
       }).join("");
-      if (masAntiguos && contenedor.querySelector("tbody")) {
-        contenedor.querySelector("tbody").insertAdjacentHTML("beforeend", filas);
+      if (masAntiguos && contenedor.querySelector(".admin-tarjetas")) {
+        contenedor.querySelector(".admin-tarjetas").insertAdjacentHTML("beforeend", filas);
       } else {
-        contenedor.innerHTML = `
-          <table class="admin-tabla">
-            <thead><tr><th scope="col">Fecha</th><th scope="col">Responsable</th><th scope="col">Acción</th><th scope="col">Sobre</th><th scope="col">Detalle</th></tr></thead>
-            <tbody>${filas}</tbody>
-          </table>`;
+        contenedor.innerHTML = listaTarjetas(filas);
       }
       audCursor = data.length ? data[data.length - 1].id : audCursor;
       botonMas.hidden = !hayMas;
