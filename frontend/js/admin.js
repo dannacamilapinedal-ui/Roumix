@@ -81,16 +81,78 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const paneles = { resumen: cargarResumen, solicitudes: cargarSolicitudes, contratos: cargarContratos, pagos: cargarPagos, mensajes: cargarMensajes, reportes: cargarReportes, propietarios: cargarPropietarios, inmuebles: cargarInmuebles, usuarios: cargarUsuarios, historial: cargarHistorial };
 
+  // Título y explicación de cada sección (se muestran arriba del contenido)
+  const SECCIONES = {
+    resumen: ["Resumen", "Lo que necesita atención hoy y las cifras de la plataforma."],
+    solicitudes: ["Solicitudes", "Revisa cada solicitud de arriendo, compártela con el propietario y avanza su estado."],
+    contratos: ["Contratos", "Contratos demostrativos: prepáralos desde la solicitud, envíalos y sigue las aceptaciones."],
+    pagos: ["Pagos", "Pagos simulados del primer mes, comisión del 10 %, desembolsos, devoluciones y disputas."],
+    mensajes: ["Mensajes", "Conversaciones de estudiantes y propietarios con el equipo de Roumix."],
+    propietarios: ["Propietarios", "Verifica la identidad de los propietarios antes de que puedan publicar."],
+    inmuebles: ["Publicaciones", "Modera las publicaciones: aprobar, pedir cambios, pausar o retirar."],
+    reportes: ["Reportes", "Reportes de estudiantes y propietarios sobre publicaciones."],
+    usuarios: ["Usuarios", "Cuentas de la plataforma: busca, suspende o reactiva."],
+    historial: ["Auditoría", "Registro de solo adición de cada acción del equipo y de los pasos clave de los usuarios."]
+  };
+
+  // Menú lateral: en celular es un cajón que se abre con "Secciones"
+  const lateral = document.getElementById("admin-lateral");
+  const fondoLateral = document.getElementById("admin-lateral-fondo");
+  const btnAbrirLateral = document.getElementById("admin-lateral-abrir");
+  const esCelular = window.matchMedia("(max-width: 900px)");
+  function abrirLateral() {
+    lateral.classList.add("abierto");
+    fondoLateral.hidden = false;
+    btnAbrirLateral.setAttribute("aria-expanded", "true");
+    document.body.classList.add("admin-lateral-bloqueo");
+    (lateral.querySelector(".admin-tab.activa") || lateral.querySelector("button")).focus();
+  }
+  function cerrarLateral(devolverFoco) {
+    if (!lateral.classList.contains("abierto")) return;
+    lateral.classList.remove("abierto");
+    fondoLateral.hidden = true;
+    btnAbrirLateral.setAttribute("aria-expanded", "false");
+    document.body.classList.remove("admin-lateral-bloqueo");
+    if (devolverFoco) btnAbrirLateral.focus();
+  }
+  btnAbrirLateral.addEventListener("click", abrirLateral);
+  document.getElementById("admin-lateral-cerrar").addEventListener("click", () => cerrarLateral(true));
+  fondoLateral.addEventListener("click", () => cerrarLateral(true));
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") cerrarLateral(true); });
+  esCelular.addEventListener("change", () => cerrarLateral(false));
+
+  // El botón "Secciones" muestra cuántas cosas esperan atención en total
+  function actualizarContadorTotal() {
+    const total = [...lateral.querySelectorAll(".admin-contador")]
+      .filter(c => !c.hidden).reduce((suma, c) => suma + (Number(c.textContent) || 0), 0);
+    const contadorTotal = document.getElementById("contador-total");
+    contadorTotal.textContent = total > 99 ? "99+" : String(total);
+    contadorTotal.hidden = total === 0;
+  }
+  new MutationObserver(actualizarContadorTotal).observe(lateral, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ["hidden"] });
+
   function abrirPanel(nombre) {
+    if (!Object.hasOwn(paneles, nombre)) nombre = "resumen";
     document.querySelectorAll(".admin-tab").forEach(tab => {
       const activa = tab.dataset.panel === nombre;
       tab.classList.toggle("activa", activa);
-      tab.setAttribute("aria-selected", String(activa));
+      if (activa) tab.setAttribute("aria-current", "page");
+      else tab.removeAttribute("aria-current");
     });
     document.querySelectorAll(".admin-panel").forEach(panel => { panel.hidden = panel.id !== `panel-${nombre}`; });
+    const [titulo, descripcion] = SECCIONES[nombre];
+    document.getElementById("admin-titulo").textContent = titulo;
+    document.getElementById("admin-descripcion").textContent = descripcion;
+    document.title = `${titulo} — Panel Roumix`;
+    // La sección queda en la dirección: al recargar o volver atrás se abre la misma
+    if (location.hash !== `#${nombre}`) history.replaceState(null, "", `#${nombre}`);
+    cerrarLateral(false);
     paneles[nombre]();
   }
-  document.querySelectorAll(".admin-tab").forEach(tab => tab.addEventListener("click", () => abrirPanel(tab.dataset.panel)));
+  document.querySelectorAll(".admin-tab").forEach(tab => tab.addEventListener("click", () => {
+    abrirPanel(tab.dataset.panel);
+    if (esCelular.matches) document.getElementById("admin-titulo").scrollIntoView({ block: "start" });
+  }));
 
   // ---------------- Resumen ----------------
   async function cargarResumen() {
@@ -1332,5 +1394,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (e) { /* el contador es informativo */ }
   }
 
-  abrirPanel("resumen");
+  // Se abre la sección guardada en la dirección (#pagos, #solicitudes…); si no es el resumen,
+  // los contadores del menú se cargan aparte
+  abrirPanel(location.hash.slice(1) || "resumen");
+  if (!document.querySelector('.admin-tab.activa[data-panel="resumen"]')) cargarContador();
 });

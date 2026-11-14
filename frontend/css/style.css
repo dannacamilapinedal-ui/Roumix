@@ -7469,3 +7469,96 @@ html[data-tema="oscuro"] .aviso-vista-estudiante { background: #1f3527; color: #
 }
 .btn-ver-estudiante:hover { text-decoration: underline; }
 html[data-tema="oscuro"] .btn-ver-estudiante { color: #9fd8ac; }
+
+/* =========================================================================
+   Panel con menú lateral (UI-2)
+   ========================================================================= */
+.admin-container { max-width: 1400px; }
+.admin-layout {
+  display: grid;
+  grid-template-columns: 236px minmax(0, 1fr);
+  gap: 32px;
+  align-items: start;
+}
+.admin-contenido { min-width: 0; }
+
+.admin-lateral {
+  position: sticky;
+  top: 88px;
+  max-height: calc(100vh - 108px);
+  overflow-y: auto;
+  background: var(--superficie);
+  border: 1px solid var(--borde-arena);
+  border-radius: var(--radio-lg);
+  padding: 14px 10px 16px;
+  box-shadow: var(--sombra-sm);
+}
+.admin-lateral-cabeza {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 4px 10px 10px; margin-bottom: 4px; border-bottom: 1px solid var(--borde-suave);
+  font-weight: 800; color: var(--tinta-fuerte); font-size: 0.95rem;
+}
+.admin-lateral-cerrar {
+  display: none; background: none; border: 1px solid var(--borde-arena); border-radius: var(--radio-sm);
+  width: 34px; height: 34px; color: var(--tinta-media); cursor: pointer; font-size: 0.95rem;
+}
+.admin-lateral-grupo {
+  margin: 14px 10px 6px; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--tinta-tenue);
+}
+.admin-lateral ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+
+/* Los botones de sección conservan la clase .admin-tab (la usa admin.js) pero ahora son filas del menú */
+.admin-lateral .admin-tab {
+  width: 100%;
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px;
+  border: none; border-radius: var(--radio-sm);
+  border-left: 3px solid transparent;
+  background: none; color: var(--tinta-media);
+  font: inherit; font-size: 0.92rem; font-weight: 600; text-align: left; cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.admin-lateral .admin-tab svg { flex: none; opacity: 0.85; }
+.admin-lateral .admin-tab .admin-tab-texto { flex: 1; }
+.admin-lateral .admin-tab:hover { background: var(--fondo-crema-alt); color: var(--tinta-fuerte); }
+.admin-lateral .admin-tab.activa {
+  background: var(--verde-badge-bg); color: var(--verde-badge-text);
+  border-left-color: var(--acento-naranja); font-weight: 700;
+}
+.admin-lateral .admin-tab.activa svg { opacity: 1; }
+.admin-lateral .admin-tab:focus-visible { outline: 2px solid var(--acento-naranja); outline-offset: 1px; }
+
+.admin-encabezado { margin-bottom: 18px; }
+.admin-migas { margin: 0 0 2px; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--tinta-tenue); }
+.admin-encabezado h1 { margin: 0; }
+.admin-encabezado #admin-descripcion { margin: 6px 0 0; }
+.admin-lateral-abrir {
+  display: none; align-items: center; gap: 8px; margin-bottom: 14px;
+  padding: 9px 14px; border: 1px solid var(--borde-arena); border-radius: var(--radio-pill);
+  background: var(--superficie); color: var(--tinta-fuerte); font: inherit; font-weight: 700; cursor: pointer;
+}
+.admin-lateral-fondo { display: none; }
+
+@media (max-width: 900px) {
+  .admin-layout { display: block; }
+  .admin-lateral-abrir { display: inline-flex; }
+  .admin-lateral-cerrar { display: inline-flex; align-items: center; justify-content: center; }
+  .admin-lateral {
+    position: fixed; top: 0; left: 0; bottom: 0; z-index: 1200;
+    width: min(300px, 86vw); max-height: none;
+    border-radius: 0 var(--radio-lg) var(--radio-lg) 0; border-left: none;
+    box-shadow: var(--sombra-lg);
+    transform: translateX(-105%); visibility: hidden;
+    transition: transform 0.22s ease, visibility 0s linear 0.22s;
+  }
+  .admin-lateral.abierto { transform: none; visibility: visible; transition: transform 0.22s ease; }
+  .admin-lateral-fondo:not([hidden]) {
+    display: block; position: fixed; inset: 0; z-index: 1190; background: rgba(15, 20, 16, 0.45);
+  }
+  .admin-lateral .admin-tab { padding: 11px 10px; }
+  body.admin-lateral-bloqueo { overflow: hidden; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-lateral, .admin-lateral.abierto { transition: none; }
+}

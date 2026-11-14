@@ -50,29 +50,51 @@
   <!-- ======================================================== -->
   <main>
     <div class="admin-container">
-      <header class="admin-encabezado">
-        <h1>Panel de administración</h1>
-        <p>Revisa reportes, modera publicaciones y gestiona cuentas. Cada decisión queda registrada con su justificación.</p>
-      </header>
+      <div class="admin-layout">
+        <!-- Menú lateral del panel: fijo en computador, cajón deslizable en celular -->
+        <aside class="admin-lateral" id="admin-lateral" aria-label="Secciones del panel">
+          <div class="admin-lateral-cabeza">
+            <span>Panel Roumix</span>
+            <button type="button" class="admin-lateral-cerrar" id="admin-lateral-cerrar" aria-label="Cerrar menú de secciones">✕</button>
+          </div>
+          <p class="admin-lateral-grupo" id="grupo-operacion">Operación</p>
+          <ul aria-labelledby="grupo-operacion">
+            <li><button type="button" class="admin-tab activa" id="tab-resumen" data-panel="resumen" aria-controls="panel-resumen" aria-current="page"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span class="admin-tab-texto">Resumen</span></button></li>
+            <li><button type="button" class="admin-tab" id="tab-solicitudes" data-panel="solicitudes" aria-controls="panel-solicitudes"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="m9 15 2 2 4-4"/></svg><span class="admin-tab-texto">Solicitudes</span> <span class="admin-contador" id="contador-solicitudes" hidden></span></button></li>
+            <li><button type="button" class="admin-tab" id="tab-contratos" data-panel="contratos" aria-controls="panel-contratos"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg><span class="admin-tab-texto">Contratos</span> <span class="admin-contador" id="contador-contratos" hidden></span></button></li>
+            <li><button type="button" class="admin-tab" id="tab-pagos" data-panel="pagos" aria-controls="panel-pagos"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/></svg><span class="admin-tab-texto">Pagos</span> <span class="admin-contador" id="contador-pagos" hidden></span></button></li>
+            <li><button type="button" class="admin-tab" id="tab-mensajes" data-panel="mensajes" aria-controls="panel-mensajes"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="admin-tab-texto">Mensajes</span> <span class="admin-contador" id="contador-mensajes" hidden></span></button></li>
+          </ul>
+          <p class="admin-lateral-grupo" id="grupo-confianza">Confianza</p>
+          <ul aria-labelledby="grupo-confianza">
+            <li><button type="button" class="admin-tab" id="tab-propietarios" data-panel="propietarios" aria-controls="panel-propietarios"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg><span class="admin-tab-texto">Propietarios</span> <span class="admin-contador" id="contador-propietarios" hidden></span></button></li>
+            <li><button type="button" class="admin-tab" id="tab-inmuebles" data-panel="inmuebles" aria-controls="panel-inmuebles"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/></svg><span class="admin-tab-texto">Publicaciones</span></button></li>
+            <li><button type="button" class="admin-tab" id="tab-reportes" data-panel="reportes" aria-controls="panel-reportes"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 22V4"/><path d="M4 4h13l-2 4 2 4H4"/></svg><span class="admin-tab-texto">Reportes</span> <span class="admin-contador" id="contador-reportes" hidden></span></button></li>
+            <li><button type="button" class="admin-tab" id="tab-usuarios" data-panel="usuarios" aria-controls="panel-usuarios"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M16 4a4 4 0 0 1 0 8M22 21a7 7 0 0 0-4-6.3"/></svg><span class="admin-tab-texto">Usuarios</span></button></li>
+          </ul>
+          <p class="admin-lateral-grupo" id="grupo-control">Control</p>
+          <ul aria-labelledby="grupo-control">
+            <li><button type="button" class="admin-tab" id="tab-historial" data-panel="historial" aria-controls="panel-historial"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span class="admin-tab-texto">Auditoría</span></button></li>
+          </ul>
+        </aside>
+        <div class="admin-lateral-fondo" id="admin-lateral-fondo" hidden></div>
 
-      <div class="admin-tabs" role="tablist" aria-label="Secciones del panel">
-        <button type="button" role="tab" class="admin-tab activa" aria-selected="true" aria-controls="panel-resumen" id="tab-resumen" data-panel="resumen">Resumen</button>
-        <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-solicitudes" id="tab-solicitudes" data-panel="solicitudes">Solicitudes <span class="admin-contador" id="contador-solicitudes" hidden></span></button>
-        <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-contratos" id="tab-contratos" data-panel="contratos">Contratos <span class="admin-contador" id="contador-contratos" hidden></span></button>
-        <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-pagos" id="tab-pagos" data-panel="pagos">Pagos <span class="admin-contador" id="contador-pagos" hidden></span></button>
-        <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-mensajes" id="tab-mensajes" data-panel="mensajes">Mensajes <span class="admin-contador" id="contador-mensajes" hidden></span></button>
-        <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-reportes" id="tab-reportes" data-panel="reportes">Reportes <span class="admin-contador" id="contador-reportes" hidden></span></button>
-        <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-propietarios" id="tab-propietarios" data-panel="propietarios">Propietarios <span class="admin-contador" id="contador-propietarios" hidden></span></button>
-        <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-inmuebles" id="tab-inmuebles" data-panel="inmuebles">Publicaciones</button>
-        <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-usuarios" id="tab-usuarios" data-panel="usuarios">Usuarios</button>
-        <button type="button" role="tab" class="admin-tab" aria-selected="false" aria-controls="panel-historial" id="tab-historial" data-panel="historial">Auditoría</button>
-      </div>
+        <div class="admin-contenido">
+          <header class="admin-encabezado">
+            <button type="button" class="admin-lateral-abrir" id="admin-lateral-abrir" aria-controls="admin-lateral" aria-expanded="false">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+              Secciones <span class="admin-contador" id="contador-total" hidden></span>
+            </button>
+            <p class="admin-migas">Panel de administración</p>
+            <h1 id="admin-titulo">Resumen</h1>
+            <p id="admin-descripcion">Lo que necesita atención hoy y las cifras de la plataforma.</p>
+          </header>
 
-      <section class="admin-panel" id="panel-resumen" role="tabpanel" aria-labelledby="tab-resumen">
+      <section class="admin-panel" id="panel-resumen" aria-labelledby="tab-resumen">
         <div class="admin-resumen" id="admin-metricas"><p class="admin-cargando">Cargando…</p></div>
       </section>
 
-      <section class="admin-panel" id="panel-reportes" role="tabpanel" aria-labelledby="tab-reportes" hidden>
+      <section class="admin-panel" id="panel-reportes" aria-labelledby="tab-reportes" hidden>
         <div class="admin-filtros">
           <label for="filtro-reportes">Estado</label>
           <select id="filtro-reportes">
@@ -85,7 +107,7 @@
         <div id="lista-reportes" class="admin-lista"></div>
       </section>
 
-      <section class="admin-panel" id="panel-solicitudes" role="tabpanel" aria-labelledby="tab-solicitudes" hidden>
+      <section class="admin-panel" id="panel-solicitudes" aria-labelledby="tab-solicitudes" hidden>
         <div class="admin-filtros">
           <label for="filtro-solicitudes">Estado</label>
           <select id="filtro-solicitudes">
@@ -105,7 +127,7 @@
         <div id="lista-solicitudes-admin" class="admin-lista"></div>
       </section>
 
-      <section class="admin-panel" id="panel-contratos" role="tabpanel" aria-labelledby="tab-contratos" hidden>
+      <section class="admin-panel" id="panel-contratos" aria-labelledby="tab-contratos" hidden>
         <div class="admin-filtros">
           <label for="filtro-contratos">Estado</label>
           <select id="filtro-contratos">
@@ -123,7 +145,7 @@
         <div id="lista-contratos-admin" class="admin-lista"></div>
       </section>
 
-      <section class="admin-panel" id="panel-pagos" role="tabpanel" aria-labelledby="tab-pagos" hidden>
+      <section class="admin-panel" id="panel-pagos" aria-labelledby="tab-pagos" hidden>
         <p class="contrato-demo"><strong>Pagos demostrativos.</strong> Roumix aún no tiene un proveedor de pagos autorizado: no se mueve dinero real.</p>
         <div id="pagos-totales" class="admin-metricas admin-metricas-pagos"></div>
         <div id="pagos-esperando"></div>
@@ -142,7 +164,7 @@
         <div id="lista-pagos-admin" class="admin-lista"></div>
       </section>
 
-      <section class="admin-panel" id="panel-mensajes" role="tabpanel" aria-labelledby="tab-mensajes" hidden>
+      <section class="admin-panel" id="panel-mensajes" aria-labelledby="tab-mensajes" hidden>
         <div class="admin-filtros">
           <label for="filtro-mensajes">Estado</label>
           <select id="filtro-mensajes">
@@ -162,7 +184,7 @@
         <div id="lista-mensajes-admin" class="admin-lista"></div>
       </section>
 
-      <section class="admin-panel" id="panel-propietarios" role="tabpanel" aria-labelledby="tab-propietarios" hidden>
+      <section class="admin-panel" id="panel-propietarios" aria-labelledby="tab-propietarios" hidden>
         <div class="admin-filtros">
           <label for="filtro-verificacion">Verificación</label>
           <select id="filtro-verificacion">
@@ -179,7 +201,7 @@
         <div id="lista-propietarios" class="admin-lista"></div>
       </section>
 
-      <section class="admin-panel" id="panel-inmuebles" role="tabpanel" aria-labelledby="tab-inmuebles" hidden>
+      <section class="admin-panel" id="panel-inmuebles" aria-labelledby="tab-inmuebles" hidden>
         <div class="admin-filtros">
           <label for="filtro-moderacion">Moderación</label>
           <select id="filtro-moderacion">
@@ -196,7 +218,7 @@
         <div id="lista-inmuebles-admin" class="admin-lista"></div>
       </section>
 
-      <section class="admin-panel" id="panel-usuarios" role="tabpanel" aria-labelledby="tab-usuarios" hidden>
+      <section class="admin-panel" id="panel-usuarios" aria-labelledby="tab-usuarios" hidden>
         <div class="admin-filtros">
           <label for="filtro-rol">Rol</label>
           <select id="filtro-rol">
@@ -217,7 +239,7 @@
         <div id="lista-usuarios" class="admin-lista"></div>
       </section>
 
-      <section class="admin-panel" id="panel-historial" role="tabpanel" aria-labelledby="tab-historial" hidden>
+      <section class="admin-panel" id="panel-historial" aria-labelledby="tab-historial" hidden>
         <p class="fotos-ayuda">Historial de solo adición: cada acción del equipo y los pasos clave de los usuarios quedan registrados y no se pueden modificar ni borrar. Los mensajes y notas no se guardan aquí, solo que existieron.</p>
         <div class="admin-filtros admin-filtros-auditoria">
           <label for="aud-entidad">Sobre</label>
@@ -248,6 +270,8 @@
         <div id="lista-historial" class="admin-lista"></div>
         <button type="button" class="btn-card-action admin-cargar-mas" id="aud-mas" hidden>Cargar más</button>
       </section>
+        </div>
+      </div>
     </div>
   </main>
 
