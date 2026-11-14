@@ -354,6 +354,54 @@ async function actualizarInsigniaAvisos() {
   } catch (e) { /* el contador es informativo */ }
 }
 
+// Página de inicio de cada rol (sin la carpeta pages/). Cada rol tiene su propia experiencia:
+// el estudiante busca vivienda, el propietario gestiona sus publicaciones y el admin opera el panel.
+function paginaInicioRol(usuario) {
+  if (!usuario) return "buscar.html";
+  if (usuario.rol === "admin") return "admin.html";
+  if (usuario.rol === "propietario") {
+    return usuario.verificacion && usuario.verificacion !== "aprobado" ? "verificacion.html" : "mis-publicaciones.html";
+  }
+  return "buscar.html";
+}
+
+// Enlaces principales de cada rol: [página, texto]
+function enlacesDelRol(usuario) {
+  if (!usuario) return [];
+  if (usuario.rol === "admin") return [["admin.html", "Panel"]];
+  if (usuario.rol === "propietario") {
+    const enlaces = [];
+    // Mientras Roumix no apruebe la cuenta, el primer paso es la verificación
+    if (usuario.verificacion && usuario.verificacion !== "aprobado") enlaces.push(["verificacion.html", "Mi verificación"]);
+    enlaces.push(["mis-publicaciones.html", "Mis publicaciones"], ["publicar.html", "Publicar"], ["solicitudes.html", "Solicitudes"], ["mensajes.html", "Mensajes"]);
+    return enlaces;
+  }
+  return [["buscar.html", "Buscar"], ["comparar.html", "Comparar"], ["solicitudes.html", "Mis solicitudes"], ["mensajes.html", "Mensajes"]];
+}
+
+// Propietarios y admin pueden abrir Buscar o una ficha para ver lo que ve un estudiante:
+// se les indica que es una vista previa y cómo volver a su área
+function mostrarAvisoVistaEstudiante(usuario, paginaActual) {
+  const existente = document.getElementById("aviso-vista-estudiante");
+  const aplica = usuario && usuario.rol !== "estudiante" && ["buscar.html", "detalle.html"].includes(paginaActual);
+  if (!aplica) {
+    if (existente) existente.remove();
+    return;
+  }
+  if (existente) return;
+  const inicio = paginaInicioRol(usuario);
+  const volver = usuario.rol === "admin" ? "Volver al panel" : "Volver a Mis publicaciones";
+  const aviso = document.createElement("div");
+  aviso.id = "aviso-vista-estudiante";
+  aviso.className = "aviso-vista-estudiante";
+  aviso.setAttribute("role", "note");
+  aviso.innerHTML = `
+    <span><strong>Vista de estudiante.</strong> Así ven los estudiantes las publicaciones de Roumix.</span>
+    <a href="${inicio}">← ${volver}</a>`;
+  const header = document.querySelector(".main-header");
+  if (header) header.insertAdjacentElement("afterend", aviso);
+}
+
 // 5. Renderizado inteligente y homogéneo de la barra de navegación según el rol
 function sincronizarBarraNavegacion() {
   const header = document.querySelector(".main-header");
@@ -373,7 +421,6 @@ function sincronizarBarraNavegacion() {
 
   // El rol guardado solo decide qué enlaces se muestran; el servidor vuelve a validarlo
   const usuario = RoumixStorage.getUsuario();
-  const esPropietario = usuario && usuario.rol === "propietario";
   const paginaActual = window.location.pathname.split("/").pop() || "index.html";
 
   // Obtenemos los contenedores de nav
@@ -389,21 +436,12 @@ function sincronizarBarraNavegacion() {
     // Un solo enlace "Buscar" (antes "Inicio" y "Buscar" llevaban al mismo lugar)
     const enlace = (pagina, texto) =>
       `<li><a href="${prefixPages}${pagina}" class="nav-link ${paginaActual === pagina ? 'active' : ''}"${paginaActual === pagina ? ' aria-current="page"' : ''}>${texto}</a></li>`;
-    const enlaces = [enlace("buscar.html", "Buscar"), enlace("comparar.html", "Comparar")];
-    if (esPropietario) {
-      // Mientras Roumix no apruebe la cuenta, el primer paso es la verificación
-      if (usuario.verificacion && usuario.verificacion !== "aprobado") enlaces.push(enlace("verificacion.html", "Mi verificación"));
-      enlaces.push(enlace("publicar.html", "Publicar"), enlace("mis-publicaciones.html", "Mis publicaciones"), enlace("solicitudes.html", "Solicitudes"));
-    }
-    if (usuario && usuario.rol === "estudiante") enlaces.push(enlace("solicitudes.html", "Mis solicitudes"));
-    if (usuario && (usuario.rol === "estudiante" || usuario.rol === "propietario")) {
-      const insignia = roumixAvisosSinLeer > 0
-        ? ` <span class="nav-insignia" aria-label="${roumixAvisosSinLeer} novedades sin leer">${roumixAvisosSinLeer > 9 ? "9+" : roumixAvisosSinLeer}</span>`
-        : "";
-      enlaces.push(enlace("mensajes.html", `Mensajes${insignia}`));
-    }
-    if (usuario && usuario.rol === "admin") enlaces.push(enlace("admin.html", "Administración"));
-    navContainer.innerHTML = enlaces.join("");
+    const insignia = roumixAvisosSinLeer > 0
+      ? ` <span class="nav-insignia" aria-label="${roumixAvisosSinLeer} novedades sin leer">${roumixAvisosSinLeer > 9 ? "9+" : roumixAvisosSinLeer}</span>`
+      : "";
+    navContainer.innerHTML = enlacesDelRol(usuario)
+      .map(([pagina, texto]) => enlace(pagina, pagina === "mensajes.html" ? `${texto}${insignia}` : texto))
+      .join("");
     // En celular el menú está plegado: un punto en el botón avisa que hay novedades
     header.classList.toggle("con-avisos", roumixAvisosSinLeer > 0);
   }
@@ -449,6 +487,29 @@ function sincronizarBarraNavegacion() {
     document.addEventListener("click", (e) => { if (!header.contains(e.target)) cerrarMenu(); });
     window.matchMedia("(min-width: 769px)").addEventListener("change", cerrarMenu);
   }
+
+  // El logo lleva al inicio de cada rol (antes siempre a Buscar)
+  if (usuario) {
+    header.querySelectorAll("a.logo").forEach((logo) => { logo.href = `${prefixPages}${paginaInicioRol(usuario)}`; });
+  }
+
+  // Pie de página: la columna "Navegación" muestra los mismos enlaces del rol
+  if (usuario) {
+    document.querySelectorAll(".footer-col").forEach((col) => {
+      const titulo = col.querySelector("h4");
+      const lista = col.querySelector("ul");
+      if (!titulo || !lista || titulo.textContent.trim() !== "Navegación" || lista.dataset.rol === usuario.rol) return;
+      lista.dataset.rol = usuario.rol;
+      lista.innerHTML = enlacesDelRol(usuario)
+        .map(([pagina, texto]) => `<li><a href="${prefixPages}${pagina}" class="footer-link">${texto}</a></li>`)
+        .join("") + `<li><a href="${prefixRoot}ingresar.html" class="footer-link">Cerrar sesión</a></li>`;
+    });
+  }
+
+  // Clases por rol: ocultan herramientas que ese rol no usa (Comparar, Guardados…)
+  ["estudiante", "propietario", "admin"].forEach((rol) => document.body.classList.toggle(`rol-${rol}`, !!usuario && usuario.rol === rol));
+  document.body.classList.toggle("vista-no-estudiante", !!usuario && usuario.rol !== "estudiante");
+  mostrarAvisoVistaEstudiante(usuario, paginaActual);
 
   // Al confirmar la sesión la barra se redibuja: el botón de tema (☾/☀) se vuelve a poner
   if (typeof RoumixTema !== "undefined") RoumixTema.instalar();
@@ -611,8 +672,11 @@ async function protegerPagina(rolesPermitidos) {
 
   if (!rolesPermitidos.includes(usuario.rol)) {
     document.body.style.visibility = "";
-    RoumixAvisos.mostrar(rolesPermitidos.includes("admin") ? "Esta sección es solo para el equipo de Roumix." : "Esta sección es solo para propietarios.", "error");
-    setTimeout(() => window.location.replace(`${enCarpetaPages ? "" : "pages/"}buscar.html`), 1600);
+    const soloPara = rolesPermitidos.length === 1
+      ? { admin: "el equipo de Roumix", propietario: "propietarios", estudiante: "estudiantes" }[rolesPermitidos[0]]
+      : rolesPermitidos.includes("admin") ? "el equipo de Roumix" : "otro tipo de cuenta";
+    RoumixAvisos.mostrar(`Esta sección es solo para ${soloPara}. Te llevamos a tu inicio.`, "error");
+    setTimeout(() => window.location.replace(`${enCarpetaPages ? "" : "pages/"}${paginaInicioRol(usuario)}`), 1600);
     return null;
   }
 
@@ -988,6 +1052,12 @@ const RoumixTema = {
     const derecha = contenedor.querySelector(".header-right");
     const esCelular = window.matchMedia("(max-width: 768px)");
     const ubicar = () => {
+      // Al redibujar la barra este botón pudo quedar fuera de la página y otro ocupó su lugar:
+      // en ese caso no se vuelve a insertar (antes aparecían varios al girar o cambiar el tamaño)
+      if (!boton.isConnected && contenedor.querySelector(".rx-tema-toggle")) {
+        esCelular.removeEventListener("change", ubicar);
+        return;
+      }
       // Sin menú plegable (visitantes) el botón siempre va junto a los de la derecha
       const sinMenu = contenedor.closest(".main-header").classList.contains("sin-menu");
       if (derecha && (!esCelular.matches || sinMenu)) {

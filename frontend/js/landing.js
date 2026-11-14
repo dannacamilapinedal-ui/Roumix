@@ -6,24 +6,31 @@
 document.addEventListener("DOMContentLoaded", () => {
   const reducir = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   // Todas las secciones requieren cuenta: los botones cambian según haya sesión o no
-  const conSesion = Boolean(RoumixStorage.getUsuario());
+  const usuarioActual = RoumixStorage.getUsuario();
+  const conSesion = Boolean(usuarioActual);
   if (conSesion) {
     document.querySelectorAll("[data-texto-usuario]").forEach((el) => { el.textContent = el.dataset.textoUsuario; });
     document.querySelectorAll("[data-solo-visitante]").forEach((el) => { el.hidden = true; });
     const finalPrincipal = document.querySelector(".lx-final-acciones .lx-btn-naranja");
     if (finalPrincipal) {
-      finalPrincipal.href = "pages/buscar.html";
-      finalPrincipal.querySelector("span").textContent = "Ir a buscar vivienda";
+      // Cada rol vuelve a su propio inicio
+      finalPrincipal.href = `pages/${paginaInicioRol(usuarioActual)}`;
+      finalPrincipal.querySelector("span").textContent = {
+        admin: "Ir al panel",
+        propietario: "Ir a mis publicaciones",
+      }[usuarioActual.rol] || "Ir a buscar vivienda";
     }
     const finalSecundario = document.querySelector(".lx-final-acciones .lx-btn-contorno");
     if (finalSecundario) finalSecundario.hidden = true;
     const textoFinal = document.querySelector(".lx-final-caja p");
-    if (textoFinal) textoFinal.textContent = "Ya tienes tu cuenta: sigue buscando cerca de tu universidad.";
+    if (textoFinal) textoFinal.textContent = usuarioActual.rol === "estudiante"
+      ? "Ya tienes tu cuenta: sigue buscando cerca de tu universidad."
+      : "Ya tienes tu cuenta: continúa desde tu área de Roumix.";
   }
 
   // ---------- 1. Palabra que rota en el título ----------
   const rotador = document.getElementById("lx-rotador");
-  const frases = ["cerca de tu U", "a tu presupuesto", "sin intermediarios", "en un solo lugar"];
+  const frases = ["cerca de tu U", "a tu presupuesto", "con todo gestionado", "en un solo lugar"];
   let frase = 0;
   if (rotador && !reducir) {
     setInterval(() => {

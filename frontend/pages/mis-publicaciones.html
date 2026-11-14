@@ -55,6 +55,7 @@
         <div>
           <h1 class="my-publications-title">Mis Publicaciones</h1>
           <p class="my-publications-subtitle">Gestiona y supervisa los alojamientos que tienes registrados en Roumix.</p>
+          <a href="buscar.html" class="btn-ver-estudiante"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Ver la búsqueda como la ve un estudiante</a>
         </div>
         <a href="publicar.html" class="btn-publish-new-property">
           <svg class="svg-plus-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -204,7 +205,10 @@
         if (item.estado === "retirado" || item.moderacion === "rechazada" || item.moderacion === "retirada") return "";
         const botones = [`<a href="publicar.html?editar=${item.id}" class="btn-card-action">Editar</a>`];
         if (item.estado === "disponible") {
-          botones.push(`<a href="detalle.html?id=${item.id}" class="btn-card-action">Ver</a>`);
+          // Solo las publicaciones visibles tienen ficha pública: se abre tal como la ve un estudiante
+          if (item.moderacion === "aprobada") {
+            botones.push(`<a href="detalle.html?id=${item.id}" class="btn-card-action" title="Abre la ficha tal como la ve un estudiante">Ver como estudiante</a>`);
+          }
           botones.push(`<button type="button" class="btn-card-action" data-accion="pausado" data-id="${item.id}">Pausar</button>`);
           botones.push(`<button type="button" class="btn-card-action" data-accion="arrendado" data-id="${item.id}">Marcar arrendado</button>`);
         } else {

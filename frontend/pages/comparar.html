@@ -127,8 +127,8 @@
   <script src="../js/api.js"></script>
   <script>
     document.addEventListener("DOMContentLoaded", async () => {
-      // Todas las secciones requieren cuenta
-      if (!(await protegerPagina(["estudiante", "propietario", "admin"]))) return;
+      // Comparar es una herramienta del estudiante (los demás roles vuelven a su inicio)
+      if (!(await protegerPagina(["estudiante"]))) return;
       const contenedor = document.getElementById("comparador-contenido");
       const acciones = document.getElementById("comparador-acciones");
       const avisoQuitados = document.getElementById("comparador-aviso");

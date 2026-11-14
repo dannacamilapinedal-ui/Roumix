@@ -7441,3 +7441,31 @@ html[data-tema="oscuro"] .admin-al-dia { color: #9fd8ac; }
 .admin-cargar-mas { display: block; margin: 14px auto 0; }
 a.admin-enlace { color: var(--texto-verde-oscuro); font-weight: 600; }
 .admin-filtros-auditoria select { max-width: 210px; }
+
+/* =========================================================================
+   Experiencia por rol (UI-1)
+   ========================================================================= */
+/* Comparar y Guardados son herramientas del estudiante: no se muestran a propietarios ni al admin */
+body.vista-no-estudiante #btn-abrir-comparador,
+body.vista-no-estudiante .btn-comparar-toggle,
+body.vista-no-estudiante #btn-comparar-inmueble,
+body.vista-no-estudiante .pill-guardados,
+body.vista-no-estudiante button[data-guardar] { display: none !important; }
+/* El admin no usa "Mensajes" como usuario: responde desde el panel */
+body.rol-admin #det-preguntar { display: none; }
+
+.aviso-vista-estudiante {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 16px;
+  padding: 10px 16px; background: var(--verde-badge-bg); color: var(--verde-badge-text);
+  border-bottom: 1px solid var(--verde-pastilla-borde); font-size: 0.9rem; text-align: center;
+}
+.aviso-vista-estudiante a { color: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+html[data-tema="oscuro"] .aviso-vista-estudiante { background: #1f3527; color: #cfe8d3; border-color: #315c44; }
+
+/* "Ver como estudiante" en Mis publicaciones */
+.btn-ver-estudiante {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 600;
+  color: var(--texto-verde-medio); text-decoration: none;
+}
+.btn-ver-estudiante:hover { text-decoration: underline; }
+html[data-tema="oscuro"] .btn-ver-estudiante { color: #9fd8ac; }

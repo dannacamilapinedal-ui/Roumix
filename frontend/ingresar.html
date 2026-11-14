@@ -227,7 +227,10 @@
       // Página a la que volver después de iniciar sesión (solo páginas propias de Roumix)
       const params = new URLSearchParams(window.location.search);
       const redirigir = params.get("redirigir");
-      const destino = redirigir && /^[a-z-]+\.html(\?[A-Za-z0-9=&%._-]*)?$/.test(redirigir) ? `pages/${redirigir}` : "pages/buscar.html";
+      const redirigirValido = redirigir && /^[a-z-]+\.html(\?[A-Za-z0-9=&%._-]*)?$/.test(redirigir) ? redirigir : null;
+      // Sin una página pedida, cada rol entra a su propio inicio (estudiante → Buscar,
+      // propietario → Mis publicaciones o Mi verificación, admin → Panel)
+      const destino = (usuario) => `pages/${redirigirValido || paginaInicioRol(usuario)}`;
 
       function mostrarMensaje(texto, tipo) {
         mensaje.textContent = texto;
@@ -243,7 +246,7 @@
 
       // Si ya hay sesión, no tiene sentido volver a iniciarla
       if (RoumixStorage.getUsuario()) {
-        window.location.replace(destino);
+        window.location.replace(destino(RoumixStorage.getUsuario()));
         return;
       }
 
@@ -393,9 +396,7 @@
 
           if (modo === "login") {
             const usuario = await RoumixAPI.login(email, password, captchaToken);
-            // Un propietario sin aprobar empieza por su verificación (salvo que viniera a otra página)
-            const pendiente = usuario && usuario.rol === "propietario" && usuario.verificacion && usuario.verificacion !== "aprobado";
-            window.location.href = pendiente && !redirigir ? "pages/verificacion.html" : destino;
+            window.location.href = destino(usuario || RoumixStorage.getUsuario());
             return;
           }
 
@@ -407,7 +408,7 @@
               ? `${respuesta.message} Después de ingresar, completa tu perfil de propietario: el equipo de Roumix lo revisará antes de que puedas publicar.`
               : respuesta.message, "exito");
           } else {
-            window.location.href = destino;
+            window.location.href = destino(RoumixStorage.getUsuario());
             return;
           }
         } catch (error) {
