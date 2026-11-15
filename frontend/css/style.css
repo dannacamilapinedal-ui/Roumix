@@ -8119,3 +8119,47 @@ body.pagina-buscar { --ancho-pagina: 1680px; }
   .solicitud-acciones > .destacado { grid-column: 1 / -1; }
   .solicitud-acciones .btn-card-action { justify-content: center; text-align: center; padding: 10px 12px; }
 }
+
+/* =========================================================================
+   E-4 — Páginas del propietario
+   ========================================================================= */
+/* La foto ocupa todo el alto de la tarjeta (antes dejaba un hueco debajo) */
+.my-property-card {
+  grid-template-columns: 232px minmax(0, 1fr);
+  gap: var(--esp-5);
+  padding: var(--esp-4);
+  margin-bottom: var(--esp-4);
+  align-items: stretch;
+}
+.my-prop-image-wrap { height: auto; min-height: 180px; }
+.my-prop-image-wrap .my-prop-img { position: absolute; inset: 0; }
+.my-prop-body { gap: var(--esp-3); min-width: 0; }
+.my-prop-price { font-size: 1.4rem; line-height: 1.2; }
+.my-prop-title { font-size: var(--texto-lg); line-height: 1.3; }
+.my-prop-location { margin-bottom: var(--esp-2); }
+.my-prop-tags { flex-wrap: wrap; gap: 6px; margin-bottom: 0; }
+.my-prop-footer { padding-top: var(--esp-3); gap: var(--esp-3); }
+.my-prop-actions { gap: var(--esp-2); }
+.my-prop-actions .btn-card-action { padding: 7px 14px; }
+/* El aviso de comisión y el resumen respiran igual que el resto */
+.prop-resumen { margin-bottom: var(--esp-4); }
+.verif-aviso { margin-bottom: var(--esp-5); }
+
+/* Área del propietario en celular y tableta: un solo margen lateral (antes se sumaban dos) */
+@media (max-width: 900px) {
+  .prop-layout { padding: 0; }
+}
+
+@media (max-width: 760px) {
+  .my-property-card { grid-template-columns: 1fr; gap: var(--esp-3); padding: var(--esp-3); }
+  .my-prop-image-wrap { min-height: 0; height: 170px; }
+  .my-prop-footer { flex-direction: column; align-items: stretch; }
+  /* Los botones en una cuadrícula de 2 columnas; "Retirar" a todo el ancho */
+  .my-prop-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .my-prop-actions .btn-card-action { padding: 9px 8px; text-align: center; font-size: 0.8rem; white-space: nowrap; }
+  .my-prop-image-wrap { height: 160px; }
+  .my-prop-actions .btn-card-danger { grid-column: 1 / -1; }
+  .my-publications-header-row .btn-publish-new-property { width: 100%; justify-content: center; }
+}
+/* Mi verificación usa el mismo ancho que las demás páginas del área (antes dejaba una franja vacía) */
+.prop-contenido > .verif-contenedor { max-width: none; }
