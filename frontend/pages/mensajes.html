@@ -351,6 +351,11 @@
       if (idParam) abrirConversacion(idParam);
       else if (params.get("solicitud")) nuevaConsulta({ solicitudId: Number(params.get("solicitud")) });
       else if (params.get("inmueble")) nuevaConsulta({ inmuebleId: Number(params.get("inmueble")) });
+      // En computador la columna del hilo no queda vacía: se abre la conversación más reciente
+      // (en celular se muestra primero la lista, como en cualquier app de mensajes)
+      else if (conversaciones.length && window.matchMedia("(min-width: 761px)").matches) {
+        abrirConversacion(conversaciones[0].id, { silencioso: true });
+      }
 
       // Revisa respuestas nuevas cada 20 s mientras la pestaña está visible
       setInterval(async () => {

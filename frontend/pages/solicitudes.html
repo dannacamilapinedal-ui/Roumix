@@ -182,7 +182,7 @@
           return `
             <article class="solicitud-tarjeta${cerrada ? " cerrada" : ""}">
               <div class="solicitud-cabeza">
-                ${s.imagen_principal ? `<img src="${escaparHTML(s.imagen_principal)}" alt="" class="solicitud-foto" loading="lazy">` : '<div class="solicitud-foto"></div>'}
+                ${s.imagen_principal ? `<img src="${escaparHTML(s.imagen_principal)}" alt="" class="solicitud-foto" loading="lazy">` : '<div class="solicitud-foto solicitud-foto-vacia" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/></svg></div>'}
                 <div class="solicitud-datos">
                   <span class="solicitud-numero">Solicitud #${s.id}${esEstudiante ? "" : ` · ${escaparHTML(s.estudiante_nombre)}`}</span>
                   <h2>${esEstudiante && !cerrada ? `<a href="detalle.html?id=${s.inmueble_id}">${titulo}</a>` : titulo}</h2>

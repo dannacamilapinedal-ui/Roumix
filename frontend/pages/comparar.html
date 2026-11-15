@@ -237,6 +237,8 @@
       async function cargar() {
         const ids = RoumixComparador.getIds();
         avisoQuitados.hidden = true;
+        // "Vaciar comparación" solo tiene sentido si hay algo elegido
+        document.getElementById("btn-limpiar-comparacion").hidden = ids.length === 0;
 
         if (ids.length === 0) {
           mostrarEstado("comparar", "Aún no has elegido inmuebles para comparar",

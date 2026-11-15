@@ -8085,3 +8085,37 @@ body.pagina-buscar { --ancho-pagina: 1680px; }
     grid-template-columns: minmax(420px, min(620px, 46%)) minmax(0, 1fr);
   }
 }
+
+/* =========================================================================
+   E-3 — Páginas del estudiante
+   ========================================================================= */
+/* Comparar: el botón "Vaciar" se oculta de verdad cuando no hay nada elegido */
+.btn-compare-quitar[hidden] { display: none; }
+
+/* Solicitudes: si el inmueble no tiene foto se muestra una casita en vez de un recuadro vacío */
+.solicitud-foto-vacia {
+  display: grid; place-items: center;
+  color: var(--texto-verde-medio);
+  background: linear-gradient(135deg, var(--verde-badge-bg), var(--fondo-crema));
+  border: 1px solid var(--borde-suave);
+}
+.solicitud-tarjeta { padding: var(--esp-5); }
+.solicitud-tarjeta + .solicitud-tarjeta { margin-top: var(--esp-4); }
+
+/* Mensajes: la conversación ocupa una altura proporcionada a la pantalla */
+@media (min-width: 761px) {
+  .msg-layout { height: clamp(480px, calc(100vh - 300px), 720px); min-height: 0; }
+  .msg-lista-col, .msg-hilo-col { min-height: 0; }
+  .msg-lista-col { max-height: none; }
+  .msg-burbujas { max-height: none; min-height: 0; }
+}
+
+@media (max-width: 640px) {
+  .solicitud-tarjeta { padding: var(--esp-4); }
+  /* Botones de la solicitud a todo el ancho, fáciles de tocar */
+  .solicitud-pie { flex-direction: column; align-items: stretch; gap: var(--esp-3); }
+  .solicitud-acciones { margin-left: 0; display: grid; grid-template-columns: 1fr 1fr; gap: var(--esp-2); }
+  .solicitud-acciones > :only-child,
+  .solicitud-acciones > .destacado { grid-column: 1 / -1; }
+  .solicitud-acciones .btn-card-action { justify-content: center; text-align: center; padding: 10px 12px; }
+}
