@@ -21,7 +21,7 @@
   <script>(function(d){d.classList.add("rx-cargando");setTimeout(function(){if(d.classList.contains("rx-cargando"))d.classList.add("rx-mostrar")},300);setTimeout(function(){d.classList.remove("rx-mostrar","rx-cargando")},6000)})(document.documentElement)</script>
 </head>
 
-<body>
+<body class="pagina-buscar">
   <!-- ======================================================== -->
   <!-- BARRA DE NAVEGACIÓN SUPERIOR (SIN DETALLE EN LA BARRA)   -->
   <!-- ======================================================== -->
@@ -422,7 +422,7 @@
                   ${botonComparar(item)}
                   ${puedeReportar(item) ? `<button type="button" class="btn-report" data-reportar="${item.id}" aria-label="Reportar publicación: ${escaparHTML(item.titulo)}">⚑ Reportar</button>` : ""}
                 </div>
-                <div style="display: flex; gap: 8px;">
+                <div class="acciones-principales">
                   <a href="detalle.html?id=${item.id}" class="btn-learn-more">
                     Saber más
                   </a>
@@ -676,6 +676,18 @@
           }, 60);
         }
       });
+
+      // El botón "Ver mapa" se esconde al bajar por la lista y vuelve al subir,
+      // así no tapa los botones de las tarjetas mientras se leen
+      let ultimoScroll = window.scrollY;
+      window.addEventListener("scroll", () => {
+        const y = window.scrollY;
+        const bajando = y > ultimoScroll + 6;
+        const subiendo = y < ultimoScroll - 6;
+        if (bajando && y > 400 && !document.body.classList.contains("vista-mapa")) botonVista.classList.add("oculto-al-bajar");
+        else if (subiendo || y < 200) botonVista.classList.remove("oculto-al-bajar");
+        if (bajando || subiendo) ultimoScroll = y;
+      }, { passive: true });
 
       // Tarjeta pequeña del marcador (se arma con nodos para no interpretar texto como HTML)
       function tarjetaPopup(item) {
