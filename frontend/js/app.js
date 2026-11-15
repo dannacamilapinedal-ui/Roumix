@@ -1119,6 +1119,36 @@ const RoumixTema = {
     });
   },
 
+  // Cambio de tema con una onda circular que nace en el botón y cubre la pantalla.
+  // Usa View Transitions (Chrome, Edge, Safari); si el navegador no la tiene, o la persona
+  // prefiere menos movimiento, se usa el fundido de colores de siempre.
+  cambiarConEfecto(boton) {
+    const nuevo = this.actual() === "oscuro" ? "claro" : "oscuro";
+    const raiz = document.documentElement;
+    const reducir = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    // El botón "salta" y gira el ícono
+    boton.classList.remove("rx-tema-salto");
+    void boton.offsetWidth; // reinicia la animación si se pulsa seguido
+    boton.classList.add("rx-tema-salto");
+    setTimeout(() => boton.classList.remove("rx-tema-salto"), 700);
+
+    if (reducir || typeof document.startViewTransition !== "function") {
+      this.aplicar(nuevo, true);
+      return;
+    }
+    const r = boton.getBoundingClientRect();
+    const x = r.left + r.width / 2;
+    const y = r.top + r.height / 2;
+    const radio = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
+    raiz.style.setProperty("--rx-onda-x", `${x}px`);
+    raiz.style.setProperty("--rx-onda-y", `${y}px`);
+    raiz.style.setProperty("--rx-onda-r", `${radio}px`);
+    raiz.dataset.temaDestino = nuevo;
+    const transicion = document.startViewTransition(() => this.aplicar(nuevo, false));
+    transicion.finished.finally(() => { delete raiz.dataset.temaDestino; });
+  },
+
   instalar() {
     const contenedor = document.querySelector(".main-header .header-inner");
     if (!contenedor || contenedor.querySelector(".rx-tema-toggle")) return;
@@ -1129,7 +1159,7 @@ const RoumixTema = {
       <svg class="icono-luna" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
       <svg class="icono-sol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8 6 18M18 6l1.8-1.8"/></svg>`;
     boton.addEventListener("click", () => {
-      this.aplicar(this.actual() === "oscuro" ? "claro" : "oscuro", true);
+      this.cambiarConEfecto(boton);
     });
     // Computador: junto a "Cerrar sesión". Celular: al lado del ☰ (fuera del menú plegable)
     const derecha = contenedor.querySelector(".header-right");

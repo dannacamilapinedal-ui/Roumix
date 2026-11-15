@@ -7754,3 +7754,206 @@ html[data-tema="oscuro"] .prop-resumen-item.atencion .prop-resumen-valor { color
   .prop-resumen { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .prop-resumen-item { padding: 12px 14px; }
 }
+
+/* =========================================================================
+   SISTEMA DE DISEÑO (E-1) — una sola escala para todas las páginas
+   Espacios en múltiplos de 4/8 px, una escala de letra y un ancho de página.
+   Esta capa va al final para unificar lo anterior sin tocar cada regla.
+   ========================================================================= */
+:root {
+  /* Espacios */
+  --esp-1: 4px;  --esp-2: 8px;  --esp-3: 12px; --esp-4: 16px;
+  --esp-5: 24px; --esp-6: 32px; --esp-7: 48px; --esp-8: 64px;
+  /* Letra */
+  --texto-xs: 0.75rem;   /* 12 px: etiquetas */
+  --texto-sm: 0.875rem;  /* 14 px: notas */
+  --texto-base: 1rem;    /* 16 px: texto */
+  --texto-lg: 1.125rem;  /* 18 px: destacados */
+  --texto-xl: 1.375rem;  /* 22 px: títulos de bloque */
+  --texto-titulo: clamp(1.75rem, 1.35rem + 1.3vw, 2.25rem); /* 28–36 px: título de página */
+  /* Página */
+  --ancho-pagina: 1280px;
+  --margen-pagina: clamp(16px, 4vw, 32px);
+  --radio-xl: 20px;
+}
+
+/* ---------- Marca: logo más grande, con el símbolo "r." ---------- */
+.logo { align-items: center; gap: 10px; }
+.main-header .logo::before,
+.footer-logo::before {
+  content: "";
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: url("/assets/logo-marca.svg") center / contain no-repeat;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+}
+.main-header .logo-text { font-size: 1.95rem; letter-spacing: -0.04em; line-height: 1; }
+.main-header .logo-dot { font-size: 1.95rem; line-height: 1; margin-left: -10px; }
+.main-header .logo:hover::before { transform: rotate(-6deg); }
+.main-header .logo::before { transition: transform 0.25s ease; }
+.main-header { padding-top: 12px; padding-bottom: 12px; }
+.footer-logo { display: inline-flex; align-items: center; gap: 10px; font-size: 1.9rem; letter-spacing: -0.04em; }
+.footer-logo::before { width: 34px; height: 34px; }
+@media (max-width: 768px) {
+  .main-header .logo::before { width: 32px; height: 32px; border-radius: 9px; }
+  .main-header .logo-text, .main-header .logo-dot { font-size: 1.6rem; }
+  .main-header .logo-dot { margin-left: -10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .main-header .logo::before { transition: none; }
+  .main-header .logo:hover::before { transform: none; }
+}
+
+/* ---------- Un solo ancho y margen de página ---------- */
+.header-inner,
+.footer-container,
+.footer-bottom { max-width: var(--ancho-pagina); }
+.main-header { padding-left: var(--margen-pagina); padding-right: var(--margen-pagina); }
+
+.my-publications-container,
+.compare-view-container,
+.detail-view-container,
+.publish-section-container,
+.admin-container {
+  /* El ancho incluye los márgenes laterales: así el contenido queda alineado con el logo */
+  max-width: calc(var(--ancho-pagina) + 2 * var(--margen-pagina));
+  padding: var(--esp-6) var(--margen-pagina) var(--esp-8);
+}
+.verif-contenedor,
+.info-page-container { padding: var(--esp-6) var(--margen-pagina) var(--esp-8); }
+/* Dentro del área del propietario el contenedor ya está alineado por la barra lateral */
+.prop-layout { max-width: calc(var(--ancho-pagina) + 2 * var(--margen-pagina)); padding: 0 var(--margen-pagina); }
+.prop-contenido > div { max-width: none; padding-top: var(--esp-6); }
+.prop-contenido > .verif-contenedor { max-width: 880px; }
+.prop-lateral { margin-top: var(--esp-6); }
+
+/* ---------- Encabezado de página común ---------- */
+.my-publications-title,
+.compare-title,
+.publish-main-title,
+.verif-encabezado h1,
+.admin-encabezado h1,
+.info-page-container h1 {
+  font-size: var(--texto-titulo);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  color: var(--tinta-fuerte);
+  margin: 0;
+}
+.my-publications-subtitle,
+.compare-subtitle,
+.publish-main-subtitle,
+.verif-encabezado > p,
+.admin-encabezado #admin-descripcion {
+  font-size: var(--texto-base);
+  line-height: 1.55;
+  color: var(--tinta-media);
+  margin: var(--esp-2) 0 0;
+  max-width: 68ch;
+}
+.my-publications-header-row,
+.publish-header,
+.verif-encabezado,
+.admin-encabezado { margin-bottom: var(--esp-5); }
+.compare-subtitle { margin-bottom: var(--esp-5); }
+.my-publications-header-row { align-items: flex-end; gap: var(--esp-4); }
+
+/* ---------- Pie de página más compacto ---------- */
+.app-footer { padding: var(--esp-7) var(--margen-pagina) var(--esp-5); }
+.footer-container { gap: var(--esp-6); margin-bottom: var(--esp-5); }
+.footer-col h4 { margin-bottom: var(--esp-3); }
+.footer-bottom { padding-top: var(--esp-4); }
+@media (max-width: 1024px) {
+  .footer-container { grid-template-columns: 1fr 1fr; }
+  .footer-container > :first-child { grid-column: 1 / -1; }
+}
+@media (max-width: 520px) {
+  .app-footer { padding-top: var(--esp-6); }
+  .footer-container { grid-template-columns: 1fr; gap: var(--esp-5); }
+}
+
+/* ---------- Celular: menos aire arriba ---------- */
+@media (max-width: 768px) {
+  .my-publications-container,
+  .compare-view-container,
+  .detail-view-container,
+  .publish-section-container,
+  .admin-container,
+  .verif-contenedor,
+  .info-page-container { padding-top: var(--esp-5); padding-bottom: var(--esp-7); }
+  .prop-contenido > div { padding-left: var(--margen-pagina); padding-right: var(--margen-pagina); padding-top: var(--esp-5); }
+}
+.footer-logo .dot-orange { margin-left: -10px; }
+/* Página de ingreso: el logo de la barra y el del panel verde también llevan el símbolo */
+.main-header.login-header .logo { display: inline-flex; }
+.auth-brand-logo { display: inline-flex; align-items: center; gap: 10px; font-size: 2rem; letter-spacing: -0.04em; }
+.auth-brand-logo::before {
+  content: ""; flex: none; width: 40px; height: 40px; border-radius: 12px;
+  background: url("/assets/logo-marca.svg") center / contain no-repeat;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+}
+.auth-brand-logo .dot-orange { margin-left: -10px; }
+
+/* =========================================================================
+   Cambio de tema con onda circular (View Transitions)
+   ========================================================================= */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+/* La pantalla nueva aparece como un círculo que crece desde el botón */
+::view-transition-new(root) {
+  animation: rx-onda-tema 0.7s cubic-bezier(0.55, 0, 0.25, 1) both;
+}
+::view-transition-old(root) { z-index: 1; }
+::view-transition-new(root) { z-index: 2; }
+@keyframes rx-onda-tema {
+  from { clip-path: circle(0 at var(--rx-onda-x, 100%) var(--rx-onda-y, 0)); }
+  to   { clip-path: circle(var(--rx-onda-r, 150vmax) at var(--rx-onda-x, 100%) var(--rx-onda-y, 0)); }
+}
+/* La pantalla anterior se oscurece o aclara un poco mientras la onda avanza */
+html[data-tema-destino="oscuro"]::view-transition-old(root) { animation: rx-tema-atenuar 0.75s ease both; }
+html[data-tema-destino="claro"]::view-transition-old(root) { animation: rx-tema-aclarar 0.75s ease both; }
+@keyframes rx-tema-atenuar { to { filter: brightness(0.7) saturate(0.85); } }
+@keyframes rx-tema-aclarar { to { filter: brightness(1.15); } }
+
+/* El botón salta y el ícono da una vuelta */
+.rx-tema-toggle.rx-tema-salto { animation: rx-tema-salto 0.6s cubic-bezier(0.3, 1.5, 0.5, 1); }
+.rx-tema-toggle.rx-tema-salto svg { transition-duration: 0.6s; }
+.rx-tema-toggle.rx-tema-salto::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  border: 2px solid var(--acento-naranja);
+  animation: rx-tema-anillo 0.6s ease-out forwards;
+  pointer-events: none;
+}
+.rx-tema-toggle { position: relative; overflow: visible; }
+.rx-tema-toggle svg { overflow: visible; }
+@keyframes rx-tema-salto {
+  0% { transform: scale(1) rotate(0); }
+  30% { transform: scale(0.82) rotate(-20deg); }
+  65% { transform: scale(1.14) rotate(12deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+@keyframes rx-tema-anillo {
+  from { transform: scale(1); opacity: 0.9; }
+  to { transform: scale(1.9); opacity: 0; }
+}
+/* El sol gira al aparecer; la luna se balancea */
+html[data-tema="oscuro"] .rx-tema-toggle.rx-tema-salto .icono-sol { animation: rx-sol-gira 0.7s cubic-bezier(0.3, 1.3, 0.5, 1); }
+html:not([data-tema="oscuro"]) .rx-tema-toggle.rx-tema-salto .icono-luna { animation: rx-luna-mece 0.7s cubic-bezier(0.3, 1.3, 0.5, 1); }
+@keyframes rx-sol-gira { from { transform: rotate(-180deg) scale(0.4); } to { transform: rotate(0) scale(1); } }
+@keyframes rx-luna-mece { 0% { transform: rotate(60deg) scale(0.4); } 60% { transform: rotate(-15deg) scale(1.1); } 100% { transform: rotate(0) scale(1); } }
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-new(root), ::view-transition-old(root) { animation: none !important; }
+  .rx-tema-toggle.rx-tema-salto,
+  .rx-tema-toggle.rx-tema-salto svg,
+  .rx-tema-toggle.rx-tema-salto::after { animation: none !important; }
+}
