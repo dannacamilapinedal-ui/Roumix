@@ -7,18 +7,20 @@
  * las páginas tienen scripts y estilos en línea; aun así se bloquean dominios ajenos,
  * plugins, el cambio de <base> y que otro sitio meta a Roumix en un iframe.
  *
+ * El widget de pagos de Wompi (checkout.wompi.co) se carga como script y como iframe.
+ *
  * vercel.json repite estas cabeceras para los archivos estáticos que sirve Vercel.
  */
 const limpiar = (v) => String(v || '').trim().replace(/\/+$/, '');
 
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://unpkg.com https://challenges.cloudflare.com",
+  "script-src 'self' 'unsafe-inline' https://unpkg.com https://challenges.cloudflare.com https://checkout.wompi.co",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com",
   "font-src 'self' https://fonts.gstatic.com",
   "img-src 'self' data: blob: https://images.unsplash.com https://*.supabase.co https://unpkg.com",
-  "connect-src 'self' https://challenges.cloudflare.com",
-  'frame-src https://challenges.cloudflare.com',
+  "connect-src 'self' https://challenges.cloudflare.com https://*.wompi.co",
+  'frame-src https://challenges.cloudflare.com https://checkout.wompi.co',
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

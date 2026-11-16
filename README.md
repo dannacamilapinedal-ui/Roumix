@@ -8,8 +8,9 @@ cada parte, prepara el contrato y gestiona el pago del primer mes.
 > **Comunicación gestionada:** estudiantes y propietarios nunca se escriben directamente ni ven el teléfono o el
 > correo del otro. Todo pasa por el equipo de Roumix.
 >
-> **Partes demostrativas:** la firma del contrato y los pagos son **simulados** (ver
-> [Qué es demostrativo](#-qué-es-demostrativo)). No se mueve dinero real.
+> **Pagos:** el primer mes se cobra con **Wompi** (pasarela de Bancolombia) cuando sus llaves están
+> configuradas; sin ellas se usa el simulador. Ver [docs/pagos-wompi.md](docs/pagos-wompi.md).
+> La firma del contrato sigue siendo **demostrativa** (ver [Qué es demostrativo](#-qué-es-demostrativo)).
 
 **En producción:** https://roumix-eight.vercel.app
 
@@ -49,7 +50,7 @@ solicitud como "pagada".
 
 | Rol | Puede |
 |-----|-------|
-| **Estudiante** | Buscar con filtros y mapa, ver el detalle, comparar hasta 3 inmuebles, enviar y cancelar solicitudes, escribirle a Roumix, aceptar su contrato, pagar el primer mes (simulado), reportar un problema con el pago y reportar publicaciones. |
+| **Estudiante** | Buscar con filtros y mapa, ver el detalle, comparar hasta 3 inmuebles, enviar y cancelar solicitudes, escribirle a Roumix, aceptar su contrato, pagar el primer mes (con Wompi), reportar un problema con el pago y reportar publicaciones. |
 | **Propietario** | Enviar su perfil a verificación, aceptar las condiciones de la comisión, publicar (solo con la cuenta **aprobada**), editar, pausar, marcar como arrendado y **retirar** sus publicaciones, ver las solicitudes que Roumix le comparte, escribirle a Roumix, aceptar contratos y ver su desembolso. |
 | **Administrador** | Todo el panel `/pages/admin.html`: verificar propietarios, moderar publicaciones y reportes, gestionar solicitudes, mensajes (con notas internas), contratos, pagos, desembolsos, devoluciones y disputas, cuentas de usuario y la **auditoría**. |
 
@@ -70,7 +71,7 @@ roumix/
 │   │   ├── solicitudes.html  Solicitudes del estudiante / del propietario
 │   │   ├── mensajes.html     Conversaciones con el equipo de Roumix y novedades
 │   │   ├── contrato.html     Contrato (documento imprimible y aceptación demostrativa)
-│   │   ├── pago.html         Pago simulado del primer mes, desglose y movimientos
+│   │   ├── pago.html         Pago del primer mes con Wompi (o simulado), desglose y movimientos
 │   │   ├── publicar.html, mis-publicaciones.html, verificacion.html   (propietario)
 │   │   ├── admin.html        Panel de administración
 │   │   └── privacidad.html, restablecer.html, como-funciona.html
@@ -111,6 +112,7 @@ Copia `backend/.env.example` como `backend/.env` y completa los valores:
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` | Recomendada | Envío de correos (o `CORREO_RELAY_URL` + `CORREO_RELAY_SECRETO`) |
 | `CORREO_REMITENTE`, `CORREO_ADMIN` | No | Remitente y correo extra que recibe los avisos del equipo |
 | `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | No | CAPTCHA de Cloudflare (sin ellas queda desactivado) |
+| `WOMPI_PUBLIC_KEY`, `WOMPI_INTEGRITY_SECRET`, `WOMPI_EVENTS_SECRET` (+ `WOMPI_PRIVATE_KEY` opcional) | No | Pagos con Wompi (sin ellas se usa el simulador). Ver docs/pagos-wompi.md |
 | `APP_URL` | En producción | Dirección pública para los enlaces de los correos |
 | `CORS_ORIGIN` | No | Orígenes adicionales permitidos |
 | `CRON_SECRET` | En Vercel | Protege la tarea diaria de limpieza |
@@ -138,8 +140,8 @@ $env:ROUMIX_PRUEBAS_BD="si"; npm test     # PowerShell
 npm test -- 05 06                         # solo algunas
 ```
 
-Son **226 comprobaciones de integración** en 7 archivos (`backend/tests/`), una por módulo: verificación
-de propietarios, publicaciones, solicitudes, mensajes, contratos, pagos simulados y auditoría. Llaman a los
+Son **259 comprobaciones de integración** en 8 archivos (`backend/tests/`), una por módulo: verificación
+de propietarios, publicaciones, solicitudes, mensajes, contratos, pagos simulados, auditoría y pagos con Wompi. Llaman a los
 controladores reales contra la base de datos configurada; cada prueba crea sus propios usuarios y datos
 (con correos `@roumix.test`) y **los borra al terminar**. No envían correos reales. Como escriben en la base
 de datos, piden confirmarlo con `ROUMIX_PRUEBAS_BD=si`. Detalle en [`docs/pruebas.md`](docs/pruebas.md).
@@ -169,10 +171,10 @@ de datos, piden confirmarlo con `ROUMIX_PRUEBAS_BD=si`. Detalle en [`docs/prueba
 | Parte | Cómo funciona hoy | Qué falta para que sea real |
 |-------|-------------------|-----------------------------|
 | **Firma del contrato** | Cada parte escribe su nombre y confirma; se guardan fecha, hora y la huella SHA-256 del documento. | Integrar un proveedor de firma electrónica certificado. |
-| **Pagos** | Un simulador interno aprueba o rechaza (el estudiante elige el resultado para la demostración). Se registran referencias, comisión, desembolso, devoluciones y disputas, todo marcado como simulado. | Un proveedor de pagos autorizado que procese cobros y desembolsos a terceros (y una migración nueva y revisada, porque la base de datos hoy impide pagos no simulados). |
-| **Desembolsos y devoluciones** | El administrador los registra en el panel. | Lo mismo: el proveedor de pagos. |
+| **Pagos** | Con las llaves de Wompi configuradas, el cobro es real a través de Wompi (en modo de pruebas no mueve dinero). Sin ellas, un simulador interno aprueba o rechaza. Ver [docs/pagos-wompi.md](docs/pagos-wompi.md). | Para dinero real: verificar el comercio en Wompi y poner las llaves de producción. |
+| **Desembolsos y devoluciones** | El administrador hace la transferencia (o la devolución en el panel de Wompi) y la registra en Roumix. | Automatizar la dispersión a propietarios (p. ej., Pagos a terceros de Wompi). |
 
-No se guardan datos de tarjetas ni cuentas bancarias, y ningún texto afirma que se movió dinero real.
+No se guardan datos de tarjetas ni cuentas bancarias: los captura el widget de Wompi. Los pagos simulados o de prueba se rotulan como tales.
 
 ## ☁️ Despliegue en Vercel
 
@@ -227,7 +229,7 @@ La lista completa con sus reglas está en [`docs/arquitectura.md`](docs/arquitec
 
 ### Pendientes y limitaciones conocidas
 
-- **Firma electrónica y pagos reales:** requieren proveedores autorizados (ver "Qué es demostrativo").
+- **Firma electrónica:** requiere un proveedor certificado. **Pagos reales:** listos con Wompi; falta poner las llaves (ver docs/pagos-wompi.md).
 - **Propietarios existentes:** los dos propietarios aprobados antes del módulo de pagos deben aceptar las
   condiciones de la comisión en "Mi verificación"; hasta entonces no se habilita el pago de sus arriendos.
 - **Rotar la contraseña de la base de datos** (Supabase → Database → Reset password) y actualizar

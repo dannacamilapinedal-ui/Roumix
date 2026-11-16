@@ -8292,3 +8292,31 @@ html[data-tema="oscuro"] .admin-chip-suspendido { background: rgba(230, 100, 90,
   .main-header .logo-text,
   .main-header .logo-dot { font-size: 1.85rem; }
 }
+
+/* ==========================================================================
+   W-1 — Pago con Wompi
+   ========================================================================== */
+.pago-wompi-texto { margin: 0 0 var(--esp-3); color: var(--tinta-media); font-size: 0.92rem; line-height: 1.55; }
+.pago-medios { list-style: none; margin: 0 0 var(--esp-3); padding: 0; display: flex; flex-wrap: wrap; gap: var(--esp-2); }
+.pago-medios li {
+  padding: 6px 12px; border-radius: var(--radio-pill); border: 1px solid var(--borde-arena);
+  background: var(--fondo-crema-alt); color: var(--tinta-fuerte); font-size: 0.8rem; font-weight: 700;
+}
+.pago-confianza { list-style: none; margin: 0 0 var(--esp-4); padding: 0; display: flex; flex-wrap: wrap; gap: var(--esp-2) var(--esp-4); }
+.pago-confianza li { display: inline-flex; align-items: center; gap: 6px; color: var(--texto-verde-oscuro); font-size: 0.82rem; font-weight: 600; }
+.pago-wompi-estado {
+  display: flex; align-items: center; gap: 10px; margin: 0 0 var(--esp-3); padding: 10px 14px;
+  border-radius: var(--radio-md); background: var(--fondo-crema-alt); color: var(--tinta-fuerte);
+  font-size: 0.88rem; line-height: 1.45;
+}
+.pago-wompi-estado[hidden] { display: none; }
+.pago-wompi-estado::before {
+  content: ""; flex: none; width: 16px; height: 16px; border-radius: 50%;
+  border: 2.5px solid var(--borde-arena); border-top-color: var(--acento-naranja); animation: rxGirar 0.8s linear infinite;
+}
+.pago-wompi .btn-contact-wa-large { width: 100%; }
+.pago-wompi .btn-contact-wa-large:disabled { opacity: 0.75; cursor: progress; }
+html[data-tema="oscuro"] .pago-medios li { background: rgba(255, 255, 255, 0.05); border-color: #3a342c; }
+html[data-tema="oscuro"] .pago-confianza li { color: #9fd8ac; }
+html[data-tema="oscuro"] .pago-wompi-estado { background: rgba(255, 255, 255, 0.05); }
+@media (prefers-reduced-motion: reduce) { .pago-wompi-estado::before { animation-duration: 2.4s; } }

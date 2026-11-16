@@ -6,6 +6,8 @@ const backend = path.resolve(__dirname, '..');
 process.chdir(backend);
 process.env.ROUMIX_PRUEBAS = '1'; // la auditoría marca estos registros como de prueba
 process.env.SMTP_HOST = 'smtp.prueba.local'; process.env.SMTP_USER = 'x@prueba.local'; process.env.SMTP_PASS = 'x';
+// Esta prueba es del SIMULADOR: sin llaves de Wompi (con Wompi activo el simulador se cierra)
+['WOMPI_PUBLIC_KEY', 'WOMPI_PRIVATE_KEY', 'WOMPI_INTEGRITY_SECRET', 'WOMPI_EVENTS_SECRET'].forEach((k) => delete process.env[k]);
 
 const db = require(path.join(backend, 'src/config/db'));
 const notificaciones = require(path.join(backend, 'src/services/notificacionesService'));

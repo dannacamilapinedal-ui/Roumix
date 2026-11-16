@@ -1,12 +1,14 @@
 /**
- * Pagos SIMULADOS del primer canon.
+ * Pagos del primer canon.
  *
- * Roumix aún no tiene un proveedor de pagos autorizado, así que el "proveedor" es un
- * simulador interno y todo queda marcado como demostrativo: no se mueve dinero real
- * y no se guardan datos de tarjetas ni cuentas.
+ * Con Wompi configurado (ver wompiService.js) el pago es real: en modo de pruebas
+ * (sandbox) no mueve dinero, y con llaves de producción sí. Sin Wompi, el "proveedor"
+ * es un simulador interno y todo queda marcado como demostrativo.
+ * Roumix nunca guarda datos de tarjetas ni de cuentas.
  */
 const crypto = require('crypto');
 const { VERSION_CONDICIONES } = require('./verificacionService');
+const { auditar } = require('./auditoriaService');
 
 const PORCENTAJE_COMISION = 10;
 
@@ -85,7 +87,55 @@ async function habilitarPago(cliente, solicitudId) {
   return { habilitado: true, pagoId: pago.id, estudianteId: s.estudiante_id, propietarioId: s.propietario_id };
 }
 
+/**
+ * Registra un pago del primer canon como APROBADO (lo usan el simulador y Wompi).
+ * - Marca el pago, registra la comisión del 10 % (a cargo del propietario) y deja
+ *   pendiente el desembolso del resto.
+ * - Mueve la solicitud a "pagado" y deja rastro en la auditoría.
+ * Debe llamarse dentro de una transacción, con el pago ya bloqueado (FOR UPDATE) y
+ * validado (contrato formalizado, pago pendiente o fallido, solicitud en pago_pendiente).
+ *
+ * p: fila del pago (con solicitud_id, propietario_id, monto, comision, neto_propietario,
+ *    porcentaje_comision y version_condiciones).
+ * opciones: { ref, metodo, detalle, simulado, modoWompi?, transaccionId?, actor?, autorRol, ip? }
+ */
+async function aprobar(cliente, p, { ref, metodo, detalle, simulado, modoWompi = null, transaccionId = null, actor = null, autorRol, ip = null }) {
+  await cliente.query(
+    `UPDATE pagos SET estado = 'aprobado', intentos = intentos + 1, metodo = $2, referencia = $3, aprobado_en = now(),
+       ultimo_error = NULL, simulado = $4, proveedor = $5, modo_wompi = $6, wompi_transaccion_id = $7
+     WHERE id = $1`,
+    [p.id, metodo, ref, simulado, simulado ? 'simulador_roumix' : 'wompi', modoWompi, transaccionId]
+  );
+  await registrarEvento(cliente, {
+    pagoId: p.id, tipo: 'intento_aprobado', referencia: ref, monto: p.monto, detalle,
+    autorId: actor ? actor.id : null, autorRol
+  });
+  // Comisión del 10 % respaldada por la versión de condiciones que aceptó el propietario
+  await cliente.query(
+    `INSERT INTO comisiones (pago_id, propietario_id, monto, porcentaje, version_condiciones) VALUES ($1, $2, $3, $4, $5)`,
+    [p.id, p.propietario_id, p.comision, p.porcentaje_comision, p.version_condiciones || VERSION_CONDICIONES]
+  );
+  await cliente.query(
+    `INSERT INTO desembolsos (pago_id, propietario_id, monto) VALUES ($1, $2, $3)`,
+    [p.id, p.propietario_id, p.neto_propietario]
+  );
+  const etiqueta = simulado ? 'pago demostrativo' : (modoWompi === 'sandbox' ? 'Wompi, modo de pruebas' : 'Wompi');
+  await moverSolicitud(cliente, {
+    solicitudId: p.solicitud_id, de: 'pago_pendiente', a: 'pagado',
+    notaEstudiante: `Roumix confirmó tu pago del primer mes (referencia ${ref}, ${etiqueta}).`,
+    notaPropietario: 'El estudiante pagó el primer mes. Roumix gestionará tu desembolso.',
+    notaInterna: `Pago #${p.id} aprobado (${ref}, ${etiqueta}). Comisión ${p.comision}, desembolso pendiente ${p.neto_propietario}.`
+  });
+  await auditar({
+    actor, actorRol: actor ? null : 'sistema', accion: 'pago_aprobado', entidad: 'pago', entidadId: p.id,
+    resumen: `Pago del primer canon aprobado (${ref}, ${etiqueta}).`,
+    datos: { metodo, monto: p.monto, comision: p.comision, neto_propietario: p.neto_propietario, simulado, modo_wompi: modoWompi, transaccion: transaccionId },
+    ip
+  }, cliente);
+}
+
 module.exports = {
+  aprobar,
   PORCENTAJE_COMISION,
   VERSION_CONDICIONES,
   repartir,

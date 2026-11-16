@@ -10,6 +10,7 @@ const db = require('../config/db');
 const notificaciones = require('../services/notificacionesService');
 const { crearAviso } = require('../services/avisosService');
 const pagos = require('../services/pagosService');
+const wompi = require('../services/wompiService');
 const { auditar } = require('../services/auditoriaService');
 
 const METODOS = { tarjeta_simulada: 'Tarjeta (simulada)', pse_simulado: 'PSE (simulado)', nequi_simulado: 'Nequi (simulado)' };
@@ -106,7 +107,19 @@ async function verPago(req, res) {
   const visibles = req.usuario.rol === 'estudiante'
     ? eventos.filter((e) => e.tipo !== 'desembolso_realizado').map((e) => (e.tipo === 'habilitado' ? { ...e, monto: p.monto } : e))
     : eventos;
-  res.json({ status: 'success', simulado: true, data: { ...vistaSegunRol(p, req.usuario.rol), eventos: visibles, metodos: METODOS } });
+  const cfg = wompi.config();
+  res.json({
+    status: 'success',
+    simulado: p.simulado,
+    data: {
+      ...vistaSegunRol(p, req.usuario.rol),
+      eventos: visibles,
+      metodos: METODOS,
+      metodo_nombre: wompi.NOMBRES_METODO[p.metodo] || METODOS[p.metodo] || null,
+      // Qué pasarela se usa para pagar: Wompi (pruebas o real) o el simulador
+      pasarela: cfg.activo ? { tipo: 'wompi', modo: cfg.modo } : { tipo: 'simulador' }
+    }
+  });
 }
 
 /**
@@ -116,6 +129,8 @@ async function verPago(req, res) {
 async function simularPago(req, res) {
   const id = idEntero(req.params.id);
   const body = req.body || {};
+  // Con la pasarela real activa, el simulador queda cerrado: nadie puede "pagar" sin pagar
+  if (wompi.config().activo) throw errorHttp(409, 'Los pagos se hacen ahora con Wompi. Recarga la página.');
   if (!METODOS[body.metodo]) throw errorHttp(400, 'Elige un método de pago simulado.');
   if (!['aprobado', 'rechazado'].includes(body.resultado)) throw errorHttp(400, 'Elige el resultado que quieres simular.');
   const aprobado = body.resultado === 'aprobado';
@@ -153,32 +168,10 @@ async function simularPago(req, res) {
       return { p, aprobado: false, ref };
     }
 
-    await cliente.query(
-      `UPDATE pagos SET estado = 'aprobado', intentos = intentos + 1, metodo = $2, referencia = $3, aprobado_en = now(), ultimo_error = NULL WHERE id = $1`,
-      [id, body.metodo, ref]
-    );
-    await pagos.registrarEvento(cliente, {
-      pagoId: id, tipo: 'intento_aprobado', referencia: ref, monto: p.monto,
-      detalle: `${METODOS[body.metodo]}: aprobado por el simulador.`, autorId: req.usuario.id, autorRol: 'estudiante'
+    await pagos.aprobar(cliente, p, {
+      ref, metodo: body.metodo, detalle: `${METODOS[body.metodo]}: aprobado por el simulador.`,
+      simulado: true, actor: req.usuario, autorRol: 'estudiante', ip: req.ip
     });
-    // Comisión del 10 % respaldada por la versión de condiciones que aceptó el propietario
-    await cliente.query(
-      `INSERT INTO comisiones (pago_id, propietario_id, monto, porcentaje, version_condiciones) VALUES ($1, $2, $3, $4, $5)`,
-      [id, p.propietario_id, p.comision, p.porcentaje_comision, p.version_condiciones || pagos.VERSION_CONDICIONES]
-    );
-    await cliente.query(
-      `INSERT INTO desembolsos (pago_id, propietario_id, monto) VALUES ($1, $2, $3)`,
-      [id, p.propietario_id, p.neto_propietario]
-    );
-    await pagos.moverSolicitud(cliente, {
-      solicitudId: p.solicitud_id, de: 'pago_pendiente', a: 'pagado',
-      notaEstudiante: `Roumix confirmó tu pago del primer mes (referencia ${ref}, pago demostrativo).`,
-      notaPropietario: 'El estudiante pagó el primer mes. Roumix gestionará tu desembolso.',
-      notaInterna: `Pago #${id} aprobado (${ref}). Comisión ${p.comision}, desembolso pendiente ${p.neto_propietario}.`
-    });
-    await auditar({ actor: req.usuario, accion: 'pago_aprobado', entidad: 'pago', entidadId: id,
-      resumen: `Pago del primer canon aprobado por el simulador (${ref}).`,
-      datos: { metodo: body.metodo, monto: p.monto, comision: p.comision, neto_propietario: p.neto_propietario, simulado: true }, ip: req.ip }, cliente);
     return { p, aprobado: true, ref };
   });
 
@@ -315,17 +308,17 @@ async function registrarDesembolso(req, res) {
       throw errorHttp(409, 'Solo se desembolsa un pago aprobado, sin disputa y con el desembolso pendiente.');
     }
     const ref = pagos.referencia('DSB');
-    await cliente.query("UPDATE desembolsos SET estado = 'realizado', referencia = $2, realizado_en = now(), nota = 'Desembolso simulado.' WHERE pago_id = $1", [id, ref]);
-    await pagos.registrarEvento(cliente, { pagoId: id, tipo: 'desembolso_realizado', referencia: ref, monto: pago.neto_propietario, detalle: 'Desembolso simulado al propietario.', autorId: req.usuario.id, autorRol: 'admin' });
+    await cliente.query("UPDATE desembolsos SET estado = 'realizado', referencia = $2, realizado_en = now(), nota = $3 WHERE pago_id = $1", [id, ref, pago.simulado ? 'Desembolso simulado.' : 'Transferencia al propietario registrada por el equipo de Roumix.']);
+    await pagos.registrarEvento(cliente, { pagoId: id, tipo: 'desembolso_realizado', referencia: ref, monto: pago.neto_propietario, detalle: pago.simulado ? 'Desembolso simulado al propietario.' : 'Transferencia al propietario registrada por el equipo.', autorId: req.usuario.id, autorRol: 'admin' });
     await pagos.moverSolicitud(cliente, {
       solicitudId: pago.solicitud_id, de: 'pagado', a: 'completada',
       notaEstudiante: '¡Proceso completado! Bienvenido a tu nuevo hogar.',
-      notaPropietario: `Roumix registró tu desembolso (referencia ${ref}, simulado). El proceso terminó.`,
+      notaPropietario: `Roumix registró tu desembolso (referencia ${ref}${pago.simulado ? ', simulado' : ''}). El proceso terminó.`,
       notaInterna: `Desembolso del pago #${id} realizado (${ref}).`
     });
     return { ...pago, referenciaDesembolso: ref };
   });
-  await crearAviso({ usuarioId: p.propietario_id, tipo: 'solicitud', titulo: 'Desembolso registrado (simulado)', cuerpo: `${p.neto_propietario.toLocaleString('es-CO')} COP · ${p.referenciaDesembolso}`, enlace: `pago.html?id=${id}` });
+  await crearAviso({ usuarioId: p.propietario_id, tipo: 'solicitud', titulo: p.simulado ? 'Desembolso registrado (simulado)' : 'Desembolso registrado', cuerpo: `${p.neto_propietario.toLocaleString('es-CO')} COP · ${p.referenciaDesembolso}`, enlace: `pago.html?id=${id}` });
   await notificaciones.notificarPago({ pago: p, evento: 'desembolso', urlBase: notificaciones.urlBase(req) });
   res.json({ status: 'success', message: `Desembolso registrado (${p.referenciaDesembolso}). La solicitud quedó completada.` });
 }
@@ -359,13 +352,13 @@ async function registrarDevolucion(req, res) {
     }
     await pagos.moverSolicitud(cliente, {
       solicitudId: pago.solicitud_id, de: 'pagado', a: 'cancelada',
-      notaEstudiante: `Roumix te devolvió el pago (referencia ${ref}, simulado). Motivo: ${texto}`,
+      notaEstudiante: `Roumix te devolvió el pago (referencia ${ref}${pago.simulado ? ', simulado' : ''}). Motivo: ${texto}`,
       notaPropietario: 'El arriendo no siguió adelante: Roumix devolvió el pago al estudiante y la comisión quedó anulada.',
       notaInterna: `Devolución del pago #${id} (${ref}): ${texto}`
     });
     return { ...pago, referenciaDevolucion: ref };
   });
-  await crearAviso({ usuarioId: p.estudiante_id, tipo: 'solicitud', titulo: 'Devolución registrada (simulada)', cuerpo: p.referenciaDevolucion, enlace: `pago.html?id=${id}` });
+  await crearAviso({ usuarioId: p.estudiante_id, tipo: 'solicitud', titulo: p.simulado ? 'Devolución registrada (simulada)' : 'Devolución registrada', cuerpo: p.referenciaDevolucion, enlace: `pago.html?id=${id}` });
   await crearAviso({ usuarioId: p.propietario_id, tipo: 'solicitud', titulo: 'El pago fue devuelto al estudiante', cuerpo: texto, enlace: 'solicitudes.html' });
   await notificaciones.notificarPago({ pago: p, evento: 'devolucion', detalle: texto, urlBase: notificaciones.urlBase(req) });
   res.json({ status: 'success', message: `Devolución registrada (${p.referenciaDevolucion}). La comisión y el desembolso quedaron anulados.` });

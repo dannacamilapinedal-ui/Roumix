@@ -17,6 +17,7 @@ const mensajesRoutes = require('./routes/mensajesRoutes');
 const avisosRoutes = require('./routes/avisosRoutes');
 const contratosRoutes = require('./routes/contratosRoutes');
 const pagosRoutes = require('./routes/pagosRoutes');
+const wompiRoutes = require('./routes/wompiRoutes');
 const errorHandler = require('./middleware/errorHandler');
 const { cabecerasSeguridad, opcionesCors } = require('./config/seguridad');
 
@@ -45,6 +46,7 @@ app.use('/api/conversaciones', mensajesRoutes);
 app.use('/api/notificaciones', avisosRoutes);
 app.use('/api/contratos', contratosRoutes);
 app.use('/api/pagos', pagosRoutes);
+app.use('/api/wompi', wompiRoutes);
 app.use('/api/mapa', mapaRoutes);
 app.use('/api/config', configRoutes);
 app.use('/api/tareas', tareasRoutes);

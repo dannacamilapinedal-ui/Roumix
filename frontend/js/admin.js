@@ -43,7 +43,8 @@ const ETIQUETAS = {
     contrato_cancelado: "Contrato cancelado", contrato_aceptado: "Contrato aceptado por una parte",
     contrato_formalizado: "Contrato formalizado", mensaje_a_parte: "Mensaje a una parte", mensaje_respondido: "Mensaje respondido",
     nota_interna_registrada: "Nota interna", conversacion_estado: "Estado de conversación",
-    pago_habilitado: "Pago habilitado", pago_aprobado: "Pago aprobado (simulado)", pago_rechazado: "Pago rechazado (simulado)",
+    pago_habilitado: "Pago habilitado", pago_aprobado: "Pago aprobado", pago_rechazado: "Pago rechazado",
+    pago_requiere_devolucion: "Cobro por devolver (Wompi)", pago_monto_no_coincide: "Monto distinto al firmado (Wompi)",
     disputa_abierta: "Disputa abierta", disputa_resuelta: "Disputa resuelta", desembolso_registrado: "Desembolso registrado",
     devolucion_registrada: "Devolución registrada", pago_cancelado: "Pago cancelado",
     acceso_denegado_panel: "Intento de acceso al panel sin permiso"
@@ -118,7 +119,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     resumen: ["Resumen", "Lo que necesita atención hoy y las cifras de la plataforma."],
     solicitudes: ["Solicitudes", "Revisa cada solicitud de arriendo, compártela con el propietario y avanza su estado."],
     contratos: ["Contratos", "Contratos demostrativos: prepáralos desde la solicitud, envíalos y sigue las aceptaciones."],
-    pagos: ["Pagos", "Pagos simulados del primer mes, comisión del 10 %, desembolsos, devoluciones y disputas."],
+    pagos: ["Pagos", "Pagos del primer mes (con Wompi o simulados), comisión del 10 %, desembolsos, devoluciones y disputas."],
     mensajes: ["Mensajes", "Conversaciones de estudiantes y propietarios con el equipo de Roumix."],
     propietarios: ["Propietarios", "Verifica la identidad de los propietarios antes de que puedan publicar."],
     inmuebles: ["Publicaciones", "Modera las publicaciones: aprobar, pedir cambios, pausar o retirar."],
@@ -222,7 +223,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           ["Contratos formalizados", data.contratos.formalizados, "ok", "contratos"],
           ["Cuentas suspendidas", data.usuarios.suspendidos, atencion(data.usuarios.suspendidos), "usuarios"]
         ]],
-        ["Finanzas (simuladas)", [
+        ["Finanzas", [
           ["Pagos registrados", data.pagos.registrados, "ok", "pagos"],
           ["Pagos por hacer", data.pagos.por_pagar, "neutro", "pagos"],
           ["Comisiones generadas", formatearPrecioCOP(data.pagos.comisiones), "ok", "pagos"]
@@ -740,19 +741,21 @@ document.addEventListener("DOMContentLoaded", async () => {
       return mostrarError(contenidoPago, error);
     }
     const acciones = [];
-    if (p.estado === "aprobado" && p.desembolso_estado === "pendiente") acciones.push(["desembolso", "Registrar desembolso (simulado)", "btn-search-action", false]);
-    if (["aprobado", "en_disputa"].includes(p.estado) && p.desembolso_estado !== "realizado") acciones.push(["devolucion", "Devolver al estudiante (simulado)", "btn-card-action btn-card-danger", true]);
+    if (p.estado === "aprobado" && p.desembolso_estado === "pendiente") acciones.push(["desembolso", p.simulado ? "Registrar desembolso (simulado)" : "Registrar transferencia al propietario", "btn-search-action", false]);
+    if (["aprobado", "en_disputa"].includes(p.estado) && p.desembolso_estado !== "realizado") acciones.push(["devolucion", p.simulado ? "Devolver al estudiante (simulado)" : "Registrar devolución (hazla antes en Wompi)", "btn-card-action btn-card-danger", true]);
     if (p.estado === "en_disputa") acciones.push(["resolver-disputa", "Cerrar la disputa sin devolución", "btn-card-action", true]);
     if (["pendiente", "fallido"].includes(p.estado)) acciones.push(["cancelar", "Cancelar el pago y cerrar la solicitud", "btn-card-action btn-card-danger", true]);
 
     contenidoPago.innerHTML = `
       <h2 id="dialogo-pago-titulo">Pago #${p.id} · ${escaparHTML(p.inmueble_titulo)}</h2>
-      <p>${chipPago(p.estado)} ${p.desembolso_estado ? chip(ETIQUETA_DESEMBOLSO[p.desembolso_estado], "neutro") : ""} ${chip("Simulado", "pendiente")}</p>
+      <p>${chipPago(p.estado)} ${p.desembolso_estado ? chip(ETIQUETA_DESEMBOLSO[p.desembolso_estado], "neutro") : ""} ${p.simulado ? chip("Simulado", "pendiente") : chip(p.modo_wompi === "sandbox" ? "Wompi · modo de pruebas" : "Wompi", "aprobada")}</p>
+      ${p.eventos.some(e => e.tipo === "requiere_devolucion") ? `<div class="verif-aviso"><div><strong>Hay un cobro por devolver.</strong>
+        <p>Wompi aprobó una transacción que no correspondía (pago duplicado, cancelado o con otro monto). Devuélvela desde el panel de Wompi; el detalle está en los movimientos.</p></div></div>` : ""}
       <dl class="admin-datos">
         <dt>Monto (primer canon)</dt><dd>${formatearPrecioCOP(p.monto)}</dd>
         <dt>Comisión Roumix</dt><dd>${formatearPrecioCOP(p.comision)} (${Number(p.porcentaje_comision)} %, a cargo del propietario${p.version_condiciones ? `, condiciones v. ${escaparHTML(p.version_condiciones)}` : ""})</dd>
         <dt>Neto al propietario</dt><dd>${formatearPrecioCOP(p.neto_propietario)}${p.desembolso_referencia ? ` · ${escaparHTML(p.desembolso_referencia)}` : ""}</dd>
-        <dt>Referencia</dt><dd>${escaparHTML(p.referencia || "—")}${p.metodo ? ` · ${escaparHTML((p.metodos || {})[p.metodo] || p.metodo)}` : ""}</dd>
+        <dt>Referencia</dt><dd>${escaparHTML(p.referencia || "—")}${p.metodo ? ` · ${escaparHTML(p.metodo_nombre || p.metodo)}` : ""}${p.wompi_transaccion_id ? ` · Transacción Wompi ${escaparHTML(p.wompi_transaccion_id)}` : ""}</dd>
         <dt>Intentos</dt><dd>${p.intentos}</dd>
         <dt>Enlaces</dt><dd><a href="pago.html?id=${p.id}" target="_blank" rel="noopener">Ver pago</a> · <a href="contrato.html?id=${p.contrato_id}" target="_blank" rel="noopener">Contrato #${p.contrato_id}</a></dd>
       </dl>

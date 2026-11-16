@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Pago del primer mes de arriendo a través de Roumix (demostrativo).">
+  <meta name="description" content="Pago seguro del primer mes de arriendo a través de Roumix y Wompi.">
   <title>Pago — Roumix</title>
   <script>try{if(localStorage.getItem("roumix_tema")==="oscuro"){document.documentElement.dataset.tema="oscuro";}}catch(e){}</script>
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
@@ -87,7 +87,11 @@
       const usuario = await protegerPagina(["estudiante", "propietario", "admin"]);
       if (!usuario) return;
       const contenedor = document.getElementById("pago");
-      const id = Number(new URLSearchParams(location.search).get("id"));
+      // Al volver del banco (PSE, Bancolombia…) Wompi agrega "id" con su número de transacción;
+      // por eso el número del pago viaja en "pago".
+      const params = new URLSearchParams(location.search);
+      const id = Number(params.get("pago") || params.get("id"));
+      const transaccionAlVolver = params.get("pago") ? params.get("id") : null;
 
       const ESTADOS = {
         pendiente: { texto: "Por pagar", tono: "proceso" },
@@ -101,8 +105,89 @@
       const EVENTOS = {
         habilitado: "Pago habilitado", intento_aprobado: "Pago aprobado", intento_rechazado: "Pago rechazado",
         cancelado: "Pago cancelado", devolucion: "Devolución registrada", disputa_abierta: "Problema reportado",
-        disputa_resuelta: "Reporte resuelto", desembolso_realizado: "Desembolso al propietario"
+        disputa_resuelta: "Reporte resuelto", desembolso_realizado: "Desembolso al propietario",
+        intento_iniciado: "Pasarela abierta", intento_en_proceso: "Pago en proceso con el banco",
+        requiere_devolucion: "Cobro por devolver"
       };
+      const MEDIOS_WOMPI = ["Tarjeta crédito o débito", "PSE", "Nequi", "Botón Bancolombia", "Daviplata"];
+      const ICONO_CANDADO = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+      const ICONO_ESCUDO = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg>';
+
+      // Aviso superior según la pasarela y el pago
+      function avisoPasarela(p) {
+        const pasarela = p.pasarela || { tipo: "simulador" };
+        if (p.simulado === false && p.modo_wompi === "sandbox") {
+          return `<div class="contrato-demo" role="note"><strong>Pago de prueba con Wompi.</strong> Se procesó en el modo de pruebas (sandbox): no se movió dinero real.</div>`;
+        }
+        if (p.simulado === false) return "";
+        if (pasarela.tipo === "wompi" && pasarela.modo === "sandbox") {
+          return `<div class="contrato-demo" role="note"><strong>Modo de pruebas de Wompi.</strong> La pasarela es real pero no cobra dinero:
+            usa las tarjetas y cuentas de prueba de Wompi, nunca tus datos reales.</div>`;
+        }
+        if (pasarela.tipo === "wompi") return "";
+        return `<div class="contrato-demo" role="note"><strong>Pago demostrativo.</strong> La pasarela de pagos no está activa:
+          no se mueve dinero real y no se guardan datos de tarjetas ni de cuentas bancarias.</div>`;
+      }
+
+      // Bloque para pagar con Wompi
+      function bloqueWompi(p) {
+        return `
+          <section class="pago-form pago-wompi" id="pago-wompi" aria-labelledby="titulo-pagar">
+            <h2 id="titulo-pagar">Pagar el primer mes</h2>
+            <p class="pago-wompi-texto">Pagas en la ventana segura de <strong>Wompi</strong>, la pasarela de Bancolombia.
+              Roumix no ve ni guarda los datos de tu tarjeta o de tu cuenta.</p>
+            <ul class="pago-medios" aria-label="Medios de pago disponibles">
+              ${MEDIOS_WOMPI.map((m) => `<li>${m}</li>`).join("")}
+            </ul>
+            <ul class="pago-confianza">
+              <li>${ICONO_CANDADO} Conexión cifrada (SSL)</li>
+              <li>${ICONO_ESCUDO} Solo pagas con el contrato ya formalizado</li>
+            </ul>
+            <p class="pago-wompi-estado" id="wompi-estado" role="status" aria-live="polite" hidden></p>
+            <p class="pub-mensaje pub-mensaje-error" id="pago-error" role="alert" hidden></p>
+            <button type="button" class="btn-contact-wa-large" id="btn-wompi">${ICONO_CANDADO} Pagar ${pesos(p.monto)} con Wompi</button>
+            <p class="contacto-nota">Antes de pagar revisa las <a href="contrato.html?id=${p.contrato_id}">condiciones de tu contrato</a>.
+              Si después hay un problema con el arriendo, puedes reportarlo aquí mismo y Roumix retiene el dinero del propietario mientras lo revisa.</p>
+          </section>`;
+      }
+
+      // Carga el script del widget de Wompi solo cuando se necesita
+      let promesaWidget = null;
+      function cargarWidget() {
+        if (window.WidgetCheckout) return Promise.resolve();
+        if (!promesaWidget) {
+          promesaWidget = new Promise((resolver, rechazar) => {
+            const s = document.createElement("script");
+            s.src = "https://checkout.wompi.co/widget.js";
+            s.onload = () => (window.WidgetCheckout ? resolver() : rechazar(new Error("widget")));
+            s.onerror = () => { promesaWidget = null; s.remove(); rechazar(new Error("widget")); };
+            document.head.appendChild(s);
+          });
+        }
+        return promesaWidget;
+      }
+
+      const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
+
+      // Pregunta a Roumix (que consulta a Wompi) el resultado. Si sigue en proceso, vuelve a preguntar.
+      async function confirmarTransaccion(transaccionId, mostrarEstado) {
+        for (let vuelta = 0; vuelta < 12; vuelta++) {
+          const r = await RoumixAPI._request(`/pagos/${id}/wompi/confirmar`, {
+            method: "POST", body: JSON.stringify({ transaccionId })
+          });
+          if (r.data.estadoWompi !== "PENDING") return r;
+          mostrarEstado(r.message);
+          await esperar(5000);
+        }
+        return { message: "Tu banco todavía no confirma el pago. Te avisaremos por correo apenas se confirme; no intentes pagar de nuevo.", data: { estado: "pendiente", estadoWompi: "PENDING" } };
+      }
+
+      function mostrarResultado(r) {
+        const ok = r.data.estado === "aprobado";
+        const enProceso = r.data.estadoWompi === "PENDING";
+        RoumixAvisos.mostrar(r.message, ok ? "exito" : enProceso ? "info" : "error", 6000);
+        if (ok && typeof lanzarConfeti === "function") lanzarConfeti();
+      }
       const momento = (valor) => new Date(valor).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" });
       const pesos = (n) => formatearPrecioCOP(n);
 
@@ -128,6 +213,9 @@
         const esEstudiante = p.mi_rol === "estudiante";
         const puedePagar = esEstudiante && ["pendiente", "fallido"].includes(p.estado);
         const puedeReportar = esEstudiante && p.estado === "aprobado";
+        const conWompi = p.pasarela && p.pasarela.tipo === "wompi";
+        // "Pasarela abierta" solo le sirve al equipo: al estudiante no se le llena el historial
+        const eventosVisibles = usuario.rol === "admin" ? p.eventos : p.eventos.filter((e) => e.tipo !== "intento_iniciado");
 
         const desglose = esEstudiante
           ? `
@@ -146,10 +234,7 @@
             <a href="${usuario.rol === "admin" ? "admin.html" : "solicitudes.html"}" class="msg-enlace">← Volver</a>
           </div>
 
-          <div class="contrato-demo" role="note">
-            <strong>Pago demostrativo.</strong> Roumix todavía no tiene un proveedor de pagos autorizado:
-            no se mueve dinero real y no se guardan datos de tarjetas ni de cuentas bancarias.
-          </div>
+          ${avisoPasarela(p)}
 
           <section class="pago-tarjeta">
             <header class="pago-cabeza">
@@ -160,12 +245,14 @@
               <span class="solicitud-chip solicitud-chip-${estado.tono}">${escaparHTML(estado.texto)}</span>
             </header>
             <div class="pago-desglose">${desglose}</div>
-            ${p.referencia ? `<p class="pago-referencia">Referencia de la transacción: <code>${escaparHTML(p.referencia)}</code>${p.aprobado_en ? ` · ${momento(p.aprobado_en)}` : ""}</p>` : ""}
+            ${p.referencia ? `<p class="pago-referencia">Referencia de la transacción: <code>${escaparHTML(p.referencia)}</code>${p.metodo_nombre ? ` · ${escaparHTML(p.metodo_nombre)}` : ""}${p.aprobado_en ? ` · ${momento(p.aprobado_en)}` : ""}${p.simulado === false ? " · Procesado por Wompi" : ""}</p>` : ""}
             ${p.estado === "fallido" && esEstudiante ? `<p class="pub-mensaje pub-mensaje-error">${escaparHTML(p.ultimo_error || "El pago fue rechazado.")} Puedes intentarlo de nuevo.</p>` : ""}
             ${p.devolucion_referencia ? `<p class="pago-nota">Devolución ${escaparHTML(p.devolucion_referencia)} · ${escaparHTML(p.devolucion_motivo || "")}</p>` : ""}
           </section>
 
-          ${puedePagar ? `
+          ${puedePagar && conWompi ? bloqueWompi(p) : ""}
+
+          ${puedePagar && !conWompi ? `
           <form class="pago-form" id="form-pagar" novalidate>
             <h2>Pagar el primer mes</h2>
             <fieldset class="pago-metodos">
@@ -198,7 +285,7 @@
           <section class="pago-historial">
             <h2>Movimientos</h2>
             <ol>
-              ${p.eventos.map((e) => `
+              ${eventosVisibles.map((e) => `
                 <li>
                   <time>${momento(e.created_at)}</time>
                   <strong>${escaparHTML(EVENTOS[e.tipo] || e.tipo)}</strong>${e.monto ? ` · ${pesos(e.monto)}` : ""}${e.referencia ? ` · <code>${escaparHTML(e.referencia)}</code>` : ""}
@@ -206,6 +293,73 @@
                 </li>`).join("")}
             </ol>
           </section>`;
+
+        const botonWompi = document.getElementById("btn-wompi");
+        if (botonWompi) {
+          const estadoTexto = document.getElementById("wompi-estado");
+          const aviso = document.getElementById("pago-error");
+          const textoBoton = botonWompi.innerHTML;
+          const mostrarEstado = (texto) => { estadoTexto.textContent = texto; estadoTexto.hidden = !texto; };
+          const ocupado = (texto) => {
+            botonWompi.disabled = true;
+            botonWompi.classList.add("rx-cargando-btn");
+            botonWompi.textContent = texto;
+          };
+          const libre = () => {
+            botonWompi.disabled = false;
+            botonWompi.classList.remove("rx-cargando-btn");
+            botonWompi.innerHTML = textoBoton;
+          };
+          const fallo = (texto) => { aviso.textContent = texto; aviso.hidden = false; mostrarEstado(""); libre(); };
+
+          // Si el banco dejó el pago "en proceso", se avisa y no se invita a pagar dos veces
+          const ultimo = [...p.eventos].reverse().find((e) => ["intento_en_proceso", "intento_aprobado", "intento_rechazado"].includes(e.tipo));
+          if (ultimo && ultimo.tipo === "intento_en_proceso") {
+            mostrarEstado("Tienes un pago en proceso con tu banco. Te avisaremos apenas se confirme; no hace falta pagar de nuevo.");
+          }
+
+          botonWompi.addEventListener("click", async () => {
+            aviso.hidden = true;
+            ocupado("Abriendo la pasarela segura…");
+            let datos;
+            try {
+              ({ data: datos } = await RoumixAPI._request(`/pagos/${p.id}/wompi`, { method: "POST" }));
+              await cargarWidget();
+            } catch (err) {
+              return fallo(err.message === "widget"
+                ? "No pudimos cargar la pasarela de Wompi. Revisa tu conexión a internet e intenta de nuevo."
+                : err.message);
+            }
+            mostrarEstado("Completa el pago en la ventana de Wompi.");
+            const widget = new window.WidgetCheckout({
+              currency: datos.moneda,
+              amountInCents: datos.montoCentavos,
+              reference: datos.referencia,
+              publicKey: datos.llavePublica,
+              signature: { integrity: datos.firmaIntegridad },
+              redirectUrl: datos.urlRetorno,
+              customerData: { email: datos.cliente.correo, fullName: datos.cliente.nombre }
+            });
+            widget.open(async (resultado) => {
+              const transaccion = resultado && resultado.transaction;
+              if (!transaccion || !transaccion.id) {
+                mostrarEstado("");
+                return fallo("Cerraste la pasarela sin terminar el pago. No se hizo ningún cobro.");
+              }
+              ocupado("Confirmando tu pago…");
+              mostrarEstado("Estamos confirmando el pago con Wompi. Puede tardar unos segundos (con 3D Secure o PSE, un poco más).");
+              try {
+                const r = await confirmarTransaccion(transaccion.id, mostrarEstado);
+                mostrarResultado(r);
+                if (r.data.estado === "aprobado" || r.data.estadoWompi === "PENDING") return cargar();
+                fallo(r.message);
+              } catch (err) {
+                // La transacción existe en Wompi: el webhook la registrará aunque esta consulta falle
+                fallo(`${err.message} Si el banco te cobró, el pago se registrará solo en unos minutos: recarga esta página antes de intentar de nuevo.`);
+              }
+            });
+          });
+        }
 
         const form = document.getElementById("form-pagar");
         if (form) {
@@ -253,7 +407,21 @@
         }
       }
 
-      cargar();
+      // Regreso desde el banco (PSE, Botón Bancolombia…): se confirma la transacción y se limpia la dirección
+      async function iniciar() {
+        if (transaccionAlVolver && id) {
+          history.replaceState(null, "", `pago.html?id=${id}`);
+          contenedor.innerHTML = '<p class="solicitud-cargando" role="status">Confirmando tu pago con el banco…</p>';
+          try {
+            mostrarResultado(await confirmarTransaccion(transaccionAlVolver, () => {}));
+          } catch (err) {
+            RoumixAvisos.mostrar(err.message, "error", 6000);
+          }
+        }
+        cargar();
+      }
+
+      iniciar();
     });
   </script>
 </body>

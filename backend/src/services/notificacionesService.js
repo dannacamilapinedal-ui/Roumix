@@ -620,7 +620,12 @@ async function notificarPago({ pago, evento, detalle, urlBase }) {
   try {
     const pesos = (n) => `$${Number(n || 0).toLocaleString('es-CO')}`;
     const boton = { texto: 'Ver el pago', url: `${urlBase}/pages/pago.html?id=${pago.id}` };
-    const nota = 'Pago demostrativo: Roumix aún no procesa dinero real.';
+    // Pagos con Wompi: reales (o de prueba en sandbox). Sin Wompi: demostrativos.
+    const real = pago.simulado === false;
+    const nota = !real ? 'Pago demostrativo: Roumix aún no procesa dinero real.'
+      : pago.modo_wompi === 'sandbox' ? 'Pago procesado por Wompi en modo de pruebas: no se movió dinero real.'
+      : 'Pago procesado de forma segura por Wompi. Roumix no guarda datos de tarjetas ni cuentas.';
+    const sufijo = real ? '' : ' (simulado)';
     const ids = [pago.estudiante_id, pago.propietario_id].filter(Boolean);
     const { rows } = ids.length ? await db.query("SELECT id, email, nombre FROM usuarios WHERE id = ANY($1) AND estado = 'activo'", [ids]) : { rows: [] };
     const estudiante = rows.find((u) => u.id === pago.estudiante_id);
@@ -632,19 +637,23 @@ async function notificarPago({ pago, evento, detalle, urlBase }) {
     }
     if (evento === 'aprobado') {
       if (estudiante) envios.push(enviar({ para: estudiante.email, asunto: `Pago confirmado · ${pago.referencia}`, contenido: {
-        titulo: 'Recibimos tu pago (simulado)', parrafos: [`Pagaste ${pesos(pago.monto)} por el primer mes de <strong>${escapar(pago.inmueble_titulo || '')}</strong>.`, `Referencia: <strong>${escapar(pago.referencia)}</strong>.`], boton, nota } }));
+        titulo: `Recibimos tu pago${sufijo}`, parrafos: [`Pagaste ${pesos(pago.monto)} por el primer mes de <strong>${escapar(pago.inmueble_titulo || '')}</strong>.`, `Referencia: <strong>${escapar(pago.referencia)}</strong>.`], boton, nota } }));
       if (propietario) envios.push(enviar({ para: propietario.email, asunto: 'El estudiante pagó el primer mes', contenido: {
-        titulo: 'Pago del primer mes recibido (simulado)', parrafos: [`Canon: ${pesos(pago.monto)} · Comisión Roumix (10 %): ${pesos(pago.comision)} · Tu desembolso: <strong>${pesos(pago.neto_propietario)}</strong>.`, 'Roumix registrará tu desembolso y te avisará.'], boton, nota } }));
+        titulo: `Pago del primer mes recibido${sufijo}`, parrafos: [`Canon: ${pesos(pago.monto)} · Comisión Roumix (10 %): ${pesos(pago.comision)} · Tu desembolso: <strong>${pesos(pago.neto_propietario)}</strong>.`, 'Roumix registrará tu desembolso y te avisará.'], boton, nota } }));
       envios.push(enviar({ para: await correosAdministradores(), asunto: `Pago aprobado #${pago.id} · desembolso pendiente`, contenido: {
         titulo: 'Un pago quedó aprobado', parrafos: [`Pago #${pago.id} (${escapar(pago.referencia)}): ${pesos(pago.monto)}. Desembolso pendiente: ${pesos(pago.neto_propietario)}.`], boton: { texto: 'Abrir el panel', url: `${urlBase}/pages/admin.html` }, nota } }));
     }
     if (evento === 'desembolso' && propietario) {
       envios.push(enviar({ para: propietario.email, asunto: 'Registramos tu desembolso', contenido: {
-        titulo: 'Desembolso registrado (simulado)', parrafos: [`Monto: <strong>${pesos(pago.neto_propietario)}</strong> · Referencia: ${escapar(pago.referenciaDesembolso || '')}.`], boton, nota } }));
+        titulo: `Desembolso registrado${sufijo}`, parrafos: [`Monto: <strong>${pesos(pago.neto_propietario)}</strong> · Referencia: ${escapar(pago.referenciaDesembolso || '')}.`], boton, nota } }));
     }
     if (evento === 'devolucion' && estudiante) {
       envios.push(enviar({ para: estudiante.email, asunto: 'Registramos la devolución de tu pago', contenido: {
-        titulo: 'Devolución registrada (simulada)', parrafos: [`Monto: <strong>${pesos(pago.monto)}</strong> · Referencia: ${escapar(pago.referenciaDevolucion || '')}.`, `Motivo: ${escapar(detalle || '')}`], boton, nota } }));
+        titulo: `Devolución registrada${real ? '' : ' (simulada)'}`, parrafos: [`Monto: <strong>${pesos(pago.monto)}</strong> · Referencia: ${escapar(pago.referenciaDevolucion || '')}.`, `Motivo: ${escapar(detalle || '')}`], boton, nota } }));
+    }
+    if (evento === 'requiere_devolucion') {
+      envios.push(enviar({ para: await correosAdministradores(), asunto: `Revisar cobro de más en el pago #${pago.id}`, contenido: {
+        titulo: 'Wompi aprobó un cobro que no corresponde', parrafos: [`Pago #${pago.id} (${escapar(pago.inmueble_titulo || '')}): llegó una transacción aprobada cuando el pago ya no estaba pendiente o con un monto distinto.`, `${escapar(detalle || '')}. Haz la devolución desde el panel de Wompi y regístrala en Roumix.`], boton: { texto: 'Abrir el panel', url: `${urlBase}/pages/admin.html#pagos` }, nota } }));
     }
     if (evento === 'disputa') {
       envios.push(enviar({ para: await correosAdministradores(), asunto: `Disputa abierta en el pago #${pago.id}`, contenido: {
@@ -662,7 +671,8 @@ async function notificarPago({ pago, evento, detalle, urlBase }) {
  */
 function urlBase(req) {
   const configurada = limpiar(process.env.APP_URL).replace(/\/+$/, '');
-  return configurada || `${req.protocol}://${req.get('host')}`;
+  if (configurada) return configurada;
+  return req ? `${req.protocol}://${req.get('host')}` : 'https://roumix-eight.vercel.app';
 }
 
 module.exports = {
