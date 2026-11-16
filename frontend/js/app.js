@@ -854,6 +854,7 @@ const RoumixUI = {
 
     document.querySelectorAll(this.SELECTOR_IMAGENES).forEach((img) => this.prepararImagen(img));
     this.registrarRevelar(document);
+    this.sombraAlBajar();
 
     // Contenido que las páginas agregan después (tarjetas, galería, tablas)
     let pendiente = null;
@@ -870,6 +871,21 @@ const RoumixUI = {
     // Pantalla de carga: se retira cuando la página y sus fuentes están listas (máximo 1,2 s)
     const fuentes = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
     Promise.race([fuentes, new Promise((r) => setTimeout(r, 1200))]).then(() => this.ocultarCarga());
+  },
+
+  // La barra superior se compacta y gana sombra cuando el usuario baja por la página
+  sombraAlBajar: function() {
+    const barra = document.querySelector(".main-header");
+    if (!barra) return;
+    let marcada = null;
+    const revisar = () => {
+      const bajo = window.scrollY > 8;
+      if (bajo === marcada) return;
+      marcada = bajo;
+      barra.classList.toggle("rx-barra-baja", bajo);
+    };
+    window.addEventListener("scroll", revisar, { passive: true });
+    revisar();
   },
 
   // Tarjetas de relleno mientras llegan los resultados
@@ -1073,6 +1089,12 @@ function ilustracionVacia(tipo) {
     comparar: `
       <rect x="74" y="72" width="30" height="34" rx="6" fill="var(--rx-ilu-fondo)" stroke="var(--acento-naranja)" stroke-width="4"/>
       <path d="M81 84 H97 M81 93 H92" stroke="var(--acento-naranja)" stroke-width="4" stroke-linecap="round"/>`,
+    mensajes: `
+      <path d="M72 74 h32 a6 6 0 0 1 6 6 v16 a6 6 0 0 1 -6 6 h-18 l-8 7 v-7 h-6 a6 6 0 0 1 -6 -6 v-16 a6 6 0 0 1 6 -6z" fill="var(--acento-naranja)" stroke="var(--rx-ilu-fondo)" stroke-width="3" stroke-linejoin="round"/>
+      <circle cx="80" cy="88" r="2.6" fill="#fff"/><circle cx="88" cy="88" r="2.6" fill="#fff"/><circle cx="96" cy="88" r="2.6" fill="#fff"/>`,
+    lista: `
+      <circle cx="88" cy="88" r="15" fill="var(--rx-ilu-fondo)" stroke="var(--acento-naranja)" stroke-width="4"/>
+      <path d="M81 88 l5 5 l9 -10" fill="none" stroke="var(--acento-naranja)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`,
     error: `
       <circle cx="88" cy="88" r="15" fill="#c0392b" stroke="var(--rx-ilu-fondo)" stroke-width="3"/>
       <path d="M88 80 V90" stroke="#fff" stroke-width="4" stroke-linecap="round"/>

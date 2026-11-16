@@ -235,8 +235,8 @@
       function mostrarMensaje(texto, tipo) {
         mensaje.textContent = texto;
         mensaje.style.display = texto ? "block" : "none";
-        mensaje.style.background = tipo === "exito" ? "#e8f5e9" : "#fdecea";
-        mensaje.style.color = tipo === "exito" ? "#1b5e20" : "#8a1c1c";
+        // Los colores salen del CSS (rx-mensaje-*) para que también se adapten al modo oscuro
+        mensaje.dataset.tipo = tipo === "exito" ? "exito" : "error";
       }
 
       if (window.location.hash.includes("type=recovery")) {

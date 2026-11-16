@@ -8163,3 +8163,105 @@ body.pagina-buscar { --ancho-pagina: 1680px; }
 }
 /* Mi verificación usa el mismo ancho que las demás páginas del área (antes dejaba una franja vacía) */
 .prop-contenido > .verif-contenedor { max-width: none; }
+
+/* ==========================================================================
+   E-5 — Acabados: barra al bajar, cargas, estados vacíos, foco y microinteracciones
+   ========================================================================== */
+
+/* Barra superior: sombra más marcada y logo un poco más compacto al bajar (sin mover el contenido) */
+.main-header { transition: box-shadow 0.25s ease, background-color 0.25s ease; }
+.main-header.rx-barra-baja { box-shadow: 0 8px 28px rgba(10, 24, 16, 0.28); }
+html[data-tema="oscuro"] .main-header.rx-barra-baja { box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55); }
+.main-header .logo { transition: transform 0.25s ease; transform-origin: left center; }
+.main-header.rx-barra-baja .logo { transform: scale(0.93); }
+
+/* Al saltar a una sección (#ancla), el título no queda debajo de la barra fija */
+[id] { scroll-margin-top: 88px; }
+
+/* Cargas uniformes: todos los "Cargando…" llevan el mismo indicador giratorio */
+.admin-cargando,
+.solicitud-cargando {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--tinta-media);
+  font-size: var(--texto-sm, 0.9rem);
+  font-weight: 600;
+  list-style: none;
+}
+.admin-cargando::before,
+.solicitud-cargando::before {
+  content: "";
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border-radius: 50%;
+  border: 2.5px solid var(--borde-arena);
+  border-top-color: var(--acento-naranja);
+  animation: rxGirar 0.8s linear infinite;
+}
+@keyframes rxGirar { to { transform: rotate(360deg); } }
+
+/* Estados vacíos compactos (listas del administrador y bandeja de mensajes) */
+.rx-vacio-compacto { padding: var(--esp-6) var(--esp-4); }
+.rx-vacio-compacto .rx-vacio-ilustracion { width: 84px; height: 84px; margin-bottom: var(--esp-3); }
+.rx-vacio-compacto p { margin-bottom: 0; font-weight: 600; color: var(--tinta-media); }
+.msg-lista-vacia { list-style: none; }
+.msg-lista-vacia .rx-vacio-ilustracion { width: 88px; height: 88px; margin: 0 auto var(--esp-3); }
+.msg-lista-vacia strong { display: block; color: var(--tinta-fuerte); font-size: 0.95rem; margin-bottom: 4px; }
+
+/* Foco visible y coherente al navegar con teclado (las reglas propias de cada componente siguen mandando) */
+a:focus-visible,
+button:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2.5px solid var(--acento-naranja);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+input[type="checkbox"]:focus-visible,
+input[type="radio"]:focus-visible {
+  outline: 2.5px solid var(--acento-naranja);
+  outline-offset: 2px;
+}
+
+/* Microinteracciones: los botones de acción se "hunden" un poco al presionar
+   (no aplica a los que usan transform para posicionarse, como el botón flotante del mapa) */
+[class*="btn-"]:not(:disabled):not(.btn-vista-movil):active {
+  transform: scale(0.97);
+}
+.nav-link { transition: background-color 0.2s ease, color 0.2s ease; }
+
+/* Selección de texto con los colores de la marca */
+::selection { background: rgba(196, 124, 43, 0.28); color: inherit; }
+
+/* Modo oscuro: detalles que quedaban desajustados */
+html[data-tema="oscuro"] .admin-cargando::before,
+html[data-tema="oscuro"] .solicitud-cargando::before { border-color: #3a342c; border-top-color: var(--acento-naranja); }
+html[data-tema="oscuro"] ::selection { background: rgba(232, 161, 82, 0.35); }
+
+@media (prefers-reduced-motion: reduce) {
+  .main-header.rx-barra-baja .logo { transform: none; }
+  .admin-cargando::before,
+  .solicitud-cargando::before { animation-duration: 2.4s; }
+  [class*="btn-"]:not(:disabled):not(.btn-vista-movil):active { transform: none; }
+}
+
+/* Mensaje del formulario de ingreso: colores por tipo (antes eran fijos y no cambiaban en modo oscuro) */
+#auth-mensaje[data-tipo="error"] { background: #fdecea; color: #8a1c1c; }
+#auth-mensaje[data-tipo="exito"] { background: #e8f5e9; color: #1b5e20; }
+html[data-tema="oscuro"] #auth-mensaje[data-tipo="error"] { background: #3a1d1b; color: #ffc9c2; }
+html[data-tema="oscuro"] #auth-mensaje[data-tipo="exito"] { background: #1f3527; color: #cfe8d3; }
+
+/* Etiquetas de estado del panel del administrador en modo oscuro (antes conservaban los tonos claros) */
+html[data-tema="oscuro"] .admin-chip-aprobada,
+html[data-tema="oscuro"] .admin-chip-no_procede,
+html[data-tema="oscuro"] .admin-chip-activo { background: rgba(110, 190, 130, 0.16); color: #9fd8ac; border-color: rgba(110, 190, 130, 0.3); }
+html[data-tema="oscuro"] .admin-chip-en_revision,
+html[data-tema="oscuro"] .admin-chip-requiere_cambios,
+html[data-tema="oscuro"] .admin-chip-pendiente { background: rgba(222, 150, 70, 0.18); color: #f0bf85; border-color: rgba(222, 150, 70, 0.32); }
+html[data-tema="oscuro"] .admin-chip-rechazada,
+html[data-tema="oscuro"] .admin-chip-retirada,
+html[data-tema="oscuro"] .admin-chip-procedente,
+html[data-tema="oscuro"] .admin-chip-suspendido { background: rgba(230, 100, 90, 0.16); color: #ffb4aa; border-color: rgba(230, 100, 90, 0.32); }

@@ -176,7 +176,7 @@
       // ---------- Lista de conversaciones ----------
       function renderLista() {
         if (conversaciones.length === 0) {
-          lista.innerHTML = `<li class="msg-lista-vacia">Aún no tienes conversaciones.<br>Usa "Nueva consulta" para escribirle a Roumix.</li>`;
+          lista.innerHTML = `<li class="msg-lista-vacia">${typeof ilustracionVacia === "function" ? ilustracionVacia("mensajes") : ""}<strong>Aún no tienes conversaciones</strong>Usa "Nueva consulta" para escribirle a Roumix.</li>`;
           return;
         }
         lista.innerHTML = conversaciones.map((c) => `

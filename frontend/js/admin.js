@@ -103,7 +103,8 @@ function mostrarError(contenedor, error) {
 }
 
 function vacio(contenedor, texto) {
-  contenedor.innerHTML = `<p class="admin-vacio">${escaparHTML(texto)}</p>`;
+  const dibujo = typeof ilustracionVacia === "function" ? ilustracionVacia("lista") : "";
+  contenedor.innerHTML = `<div class="admin-vacio rx-vacio rx-vacio-compacto" role="status">${dibujo}<p>${escaparHTML(texto)}</p></div>`;
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
