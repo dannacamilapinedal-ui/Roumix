@@ -88,7 +88,7 @@ async function hastaFormalizado(est, nombre) {
     ok(e && e.status === 400, 'Aceptar sin marcar → 400');
     r = res(); await propCtrl.aceptarCondiciones(req(prop, { body: { acepto: true } }), r);
     const v = (await db.query('SELECT acepta_comision, version_condiciones FROM verificaciones_propietario WHERE propietario_id = $1', [ids.prop])).rows[0];
-    ok(v.acepta_comision && v.version_condiciones === '2026-11' && /1 arriendo/.test(r.cuerpo.message), `Condiciones aceptadas (versión ${v.version_condiciones}) y pago habilitado: "${r.cuerpo.message}"`);
+    ok(v.acepta_comision && v.version_condiciones === require(path.join(backend, 'src/services/verificacionService')).VERSION_CONDICIONES && /1 arriendo/.test(r.cuerpo.message), `Condiciones aceptadas (versión ${v.version_condiciones}) y pago habilitado: "${r.cuerpo.message}"`);
     let p1 = await pagoDeSol(s1);
     ok(p1 && p1.estado === 'pendiente' && p1.monto === 800000 && p1.comision === 80000 && p1.neto_propietario === 720000 && p1.simulado,
       'Pago #' + (p1 && p1.id) + ' pendiente: 800.000 = 80.000 de comisión (10 %) + 720.000 para el propietario, marcado como simulado');
@@ -117,7 +117,7 @@ async function hastaFormalizado(est, nombre) {
     ok(await estadoSol(s1) === 'pagado', 'La solicitud pasó sola a "Pagado"');
     const com = (await db.query('SELECT * FROM comisiones WHERE pago_id = $1', [p1.id])).rows[0];
     const des = (await db.query('SELECT * FROM desembolsos WHERE pago_id = $1', [p1.id])).rows[0];
-    ok(com && com.monto === 80000 && com.version_condiciones === '2026-11' && com.estado === 'registrada', 'Comisión de 80.000 registrada con la versión de condiciones aceptada');
+    ok(com && com.monto === 80000 && com.version_condiciones === require(path.join(backend, 'src/services/verificacionService')).VERSION_CONDICIONES && com.estado === 'registrada', 'Comisión de 80.000 registrada con la versión de condiciones aceptada');
     ok(des && des.monto === 720000 && des.estado === 'pendiente', 'Desembolso de 720.000 pendiente');
     ok(correos.filter((c) => /simulado|Pago confirmado|pagó el primer mes|Pago aprobado/.test(c.subject + c.html)).length >= 3, 'Correos a estudiante, propietario y administración (rotulados como demostrativos)');
     ok(correos.every((c) => /demostrativo/i.test(c.html)), 'Todos los correos de pago dicen que es demostrativo');

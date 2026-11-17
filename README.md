@@ -140,8 +140,8 @@ $env:ROUMIX_PRUEBAS_BD="si"; npm test     # PowerShell
 npm test -- 05 06                         # solo algunas
 ```
 
-Son **286 comprobaciones de integración** en 9 archivos (`backend/tests/`), una por módulo: verificación
-de propietarios, publicaciones, solicitudes, mensajes, contratos, pagos simulados, auditoría, pagos con Wompi y pago por enlace del acudiente. Llaman a los
+Son **297 comprobaciones de integración** en 10 archivos (`backend/tests/`), una por módulo: verificación
+de propietarios, publicaciones, solicitudes, mensajes, contratos, pagos simulados, auditoría, pagos con Wompi, pago por enlace del acudiente y condiciones de la comisión. Llaman a los
 controladores reales contra la base de datos configurada; cada prueba crea sus propios usuarios y datos
 (con correos `@roumix.test`) y **los borra al terminar**. No envían correos reales. Como escriben en la base
 de datos, piden confirmarlo con `ROUMIX_PRUEBAS_BD=si`. Detalle en [`docs/pruebas.md`](docs/pruebas.md).

@@ -923,7 +923,47 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // ---------------- Propietarios (verificación) ----------------
   let propietariosCargados = [];
+  // Condiciones de la comisión: cuántos propietarios faltan por aceptar la versión vigente y aviso único
+  async function cargarCondiciones() {
+    const caja = document.getElementById("condiciones-propietarios");
+    try {
+      const { data: c } = await RoumixAPI.admin("/condiciones");
+      if (!c.por_aceptar) {
+        caja.innerHTML = `<p class="fotos-ayuda">✓ Todos los propietarios aprobados aceptaron las condiciones vigentes (versión ${escaparHTML(c.version)}).</p>`;
+        return;
+      }
+      caja.innerHTML = `
+        <div class="verif-aviso">
+          <div>
+            <strong>Condiciones de la comisión, versión ${escaparHTML(c.version)}</strong>
+            <p>${c.aceptaron} propietario(s) ya las aceptaron · ${c.por_aceptar} aprobado(s) aún no.
+              ${c.por_avisar ? `A ${c.por_avisar} todavía no se les ha avisado.` : "A todos ya se les avisó."}</p>
+            <details><summary>Qué cambia</summary><ul>${c.cambios.map((x) => `<li>${escaparHTML(x)}</li>`).join("")}</ul></details>
+          </div>
+          ${c.por_avisar ? `<button type="button" class="btn-card-action" id="btn-avisar-condiciones">Avisar a ${c.por_avisar} propietario(s)</button>` : ""}
+        </div>`;
+      const boton = document.getElementById("btn-avisar-condiciones");
+      if (boton) {
+        boton.addEventListener("click", async () => {
+          if (!confirm(`¿Enviar el aviso y el correo de las condiciones nuevas a ${c.por_avisar} propietario(s)? Cada uno lo recibe una sola vez.`)) return;
+          boton.disabled = true;
+          try {
+            const r = await RoumixAPI.admin("/condiciones/avisar", { method: "POST" });
+            RoumixAvisos.mostrar(r.message, "exito", 5000);
+            cargarCondiciones();
+          } catch (err) {
+            RoumixAvisos.mostrar(err.message, "error", 5000);
+            boton.disabled = false;
+          }
+        });
+      }
+    } catch (error) {
+      caja.innerHTML = "";
+    }
+  }
+
   async function cargarPropietarios() {
+    cargarCondiciones();
     const contenedor = document.getElementById("lista-propietarios");
     mostrarCarga(contenedor);
     const params = new URLSearchParams({ estado: document.getElementById("filtro-verificacion").value });

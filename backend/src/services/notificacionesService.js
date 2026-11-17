@@ -667,6 +667,32 @@ async function notificarPago({ pago, evento, detalle, urlBase }) {
 }
 
 /**
+ * Al propietario: Roumix publicó condiciones nuevas de la comisión y debe aceptarlas.
+ */
+async function notificarCondicionesNuevas({ propietario, version, cambios, urlBase }) {
+  try {
+    if (!propietario || !propietario.email) return false;
+    return await enviar({
+      para: propietario.email,
+      asunto: 'Roumix actualizó las condiciones de la comisión',
+      contenido: {
+        titulo: `Condiciones nuevas (versión ${escapar(version)})`,
+        parrafos: [
+          `Hola ${escapar(propietario.nombre || '')},`,
+          'Roumix ahora permite que tus inquilinos activen el <strong>débito automático mensual</strong>: Roumix cobra cada mes por ti y te desembolsa el dinero.',
+          `<strong>Qué cambia:</strong><br>${cambios.map((c) => '• ' + escapar(c)).join('<br>')}`,
+          'Puedes leerlas completas y aceptarlas en <strong>Mi verificación</strong>.'
+        ],
+        boton: { texto: 'Revisar las condiciones', url: `${urlBase}/pages/verificacion.html#condiciones` }
+      }
+    });
+  } catch (error) {
+    console.error('⚠️ Aviso de condiciones nuevas:', error.message);
+    return false;
+  }
+}
+
+/**
  * Dirección pública de la aplicación para los enlaces de los correos.
  */
 function urlBase(req) {
@@ -691,6 +717,7 @@ module.exports = {
   notificarRespuestaRoumix,
   notificarContrato,
   notificarPago,
+  notificarCondicionesNuevas,
   enviarRecuperacion,
   urlBase,
   usarTransporte,

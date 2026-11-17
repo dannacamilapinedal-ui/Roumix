@@ -5,6 +5,7 @@ const solicitudesController = require('../controllers/solicitudesController');
 const mensajesController = require('../controllers/mensajesController');
 const contratosController = require('../controllers/contratosController');
 const pagosController = require('../controllers/pagosController');
+const condicionesController = require('../controllers/condicionesController');
 const { requireAuth, requireRol } = require('../middleware/auth');
 const auditoriaAdmin = require('../middleware/auditoriaAdmin');
 const { auditar } = require('../services/auditoriaService');
@@ -52,6 +53,10 @@ router.post('/solicitudes/:id/contrato', contratosController.crearBorrador);
 router.put('/contratos/:id', contratosController.editarBorrador);
 router.post('/contratos/:id/enviar', contratosController.enviarContrato);
 router.post('/contratos/:id/cancelar', contratosController.cancelarContrato);
+// Condiciones de la comisión: aviso a propietarios de una versión nueva
+router.get('/condiciones', condicionesController.resumen);
+router.post('/condiciones/avisar', condicionesController.avisar);
+
 router.get('/pagos', pagosController.listarAdmin);
 router.get('/pagos/:id', pagosController.detalleAdmin);
 router.post('/solicitudes/:id/pago', pagosController.habilitarAdmin);

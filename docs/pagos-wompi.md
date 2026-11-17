@@ -158,11 +158,24 @@ Puede copiarlo, enviarlo por WhatsApp o enviarlo por correo. El acudiente lo abr
 | Se intenta confirmar con una transacción del estudiante | **404**: el enlace solo confirma transacciones abiertas por el acudiente. |
 | Wompi no está activo | No se pueden crear enlaces (**503**). |
 
-## 6. Pruebas
+## 6. Condiciones de la comisión, versión 2026-12 (Módulo W-5a)
+
+La versión **2026-12** mantiene el 10 % del primer canon y agrega un **5 % de cada canon mensual** que
+Roumix cobre por **débito automático**, de los meses 2 en adelante. El propietario recibe el 95 % de cada
+mes cobrado.
+
+- **Quien aceptó la versión 2026-11** sigue recibiendo los pagos del primer mes como antes. Solo el
+  débito automático exige la versión nueva.
+- **Aviso en el panel:** en **Propietarios** aparece cuántos propietarios faltan por aceptar y el botón
+  **"Avisar a N propietario(s)"**. Ese botón envía un aviso en la plataforma y un correo, una sola vez
+  por propietario y versión (tabla `condiciones_avisos`).
+- **Aceptación:** en **Mi verificación**, el propietario ve qué cambia y acepta la versión nueva.
+
+## 7. Pruebas
 
 Ejecútalas desde `backend/` con `ROUMIX_PRUEBAS_BD=si npm test -- 08 09`.
 
-La prueba **09** suma 27 comprobaciones del enlace del acudiente: creación, huella, privacidad, vencimiento, anulación, PSE tardío y pago del propio estudiante.
+La prueba **10** (11 comprobaciones) cubre las condiciones nuevas y el aviso único. La prueba **09** suma 27 comprobaciones del enlace del acudiente: creación, huella, privacidad, vencimiento, anulación, PSE tardío y pago del propio estudiante.
 
 Son 33 comprobaciones con llaves inventadas: se simulan la API de Wompi y su webhook, firmados con el
 mismo algoritmo que usa Wompi. Cubren la firma, la verificación de eventos, los permisos, el rechazo,

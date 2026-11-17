@@ -13,9 +13,26 @@ const db = require('../config/db');
 
 const ESTADOS = ['pendiente', 'aprobado', 'rechazado', 'requiere_informacion'];
 const RELACIONES = ['propietario', 'administrador', 'familiar', 'otro'];
-const VERSION_CONDICIONES = '2026-11';
+// Versión vigente de las condiciones de la comisión. Cada versión que se publica queda aquí
+// (el texto exacto que aceptó cada propietario se puede consultar por su versión).
+const VERSION_CONDICIONES = '2026-12';
+const PORCENTAJE_COMISION_MENSUAL = 5;
 
-const CONDICIONES_COMISION = 'Roumix cobra al propietario una comisión del 10 % del primer canon mensual, una sola vez, cuando el arriendo se concreta a través de la plataforma (contrato formalizado y primer pago confirmado). Mientras el proyecto esté en fase de demostración, los pagos son simulados y no se mueve dinero real.';
+const TEXTOS_CONDICIONES = {
+  '2026-11': 'Roumix cobra al propietario una comisión del 10 % del primer canon mensual, una sola vez, cuando el arriendo se concreta a través de la plataforma (contrato formalizado y primer pago confirmado). Mientras el proyecto esté en fase de demostración, los pagos son simulados y no se mueve dinero real.',
+  '2026-12': 'Roumix cobra al propietario una comisión del 10 % del primer canon mensual, una sola vez, cuando el arriendo se concreta a través de la plataforma (contrato formalizado y primer pago confirmado). ' +
+    'Además, si el estudiante activa el débito automático, Roumix cobra a través de Wompi los cánones de los meses siguientes y retiene una comisión del ' + PORCENTAJE_COMISION_MENSUAL + ' % de cada canon mensual cobrado; el resto se desembolsa al propietario. ' +
+    'Si el estudiante no activa el débito automático, los meses siguientes se pagan como diga el contrato y Roumix no cobra comisión sobre ellos. ' +
+    'Los pagos los procesa Wompi (Bancolombia); Roumix no guarda datos de tarjetas ni de cuentas.'
+};
+const CONDICIONES_COMISION = TEXTOS_CONDICIONES[VERSION_CONDICIONES];
+
+// Lo que cambió frente a la versión anterior (para avisar a quien ya había aceptado)
+const CAMBIOS_CONDICIONES = [
+  'El 10 % del primer mes no cambia.',
+  'Nuevo: si tu inquilino activa el débito automático, Roumix cobra cada mes por ti y retiene el ' + PORCENTAJE_COMISION_MENSUAL + ' % de ese mes. Tú recibes el ' + (100 - PORCENTAJE_COMISION_MENSUAL) + ' %.',
+  'Si no aceptas, nada cambia para ti: tus inquilinos no podrán activar el débito automático y los meses siguientes se pagan como diga el contrato.'
+];
 
 /** Devuelve la verificación del propietario y la crea en "pendiente" si aún no existe. */
 async function obtener(propietarioId, cliente = db) {
@@ -53,6 +70,10 @@ function vistaPropietario(v) {
     perfilEnviadoEn: v.perfil_enviado_en,
     aceptaComision: v.acepta_comision,
     aceptaComisionEn: v.acepta_comision_en,
+    // Versión que aceptó (puede ser una anterior a la vigente)
+    versionAceptada: v.acepta_comision ? v.version_condiciones : null,
+    condicionesAlDia: Boolean(v.acepta_comision && v.version_condiciones === VERSION_CONDICIONES),
+    cambiosCondiciones: CAMBIOS_CONDICIONES,
     telefonoVerificadoPorRoumix: v.telefono_verificado_por_roumix,
     mensajeAdmin: v.mensaje_admin,
     revisadoEn: v.revisado_en,
@@ -75,6 +96,9 @@ module.exports = {
   RELACIONES,
   VERSION_CONDICIONES,
   CONDICIONES_COMISION,
+  TEXTOS_CONDICIONES,
+  CAMBIOS_CONDICIONES,
+  PORCENTAJE_COMISION_MENSUAL,
   obtener,
   etapa,
   vistaPropietario,

@@ -8477,3 +8477,14 @@ html[data-tema="oscuro"] .pagar-detalle,
 html[data-tema="oscuro"] .pago-enlace-activo { background: rgba(255, 255, 255, 0.05); }
 html[data-tema="oscuro"] .pagar-aviso .checkout-exito-icono { background: rgba(222, 150, 70, 0.18); color: #f0bf85; }
 @media (prefers-reduced-motion: reduce) { .pagar-tarjeta { animation: none; } }
+
+/* W-5a — Condiciones nuevas de la comisión */
+.verif-condiciones-nuevas {
+  margin: 0 0 12px; padding: 12px 14px; border-radius: var(--radio-md);
+  background: #fff6df; border: 1px solid #f0d9a0; color: #6b4a00; font-size: 0.88rem; line-height: 1.5;
+}
+.verif-condiciones-nuevas p { margin: 4px 0 6px; }
+.verif-condiciones-nuevas ul { margin: 0; padding-left: 18px; }
+.verif-condiciones-nuevas li { margin: 2px 0; }
+.admin-condiciones { margin-bottom: var(--esp-4); }
+html[data-tema="oscuro"] .verif-condiciones-nuevas { background: rgba(222, 150, 70, 0.12); border-color: rgba(222, 150, 70, 0.3); color: #f0d3a8; }

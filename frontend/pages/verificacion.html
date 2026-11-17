@@ -234,13 +234,21 @@
         if (v.estado === "aprobado") {
           document.getElementById("condiciones-texto").textContent = v.condicionesComision;
           const estadoCondiciones = document.getElementById("condiciones-estado");
-          if (v.aceptaComision) {
+          if (v.condicionesAlDia) {
             estadoCondiciones.innerHTML = `<p class="verif-condiciones-ok">✓ Aceptaste estas condiciones${v.aceptaComisionEn ? " el " + new Date(v.aceptaComisionEn).toLocaleDateString("es-CO", { dateStyle: "long" }) : ""} (versión ${escaparHTML(v.versionCondiciones)}).</p>`;
           } else {
+            // Aceptó una versión anterior: se le explica qué cambió antes de pedirle aceptar
+            const nuevas = v.aceptaComision && v.versionAceptada !== v.versionCondiciones;
             estadoCondiciones.innerHTML = `
-              <p class="verif-condiciones-falta">Todavía no las has aceptado. Sin esta aceptación no se puede habilitar el pago del primer mes de tus arriendos.</p>
-              <label class="admin-check"><input type="checkbox" id="acepto-condiciones"> Leí y acepto las condiciones de la comisión de Roumix.</label>
-              <button type="button" class="btn-search-action" id="btn-aceptar-condiciones">Aceptar condiciones</button>`;
+              ${nuevas ? `
+              <div class="verif-condiciones-nuevas">
+                <strong>Hay condiciones nuevas (versión ${escaparHTML(v.versionCondiciones)})</strong>
+                <p>Aceptaste la versión ${escaparHTML(v.versionAceptada || "anterior")}, que sigue aplicando al pago del primer mes. Esto es lo que cambia:</p>
+                <ul>${(v.cambiosCondiciones || []).map((c) => `<li>${escaparHTML(c)}</li>`).join("")}</ul>
+              </div>` : `
+              <p class="verif-condiciones-falta">Todavía no las has aceptado. Sin esta aceptación no se puede habilitar el pago del primer mes de tus arriendos.</p>`}
+              <label class="admin-check"><input type="checkbox" id="acepto-condiciones"> Leí y acepto las condiciones de la comisión de Roumix${nuevas ? ` (versión ${escaparHTML(v.versionCondiciones)})` : ""}.</label>
+              <button type="button" class="btn-search-action" id="btn-aceptar-condiciones">${nuevas ? "Aceptar las condiciones nuevas" : "Aceptar condiciones"}</button>`;
             document.getElementById("btn-aceptar-condiciones").addEventListener("click", async (e) => {
               if (!document.getElementById("acepto-condiciones").checked) return RoumixAvisos.mostrar("Marca la casilla para aceptar.", "error");
               e.target.disabled = true;
