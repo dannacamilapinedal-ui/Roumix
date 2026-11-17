@@ -8320,3 +8320,118 @@ html[data-tema="oscuro"] .pago-medios li { background: rgba(255, 255, 255, 0.05)
 html[data-tema="oscuro"] .pago-confianza li { color: #9fd8ac; }
 html[data-tema="oscuro"] .pago-wompi-estado { background: rgba(255, 255, 255, 0.05); }
 @media (prefers-reduced-motion: reduce) { .pago-wompi-estado::before { animation-duration: 2.4s; } }
+
+/* ==========================================================================
+   W-2 — Checkout del pago por pasos
+   ========================================================================== */
+.pago-contenedor.pago-checkout {
+  max-width: calc(1120px + 2 * var(--margen-pagina));
+  padding-left: var(--margen-pagina); padding-right: var(--margen-pagina);
+}
+.checkout-cabeza { margin: 0 0 var(--esp-4); }
+.checkout-cabeza h1 { margin: 4px 0 0; font-size: var(--texto-titulo); color: var(--tinta-fuerte); letter-spacing: -0.02em; line-height: 1.15; }
+
+/* Indicador de pasos */
+.checkout-pasos { scroll-margin-top: 96px; list-style: none; margin: 0 0 var(--esp-5); padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--esp-2); }
+.checkout-pasos li {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px; min-width: 0;
+  border-radius: var(--radio-md); background: var(--superficie); border: 1px solid var(--borde-arena);
+  color: var(--tinta-tenue); font-size: 0.86rem; font-weight: 600; transition: border-color 0.2s ease, color 0.2s ease;
+}
+.checkout-paso-num {
+  flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--fondo-crema-alt); color: var(--tinta-media); font-weight: 800; font-size: 0.85rem;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+.checkout-paso-texto { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.checkout-pasos li.actual { border-color: var(--verde-800); color: var(--tinta-fuerte); box-shadow: inset 0 0 0 1px var(--verde-800); }
+.checkout-pasos li.actual .checkout-paso-num { background: var(--verde-950); color: #fff; }
+.checkout-pasos li.hecho { color: var(--texto-verde-oscuro); }
+.checkout-pasos li.hecho .checkout-paso-num { background: var(--verde-badge-bg); color: var(--verde-badge-text); }
+
+/* Dos columnas: pasos a la izquierda, resumen fijo a la derecha */
+.checkout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: var(--esp-6); align-items: start; }
+.checkout-resumen { position: sticky; top: 100px; }
+.checkout-resumen-caja {
+  padding: 22px; border-radius: var(--radio-lg); background: var(--superficie);
+  border: 1px solid var(--borde-arena); box-shadow: 0 12px 32px rgba(20, 34, 25, 0.07);
+}
+.checkout-resumen-titulo { margin: 0 0 12px; font-size: 1rem; color: var(--tinta-fuerte); }
+.checkout-resumen-caja .pago-fila span small { display: block; margin-top: 2px; font-size: 0.76rem; font-weight: 500; color: var(--tinta-tenue); }
+.checkout-despues { margin-top: 14px; padding: 12px 14px; border-radius: var(--radio-md); background: var(--fondo-crema-alt); }
+.checkout-despues span { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tinta-tenue); }
+.checkout-despues p { margin: 4px 0 0; font-size: 0.88rem; line-height: 1.45; color: var(--tinta-media); }
+.checkout-sellos { flex-direction: column; margin: 16px 0 0 !important; gap: 8px !important; }
+
+/* Paneles de cada paso */
+.checkout-paso-panel { padding: 24px; border-radius: var(--radio-lg); background: var(--superficie); border: 1px solid var(--borde-arena); animation: rxPop 0.3s ease; }
+.checkout-paso-panel[hidden] { display: none; }
+.checkout-paso-panel h2 { margin: 0 0 16px; font-size: 1.15rem; color: var(--tinta-fuerte); }
+.checkout-paso-panel h2:focus { outline: none; }
+.checkout-paso-panel .pago-form { margin-top: 0; padding: 0; border: 0; background: none; }
+.checkout-inmueble { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+.checkout-inmueble-foto { flex: none; width: 96px; height: 72px; object-fit: cover; border-radius: var(--radio-md); }
+.checkout-inmueble strong { display: block; font-size: 1rem; color: var(--tinta-fuerte); }
+.checkout-inmueble span { font-size: 0.86rem; color: var(--tinta-tenue); }
+.checkout-datos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 20px; margin: 0 0 16px; }
+.checkout-datos div { min-width: 0; }
+.checkout-datos dt { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tinta-tenue); }
+.checkout-datos dd { margin: 2px 0 0; font-weight: 600; color: var(--tinta-fuerte); overflow-wrap: anywhere; }
+.checkout-datos-ancho { grid-column: 1 / -1; }
+.checkout-texto { margin: 0 0 16px; font-size: 0.9rem; line-height: 1.55; color: var(--tinta-media); }
+.checkout-confirmo {
+  display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px; padding: 12px 14px; cursor: pointer;
+  border-radius: var(--radio-md); border: 1px solid var(--borde-arena); font-size: 0.9rem; font-weight: 600; color: var(--tinta-fuerte);
+}
+.checkout-confirmo:has(input:checked) { border-color: var(--verde-800); background: var(--fondo-crema-alt); }
+.checkout-confirmo input { margin-top: 3px; accent-color: var(--verde-800); }
+.checkout-botones { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; }
+.checkout-botones .btn-contact-wa-large { width: auto; padding-left: 28px; padding-right: 28px; }
+.checkout-botones-atras { margin-top: 14px; justify-content: flex-start; }
+.checkout-exito-icono {
+  width: 60px; height: 60px; margin-bottom: 12px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--verde-badge-bg); color: var(--verde-800); animation: rxPop 0.45s ease;
+}
+.checkout-movimientos { margin-top: 16px; }
+.checkout-movimientos summary { cursor: pointer; font-size: 0.9rem; font-weight: 700; color: var(--texto-verde-oscuro); }
+.checkout-movimientos .pago-historial { margin-top: 10px; }
+
+/* Celular y tableta: el resumen pasa a un acordeón arriba */
+.checkout-resumen-movil { display: none; }
+@media (max-width: 900px) {
+  .checkout { grid-template-columns: 1fr; }
+  .checkout-resumen { display: none; }
+  .checkout-resumen-movil {
+    display: block; margin-bottom: var(--esp-4); border-radius: var(--radio-lg);
+    background: var(--superficie); border: 1px solid var(--borde-arena);
+  }
+  .checkout-resumen-movil summary {
+    display: flex; align-items: center; justify-content: space-between; padding: 14px 16px;
+    list-style: none; cursor: pointer; font-weight: 700; color: var(--tinta-fuerte);
+  }
+  .checkout-resumen-movil summary::-webkit-details-marker { display: none; }
+  .checkout-resumen-movil summary span::after { content: " \25BE"; color: var(--tinta-tenue); }
+  .checkout-resumen-movil[open] summary span::after { content: " \25B4"; }
+  .checkout-resumen-movil .checkout-resumen-caja { padding-top: 0; border: 0; box-shadow: none; }
+  .checkout-resumen-movil .checkout-resumen-titulo { display: none; }
+}
+@media (max-width: 640px) {
+  .checkout-pasos { gap: 6px; }
+  .checkout-pasos li { flex-direction: column; gap: 4px; padding: 8px 4px; text-align: center; font-size: 0.7rem; }
+  .checkout-paso-texto { white-space: normal; }
+  .checkout-paso-panel { padding: 18px 16px; }
+  .checkout-botones { flex-direction: column-reverse; align-items: stretch; }
+  .checkout-botones .btn-contact-wa-large,
+  .checkout-botones .btn-card-action { width: 100%; justify-content: center; text-align: center; }
+  .checkout-inmueble-foto { width: 76px; height: 60px; }
+}
+
+html[data-tema="oscuro"] .checkout-resumen-caja { box-shadow: none; }
+html[data-tema="oscuro"] .checkout-pasos li.actual .checkout-paso-num { background: var(--verde-800); }
+html[data-tema="oscuro"] .checkout-pasos li.hecho .checkout-paso-num,
+html[data-tema="oscuro"] .checkout-exito-icono { background: rgba(110, 190, 130, 0.16); color: #9fd8ac; }
+html[data-tema="oscuro"] .checkout-despues,
+html[data-tema="oscuro"] .checkout-confirmo:has(input:checked) { background: rgba(255, 255, 255, 0.05); }
+@media (prefers-reduced-motion: reduce) {
+  .checkout-paso-panel, .checkout-exito-icono { animation: none; }
+}

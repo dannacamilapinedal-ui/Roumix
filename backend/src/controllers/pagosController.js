@@ -52,12 +52,15 @@ async function enTransaccion(fn) {
 
 const SELECT_PAGO = `
   SELECT p.*, s.inmueble_titulo, s.estado AS solicitud_estado, c.fecha_inicio,
+         c.duracion_meses, c.dia_pago, c.canon_mensual, c.estudiante_nombre, c.servicios_incluidos,
+         s.personas, i.imagen_principal AS inmueble_imagen, i.barrio AS inmueble_barrio, i.universidad AS inmueble_universidad,
          d.estado AS desembolso_estado, d.referencia AS desembolso_referencia, d.realizado_en AS desembolso_realizado_en,
          co.estado AS comision_estado, co.version_condiciones,
          dv.referencia AS devolucion_referencia, dv.motivo AS devolucion_motivo, dv.created_at AS devolucion_en
   FROM pagos p
   JOIN solicitudes s ON s.id = p.solicitud_id
   JOIN contratos c ON c.id = p.contrato_id
+  LEFT JOIN inmuebles i ON i.id = s.inmueble_id
   LEFT JOIN desembolsos d ON d.pago_id = p.id
   LEFT JOIN comisiones co ON co.pago_id = p.id
   LEFT JOIN devoluciones dv ON dv.pago_id = p.id`;

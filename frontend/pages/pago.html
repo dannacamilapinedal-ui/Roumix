@@ -191,6 +191,219 @@
       const momento = (valor) => new Date(valor).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" });
       const pesos = (n) => formatearPrecioCOP(n);
 
+      // ---------- Fechas del contrato (siempre en hora de Colombia) ----------
+      // "2026-11-20T05:00:00Z" → { a: 2026, m: 11, d: 20 }
+      function fechaDia(valor) {
+        const [a, m, d] = new Date(valor).toLocaleDateString("en-CA", { timeZone: "America/Bogota" }).split("-").map(Number);
+        return { a, m, d };
+      }
+      // Suma meses (y opcionalmente días) a una fecha del calendario
+      function sumarMeses(f, meses, dias = 0) {
+        const x = new Date(Date.UTC(f.a, f.m - 1 + meses, f.d + dias));
+        return { a: x.getUTCFullYear(), m: x.getUTCMonth() + 1, d: x.getUTCDate() };
+      }
+      const textoFecha = (f) => new Date(Date.UTC(f.a, f.m - 1, f.d)).toLocaleDateString("es-CO", { timeZone: "UTC", day: "numeric", month: "long", year: "numeric" });
+
+      // ¿El banco dejó el último intento "en proceso"?
+      function enProcesoConBanco(p) {
+        const ultimo = [...(p.eventos || [])].reverse().find((e) => ["intento_en_proceso", "intento_aprobado", "intento_rechazado"].includes(e.tipo));
+        return Boolean(ultimo && ultimo.tipo === "intento_en_proceso");
+      }
+
+      // ---------- Indicador de pasos ----------
+      const PASOS = ["Tu estancia", "Tus datos", "Pago seguro", "Confirmación"];
+      function pasosHTML(actual) {
+        return `
+          <ol class="checkout-pasos" aria-label="Pasos del pago">
+            ${PASOS.map((nombre, i) => {
+              const n = i + 1;
+              const clase = n < actual ? "hecho" : n === actual ? "actual" : "";
+              return `<li class="${clase}" data-indicador="${n}"${n === actual ? ' aria-current="step"' : ""}>
+                <span class="checkout-paso-num" aria-hidden="true">${n < actual ? "✓" : n}</span>
+                <span class="checkout-paso-texto">${nombre}</span>
+              </li>`;
+            }).join("")}
+          </ol>`;
+      }
+
+      // ---------- Resumen de costos (columna fija en computador, acordeón en el celular) ----------
+      function resumenHTML(p) {
+        const inicio = p.fecha_inicio ? fechaDia(p.fecha_inicio) : null;
+        const finPrimerMes = inicio ? sumarMeses(inicio, 1, -1) : null;
+        const canon = p.canon_mensual || p.monto;
+        const restantes = Math.max((p.duracion_meses || 1) - 1, 0);
+        return `
+          <div class="checkout-resumen-caja">
+            <h2 class="checkout-resumen-titulo">Resumen del pago</h2>
+            <div class="pago-fila">
+              <span>Primer mes de arriendo${inicio ? `<small>${textoFecha(inicio)} – ${textoFecha(finPrimerMes)}</small>` : ""}</span>
+              <strong>${pesos(p.monto)}</strong>
+            </div>
+            <div class="pago-fila">
+              <span>Tarifa de servicio de Roumix<small>La paga el propietario, no tú</small></span>
+              <strong>$0</strong>
+            </div>
+            <div class="pago-fila pago-total"><span>${["aprobado", "en_disputa"].includes(p.estado) ? "Total pagado" : "Total a pagar hoy"}</span><strong>${pesos(p.monto)}</strong></div>
+            ${restantes > 0 ? `
+            <div class="checkout-despues">
+              <span>Después, según tu contrato</span>
+              <p><strong>${pesos(canon)}</strong> al mes, el día ${p.dia_pago || 5} de cada mes, del mes 2 al ${p.duracion_meses}.</p>
+            </div>` : ""}
+            <ul class="pago-confianza checkout-sellos">
+              <li>${ICONO_CANDADO} Conexión cifrada (SSL)</li>
+              <li>${ICONO_ESCUDO} Pagas solo con el contrato formalizado</li>
+              <li>${ICONO_ESCUDO} Si hay un problema, Roumix retiene el dinero del propietario</li>
+            </ul>
+          </div>`;
+      }
+
+      // ---------- Navegación entre pasos ----------
+      function prepararPasos(inicial) {
+        const paneles = [...contenedor.querySelectorAll(".checkout-paso-panel[data-paso]")];
+        if (!paneles.length) return;
+        let actual = inicial;
+        function ir(n, enfocar = true) {
+          // El paso 2 exige confirmar los datos antes de pasar al pago
+          if (n === 3 && actual === 2) {
+            const casilla = document.getElementById("confirmo-datos");
+            const aviso = document.getElementById("paso-2-error");
+            if (casilla && !casilla.checked) {
+              aviso.textContent = "Marca la casilla para confirmar que tus datos son correctos.";
+              aviso.hidden = false;
+              casilla.focus();
+              return;
+            }
+            if (aviso) aviso.hidden = true;
+          }
+          actual = n;
+          paneles.forEach((panel) => { panel.hidden = Number(panel.dataset.paso) !== n; });
+          contenedor.querySelectorAll(".checkout-pasos li").forEach((li) => {
+            const k = Number(li.dataset.indicador);
+            li.className = k < n ? "hecho" : k === n ? "actual" : "";
+            li.querySelector(".checkout-paso-num").textContent = k < n ? "✓" : k;
+            if (k === n) li.setAttribute("aria-current", "step"); else li.removeAttribute("aria-current");
+          });
+          if (enfocar) {
+            const titulo = contenedor.querySelector(`.checkout-paso-panel[data-paso="${n}"] h2`);
+            const cabeza = contenedor.querySelector(".checkout-pasos") || contenedor;
+            cabeza.scrollIntoView({ behavior: RoumixUI.reducirMovimiento ? "auto" : "smooth", block: "start" });
+            if (titulo) titulo.focus({ preventScroll: true });
+          }
+        }
+        contenedor.addEventListener("click", (e) => {
+          const boton = e.target.closest("[data-ir]");
+          if (boton) ir(Number(boton.dataset.ir));
+        });
+        ir(inicial, false);
+      }
+
+      // ---------- Recibo en PDF (se genera en el navegador con jsPDF) ----------
+      let promesaPDF = null;
+      function cargarJsPDF() {
+        if (window.jspdf) return Promise.resolve();
+        if (!promesaPDF) {
+          promesaPDF = new Promise((resolver, rechazar) => {
+            const s = document.createElement("script");
+            s.src = "https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js";
+            s.onload = () => (window.jspdf ? resolver() : rechazar(new Error("pdf")));
+            s.onerror = () => { promesaPDF = null; s.remove(); rechazar(new Error("pdf")); };
+            document.head.appendChild(s);
+          });
+        }
+        return promesaPDF;
+      }
+
+      async function descargarRecibo(p, usuario) {
+        await cargarJsPDF();
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ unit: "mm", format: "a4" });
+        // Los espacios especiales de las fechas (p. m.) no existen en la fuente del PDF
+        const limpio = (t) => String(t === null || t === undefined ? "" : t).replace(/[   ]/g, " ");
+        const plata = (n) => limpio("$" + Number(n || 0).toLocaleString("es-CO") + " COP");
+        const inicio = p.fecha_inicio ? fechaDia(p.fecha_inicio) : null;
+        const procesador = p.simulado === false
+          ? (p.modo_wompi === "sandbox" ? "Wompi (modo de pruebas)" : "Wompi")
+          : "Simulador de Roumix (demostrativo)";
+
+        // Encabezado verde con la marca
+        doc.setFillColor(20, 34, 25);
+        doc.rect(0, 0, 210, 34, "F");
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(24);
+        doc.setTextColor(255, 255, 255);
+        doc.text("roumix", 20, 21);
+        doc.setTextColor(196, 124, 43);
+        doc.text(".", 20 + doc.getTextWidth("roumix"), 21);
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(12);
+        doc.text("Recibo de pago", 190, 17, { align: "right" });
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.text(limpio(`Referencia ${p.referencia || ""}`), 190, 23, { align: "right" });
+
+        // Datos
+        let y = 50;
+        const fila = (etiqueta, valor) => {
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(9);
+          doc.setTextColor(110, 104, 94);
+          doc.text(etiqueta.toUpperCase(), 20, y);
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(11);
+          doc.setTextColor(30, 30, 30);
+          const lineas = doc.splitTextToSize(limpio(valor || "-"), 120);
+          doc.text(lineas, 70, y);
+          y += Math.max(lineas.length * 5.5, 5.5) + 3.5;
+        };
+        fila("Fecha de pago", p.aprobado_en ? momento(p.aprobado_en) : "");
+        fila("Arrendatario", p.estudiante_nombre || usuario.nombre);
+        fila("Correo", usuario.email);
+        fila("Inmueble", p.inmueble_titulo);
+        fila("Concepto", `Primer mes de arriendo · Contrato #${p.contrato_id}`);
+        if (inicio) fila("Periodo", `${textoFecha(inicio)} al ${textoFecha(sumarMeses(inicio, 1, -1))}`);
+        fila("Medio de pago", p.metodo_nombre);
+        fila("Procesado por", procesador);
+        if (p.wompi_transaccion_id) fila("Transacción", p.wompi_transaccion_id);
+
+        // Totales
+        y += 4;
+        doc.setDrawColor(222, 214, 198);
+        doc.setFillColor(248, 245, 238);
+        doc.roundedRect(20, y, 170, 38, 3, 3, "FD");
+        doc.setFontSize(11);
+        doc.setTextColor(30, 30, 30);
+        doc.text("Primer mes de arriendo", 26, y + 10);
+        doc.text(plata(p.monto), 184, y + 10, { align: "right" });
+        doc.text("Tarifa de servicio de Roumix", 26, y + 18);
+        doc.text(plata(0), 184, y + 18, { align: "right" });
+        doc.setDrawColor(200, 190, 170);
+        doc.line(26, y + 23, 184, y + 23);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(13);
+        doc.text("Total pagado", 26, y + 32);
+        doc.text(plata(p.monto), 184, y + 32, { align: "right" });
+
+        // Notas
+        y += 52;
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(110, 104, 94);
+        const notas = [
+          "La comisión de Roumix la paga el propietario; el estudiante no paga ningún costo adicional.",
+          "Roumix no recibe ni guarda los datos de tu tarjeta o cuenta: el pago lo procesa la pasarela.",
+          p.simulado === false && p.modo_wompi === "sandbox" ? "Pago de prueba (sandbox): no se movió dinero real." : "",
+          p.simulado !== false ? "Recibo demostrativo: no se movió dinero real." : "",
+          `Generado el ${new Date().toLocaleString("es-CO", { dateStyle: "long", timeStyle: "short" })} · roumix-eight.vercel.app`
+        ].filter(Boolean);
+        notas.forEach((nota) => {
+          const lineas = doc.splitTextToSize(limpio(nota), 170);
+          doc.text(lineas, 20, y);
+          y += lineas.length * 4.6 + 1.5;
+        });
+
+        doc.save(`recibo-roumix-${p.referencia || p.id}.pdf`);
+      }
+
       function error(texto) {
         contenedor.innerHTML = "";
         const p = document.createElement("p");
@@ -217,42 +430,30 @@
         // "Pasarela abierta" solo le sirve al equipo: al estudiante no se le llena el historial
         const eventosVisibles = usuario.rol === "admin" ? p.eventos : p.eventos.filter((e) => e.tipo !== "intento_iniciado");
 
-        const desglose = esEstudiante
-          ? `
-            <div class="pago-fila"><span>Primer mes de arriendo</span><strong>${pesos(p.monto)}</strong></div>
-            <div class="pago-fila"><span>Comisión de Roumix para ti</span><strong>$0</strong></div>
-            <div class="pago-fila pago-total"><span>Total a pagar</span><strong>${pesos(p.monto)}</strong></div>
-            <p class="pago-nota">La comisión de Roumix (10 % del primer mes) la paga el propietario, no tú.</p>`
-          : `
-            <div class="pago-fila"><span>Primer mes que paga el estudiante</span><strong>${pesos(p.monto)}</strong></div>
-            <div class="pago-fila pago-resta"><span>Comisión Roumix (${Number(p.porcentaje_comision)} %, una sola vez)</span><strong>− ${pesos(p.comision)}</strong></div>
-            <div class="pago-fila pago-total"><span>${p.mi_rol === "admin" ? "Desembolso al propietario" : "Tu desembolso"}</span><strong>${pesos(p.neto_propietario)}</strong></div>
-            <p class="pago-nota">Desembolso: <strong>${escaparHTML(DESEMBOLSO[p.desembolso_estado] || "Se registra cuando el estudiante pague")}</strong>${p.desembolso_referencia ? ` · ${escaparHTML(p.desembolso_referencia)}` : ""}${p.version_condiciones ? ` · Condiciones aceptadas: versión ${escaparHTML(p.version_condiciones)}` : ""}</p>`;
+        const historial = `
+          <section class="pago-historial">
+            <h2>Movimientos</h2>
+            <ol>
+              ${eventosVisibles.map((e) => `
+                <li>
+                  <time>${momento(e.created_at)}</time>
+                  <strong>${escaparHTML(EVENTOS[e.tipo] || e.tipo)}</strong>${e.monto ? ` · ${pesos(e.monto)}` : ""}${e.referencia ? ` · <code>${escaparHTML(e.referencia)}</code>` : ""}
+                  ${e.detalle ? `<p>${escaparHTML(e.detalle)}</p>` : ""}
+                </li>`).join("")}
+            </ol>
+          </section>`;
 
-        contenedor.innerHTML = `
-          <div class="contrato-barra">
-            <a href="${usuario.rol === "admin" ? "admin.html" : "solicitudes.html"}" class="msg-enlace">← Volver</a>
-          </div>
+        const disputaHTML = puedeReportar ? `
+          <details class="pago-disputa">
+            <summary>¿Hubo un problema con el arriendo? Repórtalo</summary>
+            <p>Roumix retendrá el dinero del propietario mientras revisa tu caso.</p>
+            <label for="disputa-motivo" class="contacto-paso">Cuéntanos qué pasó</label>
+            <textarea id="disputa-motivo" class="form-control form-textarea" rows="3" maxlength="500"></textarea>
+            <p class="pub-mensaje pub-mensaje-error" id="disputa-error" role="alert" hidden></p>
+            <button type="button" class="btn-card-action btn-card-danger" id="btn-disputa">Reportar el problema</button>
+          </details>` : "";
 
-          ${avisoPasarela(p)}
-
-          <section class="pago-tarjeta">
-            <header class="pago-cabeza">
-              <div>
-                <span class="solicitud-numero">Pago #${p.id} · Solicitud #${p.solicitud_id} · Contrato #${p.contrato_id}</span>
-                <h1>${escaparHTML(p.inmueble_titulo)}</h1>
-              </div>
-              <span class="solicitud-chip solicitud-chip-${estado.tono}">${escaparHTML(estado.texto)}</span>
-            </header>
-            <div class="pago-desglose">${desglose}</div>
-            ${p.referencia ? `<p class="pago-referencia">Referencia de la transacción: <code>${escaparHTML(p.referencia)}</code>${p.metodo_nombre ? ` · ${escaparHTML(p.metodo_nombre)}` : ""}${p.aprobado_en ? ` · ${momento(p.aprobado_en)}` : ""}${p.simulado === false ? " · Procesado por Wompi" : ""}</p>` : ""}
-            ${p.estado === "fallido" && esEstudiante ? `<p class="pub-mensaje pub-mensaje-error">${escaparHTML(p.ultimo_error || "El pago fue rechazado.")} Puedes intentarlo de nuevo.</p>` : ""}
-            ${p.devolucion_referencia ? `<p class="pago-nota">Devolución ${escaparHTML(p.devolucion_referencia)} · ${escaparHTML(p.devolucion_motivo || "")}</p>` : ""}
-          </section>
-
-          ${puedePagar && conWompi ? bloqueWompi(p) : ""}
-
-          ${puedePagar && !conWompi ? `
+        const formSimulador = `
           <form class="pago-form" id="form-pagar" novalidate>
             <h2>Pagar el primer mes</h2>
             <fieldset class="pago-metodos">
@@ -268,31 +469,176 @@
             <p class="pub-mensaje pub-mensaje-error" id="pago-error" role="alert" hidden></p>
             <button type="submit" class="btn-contact-wa-large">Pagar ${pesos(p.monto)} (simulado)</button>
             <p class="contacto-nota">No escribas datos reales de tarjetas: este pago es solo una demostración.</p>
-          </form>` : ""}
+          </form>`;
 
-          ${p.estado === "aprobado" && esEstudiante ? `<p class="contrato-estado-msg">✓ Recibimos tu pago. Roumix gestiona ahora el desembolso al propietario.</p>` : ""}
+        if (!esEstudiante) {
+          // Propietario y administración: desglose con comisión y desembolso (sin pasos)
+          contenedor.classList.remove("pago-checkout");
+          const desglose = `
+            <div class="pago-fila"><span>Primer mes que paga el estudiante</span><strong>${pesos(p.monto)}</strong></div>
+            <div class="pago-fila pago-resta"><span>Comisión Roumix (${Number(p.porcentaje_comision)} %, una sola vez)</span><strong>− ${pesos(p.comision)}</strong></div>
+            <div class="pago-fila pago-total"><span>${p.mi_rol === "admin" ? "Desembolso al propietario" : "Tu desembolso"}</span><strong>${pesos(p.neto_propietario)}</strong></div>
+            <p class="pago-nota">Desembolso: <strong>${escaparHTML(DESEMBOLSO[p.desembolso_estado] || "Se registra cuando el estudiante pague")}</strong>${p.desembolso_referencia ? ` · ${escaparHTML(p.desembolso_referencia)}` : ""}${p.version_condiciones ? ` · Condiciones aceptadas: versión ${escaparHTML(p.version_condiciones)}` : ""}</p>`;
+          contenedor.innerHTML = `
+            <div class="contrato-barra">
+              <a href="${usuario.rol === "admin" ? "admin.html" : "solicitudes.html"}" class="msg-enlace">← Volver</a>
+            </div>
+            ${avisoPasarela(p)}
+            <section class="pago-tarjeta">
+              <header class="pago-cabeza">
+                <div>
+                  <span class="solicitud-numero">Pago #${p.id} · Solicitud #${p.solicitud_id} · Contrato #${p.contrato_id}</span>
+                  <h1>${escaparHTML(p.inmueble_titulo)}</h1>
+                </div>
+                <span class="solicitud-chip solicitud-chip-${estado.tono}">${escaparHTML(estado.texto)}</span>
+              </header>
+              <div class="pago-desglose">${desglose}</div>
+              ${p.referencia ? `<p class="pago-referencia">Referencia de la transacción: <code>${escaparHTML(p.referencia)}</code>${p.metodo_nombre ? ` · ${escaparHTML(p.metodo_nombre)}` : ""}${p.aprobado_en ? ` · ${momento(p.aprobado_en)}` : ""}${p.simulado === false ? " · Procesado por Wompi" : ""}</p>` : ""}
+              ${p.devolucion_referencia ? `<p class="pago-nota">Devolución ${escaparHTML(p.devolucion_referencia)} · ${escaparHTML(p.devolucion_motivo || "")}</p>` : ""}
+            </section>
+            ${historial}`;
+        } else {
+          // Estudiante: checkout por pasos con el resumen de costos al lado (o arriba en el celular)
+          contenedor.classList.add("pago-checkout");
+          const pagado = ["aprobado", "en_disputa"].includes(p.estado);
+          const cerrado = ["reembolsado", "cancelado"].includes(p.estado);
+          const pasoInicial = pagado ? 4 : (p.estado === "fallido" || p.intentos > 0 || enProcesoConBanco(p)) ? 3 : 1;
+          const inicio = p.fecha_inicio ? fechaDia(p.fecha_inicio) : null;
 
-          ${puedeReportar ? `
-          <details class="pago-disputa">
-            <summary>¿Hubo un problema con el arriendo? Repórtalo</summary>
-            <p>Roumix retendrá el dinero del propietario mientras revisa tu caso.</p>
-            <label for="disputa-motivo" class="contacto-paso">Cuéntanos qué pasó</label>
-            <textarea id="disputa-motivo" class="form-control form-textarea" rows="3" maxlength="500"></textarea>
-            <p class="pub-mensaje pub-mensaje-error" id="disputa-error" role="alert" hidden></p>
-            <button type="button" class="btn-card-action btn-card-danger" id="btn-disputa">Reportar el problema</button>
-          </details>` : ""}
+          const pasoPago = puedePagar ? `
+            ${p.estado === "fallido" ? `<p class="pub-mensaje pub-mensaje-error" role="alert">${escaparHTML(p.ultimo_error || "El pago fue rechazado.")} Puedes intentarlo de nuevo.</p>` : ""}
+            ${conWompi ? bloqueWompi(p) : formSimulador}` : "";
 
-          <section class="pago-historial">
-            <h2>Movimientos</h2>
-            <ol>
-              ${eventosVisibles.map((e) => `
-                <li>
-                  <time>${momento(e.created_at)}</time>
-                  <strong>${escaparHTML(EVENTOS[e.tipo] || e.tipo)}</strong>${e.monto ? ` · ${pesos(e.monto)}` : ""}${e.referencia ? ` · <code>${escaparHTML(e.referencia)}</code>` : ""}
-                  ${e.detalle ? `<p>${escaparHTML(e.detalle)}</p>` : ""}
-                </li>`).join("")}
-            </ol>
-          </section>`;
+          contenedor.innerHTML = `
+            <div class="contrato-barra">
+              <a href="solicitudes.html" class="msg-enlace">← Mis solicitudes</a>
+            </div>
+            ${avisoPasarela(p)}
+            <header class="checkout-cabeza">
+              <span class="solicitud-numero">Pago #${p.id} · Contrato #${p.contrato_id}</span>
+              <h1>${cerrado ? "Pago cerrado" : pagado ? "¡Tu pago está confirmado!" : "Paga el primer mes de tu arriendo"}</h1>
+            </header>
+            ${cerrado ? "" : pasosHTML(pasoInicial)}
+
+            <details class="checkout-resumen-movil">
+              <summary>
+                <span>Resumen del pago</span>
+                <strong>${pesos(p.monto)}</strong>
+              </summary>
+              ${resumenHTML(p)}
+            </details>
+
+            <div class="checkout">
+              <div class="checkout-principal">
+                ${cerrado ? `
+                <section class="checkout-paso-panel">
+                  <span class="solicitud-chip solicitud-chip-${estado.tono}">${escaparHTML(estado.texto)}</span>
+                  <p class="checkout-texto">${p.estado === "reembolsado"
+                    ? `Roumix registró la devolución de este pago${p.devolucion_referencia ? ` (${escaparHTML(p.devolucion_referencia)})` : ""}. ${escaparHTML(p.devolucion_motivo || "")}`
+                    : "Este pago se canceló antes de hacerse y el proceso de arriendo se cerró. No se hizo ningún cobro."}</p>
+                </section>` : `
+
+                <section class="checkout-paso-panel" data-paso="1" aria-labelledby="paso-1-titulo"${pasoInicial === 1 ? "" : " hidden"}>
+                  <h2 id="paso-1-titulo" tabindex="-1">1. Tu estancia</h2>
+                  <div class="checkout-inmueble">
+                    ${p.inmueble_imagen ? `<img src="${escaparHTML(p.inmueble_imagen)}" alt="" class="checkout-inmueble-foto">` : ""}
+                    <div>
+                      <strong>${escaparHTML(p.inmueble_titulo)}</strong>
+                      <span>${escaparHTML([p.inmueble_barrio, p.inmueble_universidad ? `cerca de ${p.inmueble_universidad}` : ""].filter(Boolean).join(" · "))}</span>
+                    </div>
+                  </div>
+                  <dl class="checkout-datos">
+                    <div><dt>Ingreso</dt><dd>${inicio ? textoFecha(inicio) : "Según el contrato"}</dd></div>
+                    <div><dt>Duración</dt><dd>${p.duracion_meses ? `${p.duracion_meses} ${p.duracion_meses === 1 ? "mes" : "meses"}` : "—"}</dd></div>
+                    <div><dt>Termina</dt><dd>${inicio && p.duracion_meses ? textoFecha(sumarMeses(inicio, p.duracion_meses, -1)) : "—"}</dd></div>
+                    <div><dt>Día de pago mensual</dt><dd>${p.dia_pago ? `El ${p.dia_pago} de cada mes` : "—"}</dd></div>
+                    <div><dt>Personas</dt><dd>${p.personas || 1}</dd></div>
+                    ${p.servicios_incluidos ? `<div class="checkout-datos-ancho"><dt>Servicios incluidos</dt><dd>${escaparHTML(p.servicios_incluidos)}</dd></div>` : ""}
+                  </dl>
+                  <p class="checkout-texto">Estos datos salen de tu <a href="contrato.html?id=${p.contrato_id}">contrato formalizado</a>. Hoy solo pagas el primer mes.</p>
+                  <div class="checkout-botones">
+                    <button type="button" class="btn-contact-wa-large" data-ir="2">Continuar</button>
+                  </div>
+                </section>
+
+                <section class="checkout-paso-panel" data-paso="2" aria-labelledby="paso-2-titulo"${pasoInicial === 2 ? "" : " hidden"}>
+                  <h2 id="paso-2-titulo" tabindex="-1">2. Tus datos</h2>
+                  <dl class="checkout-datos">
+                    <div><dt>Arrendatario</dt><dd>${escaparHTML(p.estudiante_nombre || usuario.nombre || "")}</dd></div>
+                    <div><dt>Correo para el recibo</dt><dd>${escaparHTML(usuario.email || "")}</dd></div>
+                  </dl>
+                  <p class="checkout-texto">El recibo y los avisos del pago llegan a este correo. ¿Algo no coincide?
+                    <a href="mensajes.html">Escríbele al equipo de Roumix</a> antes de pagar.</p>
+                  <label class="checkout-confirmo">
+                    <input type="checkbox" id="confirmo-datos"> Confirmo que mis datos y los del contrato son correctos
+                  </label>
+                  <p class="pub-mensaje pub-mensaje-error" id="paso-2-error" role="alert" hidden></p>
+                  <div class="checkout-botones">
+                    <button type="button" class="btn-card-action" data-ir="1">Atrás</button>
+                    <button type="button" class="btn-contact-wa-large" data-ir="3">Continuar al pago</button>
+                  </div>
+                </section>
+
+                <section class="checkout-paso-panel" data-paso="3" aria-labelledby="paso-3-titulo"${pasoInicial === 3 ? "" : " hidden"}>
+                  <h2 id="paso-3-titulo" tabindex="-1" class="sr-only">3. Pago seguro</h2>
+                  ${pasoPago}
+                  <div class="checkout-botones checkout-botones-atras">
+                    <button type="button" class="btn-card-action" data-ir="2">Atrás</button>
+                  </div>
+                </section>
+
+                <section class="checkout-paso-panel checkout-exito" data-paso="4" aria-labelledby="paso-4-titulo"${pasoInicial === 4 ? "" : " hidden"}>
+                  ${pagado ? `
+                  <div class="checkout-exito-icono" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
+                  </div>
+                  <h2 id="paso-4-titulo" tabindex="-1">Recibimos tu pago</h2>
+                  ${p.estado === "en_disputa" ? `<p class="checkout-texto"><span class="solicitud-chip solicitud-chip-proceso">En revisión por tu reporte</span> Roumix retuvo el dinero del propietario mientras revisa el caso.</p>` : ""}
+                  <dl class="checkout-datos">
+                    <div><dt>Referencia</dt><dd><code>${escaparHTML(p.referencia || "")}</code></dd></div>
+                    <div><dt>Fecha</dt><dd>${p.aprobado_en ? momento(p.aprobado_en) : "—"}</dd></div>
+                    <div><dt>Medio de pago</dt><dd>${escaparHTML(p.metodo_nombre || "—")}</dd></div>
+                    <div><dt>Total pagado</dt><dd><strong>${pesos(p.monto)}</strong></dd></div>
+                  </dl>
+                  <p class="checkout-texto">Roumix gestiona ahora el desembolso al propietario. Tu contrato comienza el ${inicio ? textoFecha(inicio) : "día acordado"}.</p>
+                  <p class="pub-mensaje pub-mensaje-error" id="recibo-error" role="alert" hidden></p>
+                  <div class="checkout-botones">
+                    <button type="button" class="btn-contact-wa-large" id="btn-recibo">Descargar recibo (PDF)</button>
+                    <a href="contrato.html?id=${p.contrato_id}" class="btn-card-action">Ver contrato</a>
+                  </div>
+                  ${disputaHTML}` : ""}
+                </section>`}
+
+                <details class="checkout-movimientos">
+                  <summary>Ver movimientos del pago</summary>
+                  ${historial}
+                </details>
+              </div>
+
+              <aside class="checkout-resumen" aria-label="Resumen del pago">
+                ${resumenHTML(p)}
+              </aside>
+            </div>`;
+          prepararPasos(pasoInicial);
+          const recibo = document.getElementById("btn-recibo");
+          if (recibo) {
+            recibo.addEventListener("click", async () => {
+              const aviso = document.getElementById("recibo-error");
+              aviso.hidden = true;
+              recibo.disabled = true;
+              const texto = recibo.textContent;
+              recibo.textContent = "Generando el recibo…";
+              try {
+                await descargarRecibo(p, usuario);
+              } catch (err) {
+                aviso.textContent = "No pudimos generar el PDF. Revisa tu conexión e intenta de nuevo.";
+                aviso.hidden = false;
+              }
+              recibo.disabled = false;
+              recibo.textContent = texto;
+            });
+          }
+        }
 
         const botonWompi = document.getElementById("btn-wompi");
         if (botonWompi) {
