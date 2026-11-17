@@ -8,6 +8,7 @@ process.env.ROUMIX_PRUEBAS = '1'; // la auditoría marca estos registros como de
 process.env.SMTP_HOST = 'smtp.prueba.local'; process.env.SMTP_USER = 'x@prueba.local'; process.env.SMTP_PASS = 'x';
 
 const db = require(path.join(backend, 'src/config/db'));
+const { firmaPrueba, borrarFirmasDePrueba } = require('./_firma');
 const notificaciones = require(path.join(backend, 'src/services/notificacionesService'));
 const correos = [];
 notificaciones.usarTransporte({ sendMail: async (m) => { correos.push(m); } });
@@ -106,27 +107,27 @@ const estadoContrato = async (id) => (await db.query('SELECT estado FROM contrat
     // 6. Aceptación
     e = await falla(() => ct.aceptarContrato(req(est, { params: { id: c1 }, body: { firma: 'Laura Prueba Gómez' } }), res()));
     ok(e && e.status === 400, 'Aceptar sin confirmar la lectura → 400');
-    e = await falla(async () => ct.aceptarContrato(req(otro, { params: { id: c1 }, body: { firma: 'Otro Estudiante', confirmo: true, codigo: await ct.crearCodigoFirma(c1, otro.id) } }), res()));
+    e = await falla(async () => ct.aceptarContrato(req(otro, { params: { id: c1 }, body: { firma: 'Otro Estudiante', confirmo: true, firmaImagen: firmaPrueba, codigo: await ct.crearCodigoFirma(c1, otro.id) } }), res()));
     ok(e && e.status === 404, 'Un tercero no puede aceptarlo → 404');
     correos.length = 0;
-    r = res(); await ct.aceptarContrato(req(est, { params: { id: c1 }, body: { firma: 'Laura Prueba Gómez', confirmo: true, codigo: await ct.crearCodigoFirma(c1, est.id) } }), r);
+    r = res(); await ct.aceptarContrato(req(est, { params: { id: c1 }, body: { firma: 'Laura Prueba Gómez', confirmo: true, firmaImagen: firmaPrueba, codigo: await ct.crearCodigoFirma(c1, est.id) } }), r);
     ok(r.cuerpo.data.estado === 'pendiente_aceptacion' && await estadoSolicitud(solId) === 'contrato_pendiente',
       'El estudiante acepta → "pendiente de aceptación" (la solicitud sigue en contrato pendiente)');
     ok(correos.some((c) => /prueba-ct-propietario/.test(c.to) && /Falta tu aceptación/.test(c.subject)), 'Correo al propietario: "Falta tu aceptación"');
-    e = await falla(async () => ct.aceptarContrato(req(est, { params: { id: c1 }, body: { firma: 'Laura Prueba Gómez', confirmo: true, codigo: await ct.crearCodigoFirma(c1, est.id) } }), res()));
+    e = await falla(async () => ct.aceptarContrato(req(est, { params: { id: c1 }, body: { firma: 'Laura Prueba Gómez', confirmo: true, firmaImagen: firmaPrueba, codigo: await ct.crearCodigoFirma(c1, est.id) } }), res()));
     ok(e && e.status === 409, 'Aceptar dos veces → 409');
 
     // 7. Integridad: si alguien altera el contenido en la base, ya no se puede aceptar
     await db.query('UPDATE contratos SET canon_mensual = 1 WHERE id = $1', [c1]);
     r = res(); await ct.verContrato(req(prop, { params: { id: c1 } }), r);
     ok(r.cuerpo.data.huella_valida === false, 'Contenido alterado: la huella deja de coincidir');
-    e = await falla(async () => ct.aceptarContrato(req(prop, { params: { id: c1 }, body: { firma: 'Carlos Prueba Rodríguez', confirmo: true, codigo: await ct.crearCodigoFirma(c1, prop.id) } }), res()));
+    e = await falla(async () => ct.aceptarContrato(req(prop, { params: { id: c1 }, body: { firma: 'Carlos Prueba Rodríguez', confirmo: true, firmaImagen: firmaPrueba, codigo: await ct.crearCodigoFirma(c1, prop.id) } }), res()));
     ok(e && e.status === 409, 'Contenido alterado: no se puede aceptar → 409');
     await db.query('UPDATE contratos SET canon_mensual = 780000 WHERE id = $1', [c1]);
 
     // 8. El propietario acepta → formalizado y la solicitud pasa sola
     correos.length = 0;
-    r = res(); await ct.aceptarContrato(req(prop, { params: { id: c1 }, body: { firma: 'Carlos Prueba Rodríguez', confirmo: true, codigo: await ct.crearCodigoFirma(c1, prop.id) } }), r);
+    r = res(); await ct.aceptarContrato(req(prop, { params: { id: c1 }, body: { firma: 'Carlos Prueba Rodríguez', confirmo: true, firmaImagen: firmaPrueba, codigo: await ct.crearCodigoFirma(c1, prop.id) } }), r);
     ok(r.cuerpo.data.estado === 'formalizado', 'El propietario acepta → contrato "formalizado"');
     ok(await estadoSolicitud(solId) === 'contrato_formalizado', 'La solicitud pasó sola a "Contrato formalizado"');
     const hist = (await db.query("SELECT autor_rol FROM solicitudes_historial WHERE solicitud_id = $1 AND estado_nuevo = 'contrato_formalizado'", [solId])).rows;
@@ -159,7 +160,7 @@ const estadoContrato = async (id) => (await db.query('SELECT estado FROM contrat
     ok(r.codigo === 201, 'Tras cancelar, se puede crear un contrato nuevo');
     await ct.enviarContrato(req(admin, { params: { id: c3 } }), res());
     await db.query("UPDATE contratos SET vence_en = now() - interval '1 minute' WHERE id = $1", [c3]);
-    e = await falla(async () => ct.aceptarContrato(req(otro, { params: { id: c3 }, body: { firma: 'Otro Estudiante', confirmo: true, codigo: await ct.crearCodigoFirma(c3, otro.id) } }), res()));
+    e = await falla(async () => ct.aceptarContrato(req(otro, { params: { id: c3 }, body: { firma: 'Otro Estudiante', confirmo: true, firmaImagen: firmaPrueba, codigo: await ct.crearCodigoFirma(c3, otro.id) } }), res()));
     ok(e && e.status === 409 && await estadoContrato(c3) === 'expirado', 'Vencido el plazo → "expirado" y ya no se puede aceptar');
 
     r = res(); await ct.listarAdmin(req(admin, { query: { estado: 'todos' } }), r);
@@ -171,6 +172,7 @@ const estadoContrato = async (id) => (await db.query('SELECT estado FROM contrat
   } finally {
     await db.query('DELETE FROM conversaciones WHERE usuario_id = ANY($1)', [[ids.est, ids.prop, ids.otro]]);
     if (inmuebleId) {
+      await borrarFirmasDePrueba(db, inmuebleId);
       await db.query('DELETE FROM firmas_codigos WHERE contrato_id IN (SELECT id FROM contratos WHERE inmueble_id = $1)', [inmuebleId]);
       await db.query('DELETE FROM contratos_documentos WHERE contrato_id IN (SELECT id FROM contratos WHERE inmueble_id = $1)', [inmuebleId]);
       await db.query('DELETE FROM contratos WHERE inmueble_id = $1', [inmuebleId]);

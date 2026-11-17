@@ -7,6 +7,7 @@ process.env.ROUMIX_PRUEBAS = '1';
 process.env.SMTP_HOST = 'smtp.prueba.local'; process.env.SMTP_USER = 'x@prueba.local'; process.env.SMTP_PASS = 'x';
 
 const db = require(path.join(backend, 'src/config/db'));
+const { firmaPrueba, borrarFirmasDePrueba } = require('./_firma');
 const notificaciones = require(path.join(backend, 'src/services/notificacionesService'));
 notificaciones.usarTransporte({ sendMail: async () => {} });
 const ident = require(path.join(backend, 'src/controllers/identidadController'));
@@ -133,6 +134,7 @@ async function crearUsuario(id, rol, nombre) {
     const todos = Object.values(ids);
     await db.query('DELETE FROM conversaciones WHERE usuario_id = ANY($1)', [todos]);
     if (inmuebleId) {
+      await borrarFirmasDePrueba(db, inmuebleId);
       await db.query('DELETE FROM firmas_codigos WHERE contrato_id IN (SELECT id FROM contratos WHERE inmueble_id = $1)', [inmuebleId]);
       await db.query('DELETE FROM contratos_documentos WHERE contrato_id IN (SELECT id FROM contratos WHERE inmueble_id = $1)', [inmuebleId]);
       await db.query('DELETE FROM contratos WHERE inmueble_id = $1', [inmuebleId]);

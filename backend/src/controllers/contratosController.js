@@ -18,6 +18,7 @@ const { auditar } = require('../services/auditoriaService');
 const { avisarPagoHabilitado } = require('./pagosController');
 const contratoPdf = require('../services/contratoPdfService');
 const codigoFirma = require('../services/codigoFirmaService');
+const firmaService = require('../services/firmaService');
 
 const PLAZO_ACEPTACION_DIAS = 7;
 const VIGENTES = ['borrador', 'enviado', 'pendiente_aceptacion'];
@@ -135,6 +136,23 @@ function vistaParte(c, rol) {
 // Partes del contrato (estudiante, propietario) y consulta del admin
 // ============================================================================
 
+/** Firmas de un contrato: imagen, nombre, documento y fecha; con evidencias técnicas para el equipo. */
+async function firmasDe(contratoId, conEvidencias) {
+  const { rows } = await db.query(
+    `SELECT rol, nombre_escrito, documento, firma_png, firma_sha256, firmado_en, codigo_enviado_a, pdf_sha256, ip, dispositivo
+     FROM firmas_contrato WHERE contrato_id = $1 ORDER BY firmado_en`, [contratoId]);
+  return rows.map((f) => ({
+    rol: f.rol,
+    nombre: f.nombre_escrito,
+    documento: f.documento,
+    firmadoEn: f.firmado_en,
+    imagen: `data:image/png;base64,${f.firma_png.toString('base64')}`,
+    firmaSha256: f.firma_sha256,
+    codigoEnviadoA: codigoFirma.ocultarCorreo(f.codigo_enviado_a),
+    ...(conEvidencias ? { pdfSha256: f.pdf_sha256, ip: f.ip, dispositivo: f.dispositivo, correo: f.codigo_enviado_a } : {})
+  }));
+}
+
 /** GET /api/contratos/mios */
 async function misContratos(req, res) {
   await expirarVencidos();
@@ -154,11 +172,11 @@ async function verContrato(req, res) {
   const c = rows[0];
   if (req.usuario.rol === 'admin') {
     if (!c) throw errorHttp(404, `No existe el contrato ${id}.`);
-    return res.json({ status: 'success', data: { ...vistaParte(c, 'admin'), puedo_aceptar: false, acepte: false } });
+    return res.json({ status: 'success', data: { ...vistaParte(c, 'admin'), puedo_aceptar: false, acepte: false, firmas: await firmasDe(id, true) }, consentimiento: firmaService.CONSENTIMIENTO });
   }
   const esParte = c && (req.usuario.rol === 'estudiante' ? c.estudiante_id : c.propietario_id) === req.usuario.id;
   if (!esParte || c.estado === 'borrador') throw errorHttp(404, 'No tienes un contrato con ese número.');
-  res.json({ status: 'success', data: vistaParte(c, req.usuario.rol) });
+  res.json({ status: 'success', data: { ...vistaParte(c, req.usuario.rol), firmas: await firmasDe(id, false) }, consentimiento: firmaService.CONSENTIMIENTO });
 }
 
 /**
@@ -168,7 +186,8 @@ async function verContrato(req, res) {
 async function contratoFirmable(id, usuario) {
   const esEstudiante = usuario.rol === 'estudiante';
   const { rows: [c] } = await db.query(
-    'SELECT id, estado, estudiante_id, propietario_id, aceptado_estudiante_en, aceptado_propietario_en, inmueble_titulo FROM contratos WHERE id = $1', [id]);
+    `SELECT id, estado, estudiante_id, propietario_id, aceptado_estudiante_en, aceptado_propietario_en, inmueble_titulo,
+            estudiante_nombre, propietario_nombre FROM contratos WHERE id = $1`, [id]);
   const esParte = c && (esEstudiante ? c.estudiante_id : c.propietario_id) === usuario.id;
   if (!esParte || c.estado === 'borrador') throw errorHttp(404, 'No tienes un contrato con ese número.');
   if (!['enviado', 'pendiente_aceptacion'].includes(c.estado)) throw errorHttp(409, `Este contrato está "${ETIQUETAS[c.estado]}" y ya no se puede firmar.`);
@@ -208,7 +227,7 @@ async function crearCodigoFirma(contratoId, usuarioId) {
   return (await codigoFirma.crearCodigo(contratoId, usuarioId, { correo: '(prueba automática)' })).codigo;
 }
 
-/** POST /api/contratos/:id/aceptar  { firma, confirmo: true, codigo } */
+/** POST /api/contratos/:id/aceptar  { firma, confirmo: true, codigo, firmaImagen } */
 async function aceptarContrato(req, res) {
   await expirarVencidos();
   const id = idEntero(req.params.id);
@@ -217,8 +236,14 @@ async function aceptarContrato(req, res) {
   if (!firma || firma.length < 5) throw errorHttp(400, 'Escribe tu nombre completo para aceptar.');
   if (body.confirmo !== true) throw errorHttp(400, 'Debes confirmar que leíste las condiciones.');
   const esEstudiante = req.usuario.rol === 'estudiante';
+  // F-3: la firma manuscrita dibujada se valida antes de gastar el código
+  const imagenFirma = firmaService.validarImagen(body.firmaImagen);
+  const previo = await contratoFirmable(id, req.usuario);
+  const nombreDocumento = esEstudiante ? previo.estudiante_nombre : previo.propietario_nombre;
+  if (!firmaService.nombreCoincide(firma, nombreDocumento)) {
+    throw errorHttp(400, `Escribe tu nombre como aparece en tu documento: ${nombreDocumento}.`);
+  }
   // F-2: firmar exige el código de un solo uso enviado al correo de quien firma
-  await contratoFirmable(id, req.usuario);
   const codigoUsado = await codigoFirma.usarCodigo(id, req.usuario.id, body.codigo);
 
   const cliente = await db.pool.connect();
@@ -247,12 +272,22 @@ async function aceptarContrato(req, res) {
        WHERE id = $1`,
       [id, firma, formalizado ? 'formalizado' : 'pendiente_aceptacion']
     );
+    // Evidencias de la firma (tabla de solo adición)
+    await cliente.query(
+      `INSERT INTO firmas_contrato (contrato_id, usuario_id, rol, nombre_escrito, documento, firma_png, firma_sha256, consentimiento,
+         codigo_id, codigo_enviado_a, pdf_sha256, ip, dispositivo)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+      [id, req.usuario.id, esEstudiante ? 'arrendatario' : 'arrendador', firma,
+        esEstudiante ? c.estudiante_documento : c.propietario_documento, imagenFirma.png, imagenFirma.sha256,
+        firmaService.CONSENTIMIENTO, codigoUsado.id, codigoUsado.enviadoA, c.pdf_sha256,
+        String(req.ip || '').slice(0, 64) || null, String((req.get && req.get('user-agent')) || '').slice(0, 300) || null]
+    );
 
-    const nota = `${esEstudiante ? 'El estudiante' : 'El propietario'} firmó el contrato #${id} con el código enviado a su correo.`;
+    const nota = `${esEstudiante ? 'El estudiante' : 'El propietario'} firmó el contrato #${id} con su firma manuscrita y el código enviado a su correo.`;
     await auditar({
       actor: req.usuario, accion: formalizado ? 'contrato_formalizado' : 'contrato_aceptado', entidad: 'contrato', entidadId: id,
       resumen: formalizado ? `${nota} Con esta aceptación quedó formalizado.` : nota,
-      datos: { solicitud_id: c.solicitud_id, huella: c.huella, pdf_sha256: c.pdf_sha256, codigo_id: codigoUsado.id, codigo_enviado_a: codigoUsado.enviadoA }, ip: req.ip
+      datos: { solicitud_id: c.solicitud_id, huella: c.huella, pdf_sha256: c.pdf_sha256, codigo_id: codigoUsado.id, codigo_enviado_a: codigoUsado.enviadoA, firma_sha256: imagenFirma.sha256 }, ip: req.ip
     }, cliente);
     if (formalizado) {
       // Paso automático de la solicitud: solo el sistema pone "contrato_formalizado"

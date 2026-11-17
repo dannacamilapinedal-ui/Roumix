@@ -7,6 +7,7 @@ process.env.ROUMIX_PRUEBAS = '1';
 process.env.SMTP_HOST = 'smtp.prueba.local'; process.env.SMTP_USER = 'x@prueba.local'; process.env.SMTP_PASS = 'x';
 
 const db = require(path.join(backend, 'src/config/db'));
+const { firmaPrueba, borrarFirmasDePrueba } = require('./_firma');
 const notificaciones = require(path.join(backend, 'src/services/notificacionesService'));
 const correos = [];
 notificaciones.usarTransporte({ sendMail: async (m) => { correos.push(m); } });
@@ -81,7 +82,7 @@ async function crearUsuario(id, rol, nombre) {
     ok(e && e.status === 429 && /Espera \d+ segundos/.test(e.message), `Pedir otro enseguida → 429 "${e && e.message}"`);
 
     // 2. Firmar sin código o con un código equivocado
-    const firmar = (codigo) => ct.aceptarContrato(req(est, { params: { id: ctId }, body: { firma: 'Laura Prueba', confirmo: true, codigo } }), res());
+    const firmar = (codigo) => ct.aceptarContrato(req(est, { params: { id: ctId }, body: { firma: 'Laura Prueba', confirmo: true, firmaImagen: firmaPrueba, codigo } }), res());
     e = await falla(() => firmar(undefined));
     ok(e && e.status === 400 && /6 dígitos/.test(e.message), 'Sin código no se puede firmar → 400');
     const malo = codigo1 === '000000' ? '111111' : '000000';
@@ -119,7 +120,7 @@ async function crearUsuario(id, rol, nombre) {
     await permitirReenvio(ctId, est.id);
     await ct.solicitarCodigo(req(est, { params: { id: ctId } }), res());
     const codigo4 = codigoDelCorreo();
-    r = res(); await ct.aceptarContrato(req(est, { params: { id: ctId }, body: { firma: 'Laura Prueba', confirmo: true, codigo: ` ${codigo4.slice(0, 3)} ${codigo4.slice(3)} ` } }), r);
+    r = res(); await ct.aceptarContrato(req(est, { params: { id: ctId }, body: { firma: 'Laura Prueba', confirmo: true, firmaImagen: firmaPrueba, codigo: ` ${codigo4.slice(0, 3)} ${codigo4.slice(3)} ` } }), r);
     const c = (await db.query('SELECT estado, aceptado_estudiante_en FROM contratos WHERE id = $1', [ctId])).rows[0];
     ok(c.estado === 'pendiente_aceptacion' && c.aceptado_estudiante_en, 'Con el código correcto (aunque tenga espacios) el estudiante firma');
     const usado = (await db.query('SELECT usado_en FROM firmas_codigos WHERE contrato_id = $1 AND usuario_id = $2 ORDER BY id DESC LIMIT 1', [ctId, est.id])).rows[0];
@@ -134,6 +135,7 @@ async function crearUsuario(id, rol, nombre) {
     const todos = Object.values(ids);
     await db.query('DELETE FROM conversaciones WHERE usuario_id = ANY($1)', [todos]);
     if (inmuebleId) {
+      await borrarFirmasDePrueba(db, inmuebleId);
       await db.query('DELETE FROM firmas_codigos WHERE contrato_id IN (SELECT id FROM contratos WHERE inmueble_id = $1)', [inmuebleId]);
       await db.query('DELETE FROM contratos_documentos WHERE contrato_id IN (SELECT id FROM contratos WHERE inmueble_id = $1)', [inmuebleId]);
       await db.query('DELETE FROM contratos WHERE inmueble_id = $1', [inmuebleId]);

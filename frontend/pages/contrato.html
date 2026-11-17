@@ -113,16 +113,31 @@
       async function cargar() {
         if (!id) return error("Falta el número del contrato.");
         let c;
+        let consentimiento = "";
         try {
-          ({ data: c } = await RoumixAPI._request(`/contratos/${id}`));
+          const r = await RoumixAPI._request(`/contratos/${id}`);
+          c = r.data;
+          consentimiento = r.consentimiento || "";
         } catch (e) {
           return error(e.message);
         }
         document.title = `Contrato #${c.id} — Roumix`;
         const estado = ESTADOS[c.estado] || { texto: c.estado, tono: "neutro" };
-        const aceptacion = (fecha, firma) => fecha
-          ? `<span class="contrato-acepto">✓ Firmado por <strong>${escaparHTML(firma)}</strong><br><small>${momento(fecha)}</small></span>`
-          : `<span class="contrato-pendiente">Pendiente de firma</span>`;
+        // Firma de cada parte: la imagen dibujada (F-3) o, en contratos anteriores, solo el nombre
+        const aceptacion = (fecha, firma, rol) => {
+          const f = (c.firmas || []).find((x) => x.rol === rol);
+          if (f) {
+            return `<span class="contrato-acepto contrato-firma">
+              <img src="${f.imagen}" alt="Firma de ${escaparHTML(f.nombre)}" class="contrato-firma-img">
+              <strong>${escaparHTML(f.nombre)}</strong>${f.documento ? ` · ${escaparHTML(f.documento)}` : ""}
+              <small>Firmado el ${momento(f.firmadoEn)} · código enviado a ${escaparHTML(f.codigoEnviadoA)}</small>
+              ${f.ip ? `<small class="contrato-evidencia">IP ${escaparHTML(f.ip)} · ${escaparHTML(f.dispositivo || "")}</small>` : ""}
+            </span>`;
+          }
+          return fecha
+            ? `<span class="contrato-acepto">✓ Firmado por <strong>${escaparHTML(firma)}</strong><br><small>${momento(fecha)}</small></span>`
+            : `<span class="contrato-pendiente">Pendiente de firma</span>`;
+        };
         const volver = usuario.rol === "admin" ? "admin.html" : "solicitudes.html";
 
         contenedor.innerHTML = `
@@ -137,7 +152,7 @@
           <div class="contrato-demo" role="note">
             <strong>Contrato en PDF sellado.</strong> Descárgalo y léelo completo: es el documento definitivo y su huella permite
             comprobar que nadie lo cambió.${c.pdf.plantillaRevisada ? "" : " <strong>La plantilla aún está pendiente de revisión legal</strong>: úsala solo para pruebas del proyecto."}
-            Para firmarlo necesitas el código que te enviamos al correo; la firma dibujada y el certificado de evidencias llegan en la próxima actualización.
+            Para firmarlo dibujas tu firma y escribes el código que te enviamos al correo; Roumix guarda las evidencias de cada firma. El PDF firmado con su certificado llega en la próxima actualización.
           </div>` : `
           <div class="contrato-demo" role="note">
             <strong>Documento demostrativo.</strong>
@@ -196,8 +211,8 @@
             <section class="contrato-seccion">
               <h2>6. Firma de las partes</h2>
               <div class="contrato-firmas">
-                <div><span class="contrato-rol">Arrendador</span>${aceptacion(c.aceptado_propietario_en, c.firma_propietario)}</div>
-                <div><span class="contrato-rol">Arrendatario</span>${aceptacion(c.aceptado_estudiante_en, c.firma_estudiante)}</div>
+                <div><span class="contrato-rol">Arrendador</span>${aceptacion(c.aceptado_propietario_en, c.firma_propietario, "arrendador")}</div>
+                <div><span class="contrato-rol">Arrendatario</span>${aceptacion(c.aceptado_estudiante_en, c.firma_estudiante, "arrendatario")}</div>
               </div>
               ${c.estado === "formalizado" ? `<p class="contrato-nota">Formalizado el ${momento(c.formalizado_en)}.</p>` : ""}
               ${c.estado === "cancelado" ? `<p class="contrato-nota">Cancelado${c.cancelado_en ? ` el ${momento(c.cancelado_en)}` : ""}.</p>` : ""}
@@ -221,9 +236,17 @@
           <form class="contrato-aceptar no-imprimir" id="form-aceptar" novalidate>
             <h2>Firmar el contrato</h2>
             <p>Revisa que todo coincida con lo que acordaste. Si algo no está bien, <a href="mensajes.html?solicitud=${c.solicitud_id}">escríbele a Roumix</a> antes de aceptar.</p>
-            <label for="firma" class="contacto-paso">Escribe tu nombre completo</label>
-            <input type="text" id="firma" class="form-control" maxlength="120" autocomplete="name" placeholder="${escaparHTML(c.mi_rol === "estudiante" ? c.estudiante_nombre : c.propietario_nombre)}">
-            <label class="admin-check"><input type="checkbox" id="confirmo"> Leí el contrato completo y acepto firmarlo electrónicamente con mi nombre y el código que llegue a mi correo.</label>
+            <label for="firma" class="contacto-paso">Tu nombre como aparece en tu documento</label>
+            <input type="text" id="firma" class="form-control" maxlength="120" autocomplete="name" value="${escaparHTML(c.mi_rol === "estudiante" ? c.estudiante_nombre : c.propietario_nombre)}">
+            <div class="firma-lienzo-cabeza">
+              <label for="firma-lienzo" class="contacto-paso">Dibuja tu firma con el dedo o el mouse</label>
+              <button type="button" class="firma-reenviar" id="btn-borrar-firma">Borrar</button>
+            </div>
+            <div class="firma-lienzo-caja">
+              <canvas id="firma-lienzo" class="firma-lienzo" role="img" aria-label="Recuadro para dibujar tu firma"></canvas>
+              <span class="firma-lienzo-guia" id="firma-guia" aria-hidden="true">Firma aquí</span>
+            </div>
+            <label class="admin-check"><input type="checkbox" id="confirmo"> ${escaparHTML(consentimiento || "Leí el contrato completo y acepto firmarlo electrónicamente.")}</label>
             <div class="firma-codigo">
               <p class="firma-codigo-texto">Para firmar te enviamos un <strong>código de 6 dígitos a tu correo</strong>. Así comprobamos que eres tú.</p>
               <button type="button" class="btn-card-action" id="btn-codigo">Enviar código a mi correo</button>
@@ -272,6 +295,51 @@
         const aviso = document.getElementById("aceptar-error");
         const mostrar = (t) => { aviso.textContent = t; aviso.hidden = false; };
 
+        // Firma manuscrita (F-3): lienzo transparente, trazo oscuro, dedo o mouse
+        const lienzo = document.getElementById("firma-lienzo");
+        const guia = document.getElementById("firma-guia");
+        const ctx = lienzo.getContext("2d");
+        let dibujando = false;
+        // Hay firma si el lienzo tiene suficientes píxeles pintados (lo mismo que revisa el servidor)
+        function hayTinta() {
+          const datos = ctx.getImageData(0, 0, lienzo.width, lienzo.height).data;
+          let pintados = 0;
+          for (let i = 3; i < datos.length; i += 4) if (datos[i] > 0 && ++pintados >= 60) return true;
+          return false;
+        }
+        function prepararLienzo() {
+          const escala = Math.min(window.devicePixelRatio || 1, 2.5);
+          const caja = lienzo.getBoundingClientRect();
+          lienzo.width = Math.max(300, Math.round(caja.width * escala));
+          lienzo.height = Math.max(120, Math.round(caja.height * escala));
+          ctx.setTransform(escala, 0, 0, escala, 0, 0);
+          ctx.lineWidth = 2.6;
+          ctx.lineCap = "round";
+          ctx.lineJoin = "round";
+          ctx.strokeStyle = "#14221a";
+          guia.hidden = false;
+        }
+        const posicion = (e) => { const r = lienzo.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+        lienzo.addEventListener("pointerdown", (e) => {
+          dibujando = true;
+          lienzo.setPointerCapture(e.pointerId);
+          const p = posicion(e);
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          guia.hidden = true;
+        });
+        lienzo.addEventListener("pointermove", (e) => {
+          if (!dibujando) return;
+          const p = posicion(e);
+          ctx.lineTo(p.x, p.y);
+          ctx.stroke();
+        });
+        const terminar = () => { dibujando = false; };
+        lienzo.addEventListener("pointerup", terminar);
+        lienzo.addEventListener("pointercancel", terminar);
+        document.getElementById("btn-borrar-firma").addEventListener("click", prepararLienzo);
+        prepararLienzo();
+
         // Código de un solo uso al correo (F-2)
         const botonCodigo = document.getElementById("btn-codigo");
         const reenviar = document.getElementById("btn-reenviar");
@@ -311,6 +379,7 @@
           aviso.hidden = true;
           const firma = document.getElementById("firma").value.trim();
           if (firma.length < 5) return mostrar("Escribe tu nombre completo.");
+          if (!hayTinta()) return mostrar("Dibuja tu firma en el recuadro.");
           if (!document.getElementById("confirmo").checked) return mostrar("Confirma que leíste el contrato y aceptas firmarlo electrónicamente.");
           const codigo = document.getElementById("codigo").value.replace(/\D/g, "");
           if (document.getElementById("codigo-zona").hidden) return mostrar("Primero pide el código: toca \"Enviar código a mi correo\".");
@@ -318,7 +387,7 @@
           const boton = form.querySelector('button[type="submit"]');
           boton.disabled = true;
           try {
-            const r = await RoumixAPI._request(`/contratos/${c.id}/aceptar`, { method: "POST", body: JSON.stringify({ firma, confirmo: true, codigo }) });
+            const r = await RoumixAPI._request(`/contratos/${c.id}/aceptar`, { method: "POST", body: JSON.stringify({ firma, confirmo: true, codigo, firmaImagen: lienzo.toDataURL("image/png") }) });
             RoumixAvisos.mostrar(r.message, "exito", 5000);
             if (r.data.estado === "formalizado" && typeof lanzarConfeti === "function") lanzarConfeti();
             await cargar();
