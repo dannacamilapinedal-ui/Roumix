@@ -265,7 +265,8 @@ async function confirmar(req, res) {
 /** POST /api/wompi/eventos */
 async function recibirEvento(req, res) {
   const cfg = wompi.config();
-  if (!cfg.activo) return res.status(503).json({ status: 'error', message: 'Wompi no está configurado.' });
+  // Se informa qué variable falla (nunca su valor) para poder corregirla en Vercel
+  if (!cfg.activo) return res.status(503).json({ status: 'error', message: 'Wompi no está configurado.', motivo: cfg.motivo, detalle: cfg.detalle });
 
   const evento = req.body || {};
   if (!wompi.verificarEvento(evento, req.get('X-Event-Checksum'), cfg)) {

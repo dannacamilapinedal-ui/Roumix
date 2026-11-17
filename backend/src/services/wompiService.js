@@ -21,23 +21,39 @@ const API = {
   produccion: 'https://production.wompi.co/v1'
 };
 
-const leer = (nombre) => String(process.env[nombre] || '').trim();
+// Quita espacios y comillas que a veces se pegan por error al copiar la llave
+const leer = (nombre) => String(process.env[nombre] || '').trim().replace(/^["'`]+|["'`]+$/g, '').trim();
 
-/** Configuración actual. { activo, modo, motivo? } — nunca se devuelve un secreto al cliente. */
+/**
+ * Configuración actual. { activo, modo, motivo?, detalle? } — nunca se devuelve un secreto.
+ * "detalle" dice QUÉ variable falla y con qué debería empezar (sin mostrar su contenido),
+ * para poder corregirla en Vercel sin adivinar.
+ */
 function config() {
   const publica = leer('WOMPI_PUBLIC_KEY');
   const privada = leer('WOMPI_PRIVATE_KEY');
   const integridad = leer('WOMPI_INTEGRITY_SECRET');
   const eventos = leer('WOMPI_EVENTS_SECRET');
-  if (!publica || !integridad || !eventos) return { activo: false, motivo: 'faltan_llaves' };
+  const faltan = [['WOMPI_PUBLIC_KEY', publica], ['WOMPI_INTEGRITY_SECRET', integridad], ['WOMPI_EVENTS_SECRET', eventos]]
+    .filter(([, v]) => !v).map(([n]) => n);
+  if (faltan.length) return { activo: false, motivo: 'faltan_llaves', detalle: `Falta: ${faltan.join(', ')}.` };
 
   const modo = publica.startsWith('pub_prod_') ? 'produccion' : publica.startsWith('pub_test_') ? 'sandbox' : null;
-  if (!modo) return { activo: false, motivo: 'llave_publica_invalida' };
+  if (!modo) return { activo: false, motivo: 'llave_publica_invalida', detalle: 'WOMPI_PUBLIC_KEY debe empezar por pub_test_ (pruebas) o pub_prod_ (producción).' };
   // Mezclar llaves de pruebas y de producción daría firmas inválidas: mejor no activar
-  const prefijo = modo === 'produccion' ? 'prod_' : 'test_';
-  if (!integridad.startsWith(`${prefijo}integrity_`) || !eventos.startsWith(`${prefijo}events_`)
-      || (privada && !privada.startsWith(modo === 'produccion' ? 'prv_prod_' : 'prv_test_'))) {
-    return { activo: false, motivo: 'llaves_de_ambientes_distintos' };
+  const p = modo === 'produccion' ? 'prod_' : 'test_';
+  const esperado = [
+    ['WOMPI_INTEGRITY_SECRET', integridad, `${p}integrity_`],
+    ['WOMPI_EVENTS_SECRET', eventos, `${p}events_`],
+    ['WOMPI_PRIVATE_KEY', privada, modo === 'produccion' ? 'prv_prod_' : 'prv_test_']
+  ].filter(([, valor, prefijo]) => valor && !valor.startsWith(prefijo));
+  if (esperado.length) {
+    return {
+      activo: false,
+      motivo: 'llaves_de_ambientes_distintos',
+      detalle: `La llave pública es de ${modo === 'produccion' ? 'producción' : 'pruebas'}, pero ` +
+        esperado.map(([n, , prefijo]) => `${n} no empieza por ${prefijo}`).join('; ') + '.'
+    };
   }
   return { activo: true, modo, publica, privada, integridad, eventos, api: API[modo] };
 }
