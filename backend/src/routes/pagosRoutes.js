@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pagosController = require('../controllers/pagosController');
 const wompiController = require('../controllers/wompiController');
+const acudienteController = require('../controllers/acudienteController');
 const { requireAuth, requireRol } = require('../middleware/auth');
 
 // Pagos del primer canon: con Wompi si está configurado; si no, con el simulador.
@@ -22,6 +23,12 @@ router.post('/:id/wompi', requireRol('estudiante'), wompiController.iniciar);
 
 // POST /api/pagos/:id/wompi/confirmar - Roumix consulta a Wompi el resultado de la transacción
 router.post('/:id/wompi/confirmar', requireRol('estudiante'), wompiController.confirmar);
+
+// POST /api/pagos/:id/enlace - El estudiante crea un enlace de pago (24 h) para su acudiente
+router.post('/:id/enlace', requireRol('estudiante'), acudienteController.crearEnlace);
+
+// DELETE /api/pagos/:id/enlace - El estudiante anula el enlace activo
+router.delete('/:id/enlace', requireRol('estudiante'), acudienteController.anularEnlace);
 
 // POST /api/pagos/:id/disputa - El estudiante reporta un problema con un pago aprobado
 router.post('/:id/disputa', requireRol('estudiante'), pagosController.abrirDisputa);

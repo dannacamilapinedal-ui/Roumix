@@ -107,7 +107,8 @@
         cancelado: "Pago cancelado", devolucion: "Devolución registrada", disputa_abierta: "Problema reportado",
         disputa_resuelta: "Reporte resuelto", desembolso_realizado: "Desembolso al propietario",
         intento_iniciado: "Pasarela abierta", intento_en_proceso: "Pago en proceso con el banco",
-        requiere_devolucion: "Cobro por devolver"
+        requiere_devolucion: "Cobro por devolver",
+        enlace_creado: "Enlace de pago para el acudiente", enlace_anulado: "Enlace de pago anulado"
       };
       const MEDIOS_WOMPI = ["Tarjeta crédito o débito", "PSE", "Nequi", "Botón Bancolombia", "Daviplata"];
       const ICONO_CANDADO = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
@@ -362,6 +363,7 @@
         fila("Concepto", `Primer mes de arriendo · Contrato #${p.contrato_id}`);
         if (inicio) fila("Periodo", `${textoFecha(inicio)} al ${textoFecha(sumarMeses(inicio, 1, -1))}`);
         fila("Medio de pago", p.metodo_nombre);
+        if (p.pagado_por === "acudiente") fila("Pagado por", `${p.pagador_nombre || "Acudiente"} (acudiente del estudiante)`);
         fila("Procesado por", procesador);
         if (p.wompi_transaccion_id) fila("Transacción", p.wompi_transaccion_id);
 
@@ -402,6 +404,120 @@
         });
 
         doc.save(`recibo-roumix-${p.referencia || p.id}.pdf`);
+      }
+
+      // ---------- "Paga mi acudiente" (W-3) ----------
+      const fechaHora = (valor) => new Date(valor).toLocaleString("es-CO", { day: "numeric", month: "long", hour: "numeric", minute: "2-digit" });
+
+      function quienPagaHTML() {
+        return `
+          <fieldset class="pago-metodos pago-quien">
+            <legend class="contacto-paso">¿Quién paga?</legend>
+            <label class="pago-metodo"><input type="radio" name="quien-paga" value="yo" checked> Yo pago ahora</label>
+            <label class="pago-metodo"><input type="radio" name="quien-paga" value="acudiente"> Paga mi acudiente o familiar</label>
+          </fieldset>`;
+      }
+
+      function acudienteHTML(p) {
+        return `
+          <section class="pago-form pago-acudiente" id="panel-acudiente" aria-labelledby="titulo-acudiente" hidden>
+            <h2 id="titulo-acudiente">Paga mi acudiente o familiar</h2>
+            <p class="pago-wompi-texto">Crea un enlace seguro para que tu acudiente pague <strong>${pesos(p.monto)}</strong> desde su celular,
+              <strong>sin crear cuenta</strong>. El enlace vence en 24 horas y solo sirve para este pago.</p>
+            ${p.enlace ? `<p class="pago-enlace-activo" id="enlace-activo">Ya tienes un enlace activo que vence el <strong>${fechaHora(p.enlace.expiraEn)}</strong>.
+              Por seguridad no lo volvemos a mostrar: si lo perdiste, crea uno nuevo (el anterior deja de servir).</p>` : ""}
+            <div class="pago-enlace" id="enlace-resultado" hidden>
+              <label for="enlace-url" class="contacto-paso">Enlace de pago para tu acudiente</label>
+              <div class="pago-enlace-caja">
+                <input type="text" id="enlace-url" class="form-control" readonly>
+                <button type="button" class="btn-card-action" id="btn-copiar-enlace">Copiar</button>
+              </div>
+              <p class="contacto-nota" id="enlace-vence"></p>
+              <div class="pago-compartir">
+                <a class="btn-card-action pago-compartir-wa" id="enlace-whatsapp" target="_blank" rel="noopener">Enviar por WhatsApp</a>
+                <a class="btn-card-action" id="enlace-correo">Enviar por correo</a>
+              </div>
+            </div>
+            <p class="pub-mensaje pub-mensaje-error" id="enlace-error" role="alert" hidden></p>
+            <div class="checkout-botones">
+              <button type="button" class="btn-card-action btn-card-danger" id="btn-anular-enlace"${p.enlace ? "" : " hidden"}>Anular enlace</button>
+              <button type="button" class="btn-contact-wa-large" id="btn-crear-enlace">${p.enlace ? "Crear un enlace nuevo" : "Crear enlace de pago"}</button>
+            </div>
+            <p class="contacto-nota">Cuando tu acudiente pague, te avisamos por correo y aquí mismo verás el pago confirmado.</p>
+          </section>`;
+      }
+
+      function prepararAcudiente(p) {
+        const panel = document.getElementById("panel-acudiente");
+        if (!panel) return;
+        const panelYo = document.getElementById("pago-wompi");
+        contenedor.querySelectorAll('input[name="quien-paga"]').forEach((radio) => {
+          radio.addEventListener("change", () => {
+            const acudiente = radio.value === "acudiente" && radio.checked;
+            if (radio.checked) { panel.hidden = !acudiente; panelYo.hidden = acudiente; }
+          });
+        });
+        const aviso = document.getElementById("enlace-error");
+        const crear = document.getElementById("btn-crear-enlace");
+        const anular = document.getElementById("btn-anular-enlace");
+        const fallo = (texto) => { aviso.textContent = texto; aviso.hidden = false; };
+
+        crear.addEventListener("click", async () => {
+          if (p.enlace && !confirm("¿Crear un enlace nuevo? El enlace anterior dejará de servir.")) return;
+          aviso.hidden = true;
+          crear.disabled = true;
+          try {
+            const r = await RoumixAPI._request(`/pagos/${p.id}/enlace`, { method: "POST" });
+            const url = r.data.url;
+            const mensaje = `Hola, ¿me ayudas a pagar el primer mes de mi arriendo en Roumix? Son ${pesos(r.data.monto)}. ` +
+              `Puedes pagar aquí de forma segura con Wompi (el enlace vence en 24 horas): ${url}`;
+            document.getElementById("enlace-url").value = url;
+            document.getElementById("enlace-vence").textContent = `Vence el ${fechaHora(r.data.expiraEn)}. Compártelo solo con quien vaya a pagar.`;
+            document.getElementById("enlace-whatsapp").href = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
+            document.getElementById("enlace-correo").href =
+              `mailto:?subject=${encodeURIComponent("¿Me ayudas a pagar mi arriendo?")}&body=${encodeURIComponent(mensaje)}`;
+            document.getElementById("enlace-resultado").hidden = false;
+            const activo = document.getElementById("enlace-activo");
+            if (activo) activo.hidden = true;
+            p.enlace = { expiraEn: r.data.expiraEn };
+            anular.hidden = false;
+            crear.textContent = "Crear un enlace nuevo";
+            RoumixAvisos.mostrar("Enlace creado. Compártelo con tu acudiente.", "exito", 4000);
+          } catch (err) {
+            fallo(err.message);
+          }
+          crear.disabled = false;
+        });
+
+        document.getElementById("btn-copiar-enlace").addEventListener("click", async (e) => {
+          const campo = document.getElementById("enlace-url");
+          try {
+            await navigator.clipboard.writeText(campo.value);
+          } catch (err) {
+            campo.select();
+            document.execCommand("copy");
+          }
+          e.target.textContent = "¡Copiado!";
+          setTimeout(() => { e.target.textContent = "Copiar"; }, 2000);
+        });
+
+        anular.addEventListener("click", async () => {
+          if (!confirm("¿Anular el enlace? Tu acudiente ya no podrá pagar con él.")) return;
+          anular.disabled = true;
+          try {
+            const r = await RoumixAPI._request(`/pagos/${p.id}/enlace`, { method: "DELETE" });
+            RoumixAvisos.mostrar(r.message, "info", 4000);
+            p.enlace = null;
+            document.getElementById("enlace-resultado").hidden = true;
+            const activo = document.getElementById("enlace-activo");
+            if (activo) activo.hidden = true;
+            anular.hidden = true;
+            crear.textContent = "Crear enlace de pago";
+          } catch (err) {
+            fallo(err.message);
+          }
+          anular.disabled = false;
+        });
       }
 
       function error(texto) {
@@ -507,7 +623,7 @@
 
           const pasoPago = puedePagar ? `
             ${p.estado === "fallido" ? `<p class="pub-mensaje pub-mensaje-error" role="alert">${escaparHTML(p.ultimo_error || "El pago fue rechazado.")} Puedes intentarlo de nuevo.</p>` : ""}
-            ${conWompi ? bloqueWompi(p) : formSimulador}` : "";
+            ${conWompi ? quienPagaHTML() + bloqueWompi(p) + acudienteHTML(p) : formSimulador}` : "";
 
           contenedor.innerHTML = `
             <div class="contrato-barra">
@@ -598,6 +714,7 @@
                     <div><dt>Referencia</dt><dd><code>${escaparHTML(p.referencia || "")}</code></dd></div>
                     <div><dt>Fecha</dt><dd>${p.aprobado_en ? momento(p.aprobado_en) : "—"}</dd></div>
                     <div><dt>Medio de pago</dt><dd>${escaparHTML(p.metodo_nombre || "—")}</dd></div>
+                    ${p.pagado_por === "acudiente" ? `<div><dt>Pagó</dt><dd>${escaparHTML(p.pagador_nombre || "Tu acudiente")} (acudiente)</dd></div>` : ""}
                     <div><dt>Total pagado</dt><dd><strong>${pesos(p.monto)}</strong></dd></div>
                   </dl>
                   <p class="checkout-texto">Roumix gestiona ahora el desembolso al propietario. Tu contrato comienza el ${inicio ? textoFecha(inicio) : "día acordado"}.</p>
@@ -620,6 +737,7 @@
               </aside>
             </div>`;
           prepararPasos(pasoInicial);
+          prepararAcudiente(p);
           const recibo = document.getElementById("btn-recibo");
           if (recibo) {
             recibo.addEventListener("click", async () => {

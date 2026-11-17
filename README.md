@@ -50,7 +50,7 @@ solicitud como "pagada".
 
 | Rol | Puede |
 |-----|-------|
-| **Estudiante** | Buscar con filtros y mapa, ver el detalle, comparar hasta 3 inmuebles, enviar y cancelar solicitudes, escribirle a Roumix, aceptar su contrato, pagar el primer mes (con Wompi), reportar un problema con el pago y reportar publicaciones. |
+| **Estudiante** | Buscar con filtros y mapa, ver el detalle, comparar hasta 3 inmuebles, enviar y cancelar solicitudes, escribirle a Roumix, aceptar su contrato, pagar el primer mes (con Wompi o con un enlace para su acudiente), reportar un problema con el pago y reportar publicaciones. |
 | **Propietario** | Enviar su perfil a verificación, aceptar las condiciones de la comisión, publicar (solo con la cuenta **aprobada**), editar, pausar, marcar como arrendado y **retirar** sus publicaciones, ver las solicitudes que Roumix le comparte, escribirle a Roumix, aceptar contratos y ver su desembolso. |
 | **Administrador** | Todo el panel `/pages/admin.html`: verificar propietarios, moderar publicaciones y reportes, gestionar solicitudes, mensajes (con notas internas), contratos, pagos, desembolsos, devoluciones y disputas, cuentas de usuario y la **auditoría**. |
 
@@ -140,8 +140,8 @@ $env:ROUMIX_PRUEBAS_BD="si"; npm test     # PowerShell
 npm test -- 05 06                         # solo algunas
 ```
 
-Son **259 comprobaciones de integración** en 8 archivos (`backend/tests/`), una por módulo: verificación
-de propietarios, publicaciones, solicitudes, mensajes, contratos, pagos simulados, auditoría y pagos con Wompi. Llaman a los
+Son **286 comprobaciones de integración** en 9 archivos (`backend/tests/`), una por módulo: verificación
+de propietarios, publicaciones, solicitudes, mensajes, contratos, pagos simulados, auditoría, pagos con Wompi y pago por enlace del acudiente. Llaman a los
 controladores reales contra la base de datos configurada; cada prueba crea sus propios usuarios y datos
 (con correos `@roumix.test`) y **los borra al terminar**. No envían correos reales. Como escriben en la base
 de datos, piden confirmarlo con `ROUMIX_PRUEBAS_BD=si`. Detalle en [`docs/pruebas.md`](docs/pruebas.md).

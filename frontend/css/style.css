@@ -8435,3 +8435,45 @@ html[data-tema="oscuro"] .checkout-confirmo:has(input:checked) { background: rgb
 @media (prefers-reduced-motion: reduce) {
   .checkout-paso-panel, .checkout-exito-icono { animation: none; }
 }
+
+/* ==========================================================================
+   W-3 — Paga mi acudiente
+   ========================================================================== */
+.pago-quien { margin-bottom: var(--esp-4) !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+.pago-acudiente[hidden], .pago-wompi[hidden] { display: none; }
+.pago-enlace-activo {
+  margin: 0 0 var(--esp-3); padding: 10px 14px; border-radius: var(--radio-md);
+  background: var(--fondo-crema-alt); color: var(--tinta-media); font-size: 0.88rem; line-height: 1.45;
+}
+.pago-enlace { margin: 0 0 var(--esp-4); }
+.pago-enlace[hidden] { display: none; }
+.pago-enlace-caja { display: flex; gap: var(--esp-2); }
+.pago-enlace-caja input { flex: 1; min-width: 0; font-family: "JetBrains Mono", monospace; font-size: 0.8rem; }
+.pago-compartir { display: flex; flex-wrap: wrap; gap: var(--esp-2); margin-top: var(--esp-2); }
+.pago-compartir-wa { background: #25d366 !important; border-color: #25d366 !important; color: #0b3a1f !important; }
+
+/* Página pública del acudiente */
+.pagar-acudiente { max-width: calc(620px + 2 * var(--margen-pagina)); padding: var(--esp-6) var(--margen-pagina) var(--esp-8); }
+.pagar-tarjeta {
+  padding: 28px; border-radius: var(--radio-xl); background: var(--superficie);
+  border: 1px solid var(--borde-arena); box-shadow: 0 16px 40px rgba(20, 34, 25, 0.08); animation: rxPop 0.35s ease;
+}
+.pagar-tarjeta h1 { margin: 6px 0 12px; font-size: clamp(1.4rem, 1.1rem + 1.2vw, 1.85rem); line-height: 1.2; color: var(--tinta-fuerte); letter-spacing: -0.02em; }
+.pagar-detalle { margin: var(--esp-4) 0; padding: 16px 18px; border-radius: var(--radio-lg); background: var(--fondo-crema-alt); }
+.pagar-detalle .pago-fila span small { display: block; margin-top: 2px; font-size: 0.78rem; font-weight: 500; color: var(--tinta-tenue); }
+.pagar-form .auth-field-group { margin-bottom: var(--esp-3); }
+.pagar-form .btn-contact-wa-large { width: 100%; margin-top: var(--esp-3); }
+.pagar-form .btn-contact-wa-large:disabled { opacity: 0.75; cursor: progress; }
+.pagar-mensaje { text-align: center; }
+.pagar-mensaje .checkout-exito-icono { margin: 0 auto 12px; }
+.pagar-aviso .checkout-exito-icono { background: #fff3e0; color: #8a4b08; }
+@media (max-width: 640px) {
+  .pagar-tarjeta { padding: 20px 16px; }
+  .pago-quien { grid-template-columns: 1fr !important; }
+  .pago-compartir .btn-card-action { flex: 1 1 100%; text-align: center; justify-content: center; }
+}
+html[data-tema="oscuro"] .pagar-tarjeta { box-shadow: none; }
+html[data-tema="oscuro"] .pagar-detalle,
+html[data-tema="oscuro"] .pago-enlace-activo { background: rgba(255, 255, 255, 0.05); }
+html[data-tema="oscuro"] .pagar-aviso .checkout-exito-icono { background: rgba(222, 150, 70, 0.18); color: #f0bf85; }
+@media (prefers-reduced-motion: reduce) { .pagar-tarjeta { animation: none; } }

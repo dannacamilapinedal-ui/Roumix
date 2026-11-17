@@ -131,12 +131,38 @@ Los secretos de integridad y de eventos **nunca** salen del servidor.
 | Falla de la base de datos al procesar un evento | Se borra el registro del evento para que el reintento de Wompi sí se procese. |
 | Faltan las llaves | La pasarela y el webhook responden **503** y vuelve el simulador. |
 
-Los casos del acudiente con enlace vencido y del roommate que no paga se documentan en los módulos
-W-3 y W-6.
+## 5. Paga mi acudiente (Módulo W-3)
 
-## 5. Pruebas
+En el paso 3 del checkout, el estudiante elige **"Paga mi acudiente o familiar"** y crea un enlace.
+Puede copiarlo, enviarlo por WhatsApp o enviarlo por correo. El acudiente lo abre en
+`/pages/pagar.html?c=<código>` y paga con Wompi **sin crear cuenta**.
 
-Ejecútalas desde `backend/` con `ROUMIX_PRUEBAS_BD=si npm test -- 08`.
+| Regla | Cómo funciona |
+|---|---|
+| Vigencia | 24 horas desde que se crea. |
+| Un solo enlace activo | Si se crea uno nuevo, el anterior deja de servir. El estudiante también puede anularlo. |
+| Seguridad del código | Tiene 256 bits aleatorios. Roumix guarda solo su **huella SHA-256**, así que el código no se puede recuperar ni leer desde la base de datos. Por eso, si el estudiante lo pierde, crea uno nuevo. |
+| Qué ve el acudiente | Primer nombre del estudiante, título del inmueble, concepto, monto y fecha de vencimiento. Nunca ve direcciones, apellidos, correos ni datos del propietario. |
+| Datos del acudiente | Escribe su nombre y su correo. El nombre queda en el pago y en el recibo. El correo **solo se le pasa a Wompi** para su comprobante; Roumix no lo guarda. |
+
+### Casos límite del enlace
+
+| Caso | Qué pasa |
+|---|---|
+| El enlace venció | La página dice "Este enlace venció" y no deja abrir la pasarela (**410**). El estudiante crea uno nuevo. |
+| Un PSE empezó antes de vencer y el banco lo confirma después | **Sí se registra**: lo que cuenta es la referencia del intento, no el enlace. |
+| El estudiante creó otro enlace o anuló el anterior | El enlace viejo muestra "Este enlace ya no sirve" (**410**). |
+| El estudiante pagó él mismo | El enlace queda sin efecto y la página muestra "Este arriendo ya está pagado". |
+| Acudiente y estudiante pagan al mismo tiempo | El segundo cobro queda marcado como **"Cobro por devolver"** (ver la sección 4). |
+| Pago en proceso con el banco | La página del acudiente avisa y no deja pagar otra vez. |
+| Se intenta confirmar con una transacción del estudiante | **404**: el enlace solo confirma transacciones abiertas por el acudiente. |
+| Wompi no está activo | No se pueden crear enlaces (**503**). |
+
+## 6. Pruebas
+
+Ejecútalas desde `backend/` con `ROUMIX_PRUEBAS_BD=si npm test -- 08 09`.
+
+La prueba **09** suma 27 comprobaciones del enlace del acudiente: creación, huella, privacidad, vencimiento, anulación, PSE tardío y pago del propio estudiante.
 
 Son 33 comprobaciones con llaves inventadas: se simulan la API de Wompi y su webhook, firmados con el
 mismo algoritmo que usa Wompi. Cubren la firma, la verificación de eventos, los permisos, el rechazo,

@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Paga el primer mes de arriendo de un estudiante en Roumix, de forma segura con Wompi.">
+  <meta name="robots" content="noindex">
+  <!-- El enlace trae un código de pago: no se envía a otros sitios como "Referer" -->
+  <meta name="referrer" content="no-referrer">
+  <title>Pagar un arriendo — Roumix</title>
+  <script>try{if(localStorage.getItem("roumix_tema")==="oscuro"){document.documentElement.dataset.tema="oscuro";}}catch(e){}</script>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#142219">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="../css/style.css">
+  <script>(function(d){d.classList.add("rx-cargando");setTimeout(function(){if(d.classList.contains("rx-cargando"))d.classList.add("rx-mostrar")},300);setTimeout(function(){d.classList.remove("rx-mostrar","rx-cargando")},6000)})(document.documentElement)</script>
+</head>
+
+<body>
+  <header class="main-header login-header">
+    <div class="header-inner">
+      <div class="header-left">
+        <a href="/" class="logo">
+          <span class="logo-text">roumix</span><span class="logo-dot">.</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="pago-contenedor pagar-acudiente" id="pagar">
+      <p class="solicitud-cargando" role="status">Cargando el pago…</p>
+    </div>
+  </main>
+
+  <footer class="app-footer">
+    <div class="footer-bottom">
+      <small>© 2026 Roumix · Vivienda universitaria en Villavicencio · Pagos procesados por Wompi</small>
+    </div>
+  </footer>
+
+  <script src="../js/app.js"></script>
+  <script>
+    // "Paga mi acudiente": página PÚBLICA. El código del enlace (?c=) es la autorización;
+    // no hace falta cuenta. Los datos de la tarjeta se escriben en la ventana de Wompi.
+    document.addEventListener("DOMContentLoaded", () => {
+      const contenedor = document.getElementById("pagar");
+      const params = new URLSearchParams(location.search);
+      const codigo = params.get("c") || "";
+      const transaccionAlVolver = params.get("id");   // al volver del banco (PSE, Bancolombia)
+      const API = `${location.origin}/api/acudiente/${encodeURIComponent(codigo)}`;
+      const pesos = (n) => formatearPrecioCOP(n);
+      const fechaHora = (v) => new Date(v).toLocaleString("es-CO", { day: "numeric", month: "long", hour: "numeric", minute: "2-digit" });
+      const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
+      const ICONO_CANDADO = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+      const ICONO_ESCUDO = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg>';
+
+      async function pedir(ruta, opciones = {}) {
+        let res;
+        try {
+          res = await fetch(`${API}${ruta}`, { ...opciones, headers: { "Content-Type": "application/json" } });
+        } catch (e) {
+          throw new Error("No pudimos conectarnos con Roumix. Revisa tu conexión a internet e intenta de nuevo.");
+        }
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw Object.assign(new Error(json.message || "Ocurrió un error. Intenta de nuevo."), { status: res.status });
+        return json;
+      }
+
+      function mensajeFinal(tipo, titulo, texto) {
+        contenedor.innerHTML = `
+          <section class="pagar-tarjeta pagar-mensaje pagar-${tipo}" role="status">
+            <div class="checkout-exito-icono" aria-hidden="true">
+              ${tipo === "ok"
+                ? '<svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>'
+                : '<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V13"/><circle cx="12" cy="16.5" r=".6" fill="currentColor"/></svg>'}
+            </div>
+            <h1></h1>
+            <p class="checkout-texto"></p>
+          </section>`;
+        contenedor.querySelector("h1").textContent = titulo;
+        contenedor.querySelector("p").textContent = texto;
+      }
+
+      let promesaWidget = null;
+      function cargarWidget() {
+        if (window.WidgetCheckout) return Promise.resolve();
+        if (!promesaWidget) {
+          promesaWidget = new Promise((resolver, rechazar) => {
+            const s = document.createElement("script");
+            s.src = "https://checkout.wompi.co/widget.js";
+            s.onload = () => (window.WidgetCheckout ? resolver() : rechazar(new Error("widget")));
+            s.onerror = () => { promesaWidget = null; s.remove(); rechazar(new Error("widget")); };
+            document.head.appendChild(s);
+          });
+        }
+        return promesaWidget;
+      }
+
+      // Pregunta a Roumix (que consulta a Wompi). Si el banco sigue procesando, vuelve a preguntar.
+      async function confirmar(transaccionId, mostrarEstado) {
+        for (let vuelta = 0; vuelta < 12; vuelta++) {
+          const r = await pedir("/confirmar", { method: "POST", body: JSON.stringify({ transaccionId }) });
+          if (r.data.estadoWompi !== "PENDING") return r;
+          mostrarEstado(r.message);
+          await esperar(5000);
+        }
+        return { message: "El banco todavía no confirma el pago. No intentes pagar de nuevo: el estudiante recibirá el aviso apenas se confirme.", data: { estado: "pendiente", estadoWompi: "PENDING" } };
+      }
+
+      function pintar(d) {
+        if (d.estado === "pagado") {
+          return mensajeFinal("ok", "Este arriendo ya está pagado", `¡Gracias! ${d.referencia ? `Referencia ${d.referencia}. ` : ""}${d.estudiante} y el equipo de Roumix ya fueron avisados.`);
+        }
+        if (d.estado !== "listo" && d.estado !== "en_proceso") {
+          return mensajeFinal("aviso", d.estado === "vencido" ? "Este enlace venció" : "Este enlace ya no sirve", d.mensaje);
+        }
+        contenedor.innerHTML = `
+          ${d.modo === "sandbox" ? `<div class="contrato-demo" role="note"><strong>Modo de pruebas.</strong> Este pago no cobra dinero real: usa las tarjetas de prueba de Wompi.</div>` : ""}
+          <section class="pagar-tarjeta" aria-labelledby="pagar-titulo">
+            <span class="solicitud-numero">Pago de arriendo por enlace</span>
+            <h1 id="pagar-titulo">${escaparHTML(d.estudiante)} te pidió ayuda con su arriendo</h1>
+            <p class="checkout-texto">Con este enlace pagas el <strong>primer mes</strong> del arriendo universitario que ${escaparHTML(d.estudiante)}
+              consiguió a través de <strong>Roumix</strong>, una plataforma de vivienda para estudiantes en Villavicencio. No necesitas crear cuenta.</p>
+
+            <div class="pagar-detalle">
+              <div class="pago-fila"><span>${escaparHTML(d.concepto)}<small>${escaparHTML(d.inmueble)}</small></span><strong>${pesos(d.monto)}</strong></div>
+              <div class="pago-fila"><span>Tarifa de servicio de Roumix</span><strong>$0</strong></div>
+              <div class="pago-fila pago-total"><span>Total a pagar</span><strong>${pesos(d.monto)}</strong></div>
+              <p class="pago-nota">Este enlace vence el <strong>${fechaHora(d.expiraEn)}</strong> y solo sirve para este pago.</p>
+            </div>
+
+            <form id="form-pagador" class="pagar-form" novalidate>
+              <div class="auth-field-group">
+                <label for="pagador-nombre" class="auth-label">Tu nombre completo</label>
+                <input type="text" id="pagador-nombre" class="auth-input" autocomplete="name" maxlength="120" required>
+              </div>
+              <div class="auth-field-group">
+                <label for="pagador-correo" class="auth-label">Tu correo (para el comprobante de Wompi)</label>
+                <input type="email" id="pagador-correo" class="auth-input" autocomplete="email" maxlength="160" required>
+              </div>
+              <ul class="pago-confianza checkout-sellos">
+                <li>${ICONO_CANDADO} Pago cifrado en la ventana de Wompi (Bancolombia): Roumix no ve los datos de tu tarjeta</li>
+                <li>${ICONO_ESCUDO} El contrato del arriendo ya está formalizado por ambas partes</li>
+                <li>${ICONO_ESCUDO} Si no conoces a ${escaparHTML(d.estudiante)} o no esperabas este enlace, no pagues</li>
+              </ul>
+              <p class="pago-wompi-estado" id="pagar-estado" role="status" aria-live="polite"${d.estado === "en_proceso" ? "" : " hidden"}>${d.estado === "en_proceso" ? escaparHTML(d.mensaje) : ""}</p>
+              <p class="pub-mensaje pub-mensaje-error" id="pagar-error" role="alert" hidden></p>
+              <button type="submit" class="btn-contact-wa-large" id="btn-pagar"${d.estado === "en_proceso" ? " disabled" : ""}>${ICONO_CANDADO} Pagar ${pesos(d.monto)} con Wompi</button>
+            </form>
+          </section>`;
+        prepararFormulario();
+      }
+
+      function prepararFormulario() {
+        const form = document.getElementById("form-pagador");
+        const boton = document.getElementById("btn-pagar");
+        const estado = document.getElementById("pagar-estado");
+        const aviso = document.getElementById("pagar-error");
+        const textoBoton = boton.innerHTML;
+        const mostrarEstado = (t) => { estado.textContent = t; estado.hidden = !t; };
+        const ocupado = (t) => { boton.disabled = true; boton.textContent = t; };
+        const fallo = (t) => { aviso.textContent = t; aviso.hidden = false; mostrarEstado(""); boton.disabled = false; boton.innerHTML = textoBoton; };
+
+        form.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          aviso.hidden = true;
+          const nombre = document.getElementById("pagador-nombre").value.trim();
+          const correo = document.getElementById("pagador-correo").value.trim();
+          if (nombre.length < 3) return fallo("Escribe tu nombre completo.");
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(correo)) return fallo("Escribe un correo válido: ahí te llega el comprobante de Wompi.");
+          ocupado("Abriendo la pasarela segura…");
+          let datos;
+          try {
+            ({ data: datos } = await pedir("/wompi", { method: "POST", body: JSON.stringify({ nombre, correo }) }));
+            await cargarWidget();
+          } catch (err) {
+            if (err.status === 410) return iniciar();
+            return fallo(err.message === "widget" ? "No pudimos cargar la pasarela de Wompi. Revisa tu conexión e intenta de nuevo." : err.message);
+          }
+          mostrarEstado("Completa el pago en la ventana de Wompi.");
+          new window.WidgetCheckout({
+            currency: datos.moneda,
+            amountInCents: datos.montoCentavos,
+            reference: datos.referencia,
+            publicKey: datos.llavePublica,
+            signature: { integrity: datos.firmaIntegridad },
+            redirectUrl: datos.urlRetorno,
+            customerData: { email: datos.cliente.correo, fullName: datos.cliente.nombre }
+          }).open(async (resultado) => {
+            const tx = resultado && resultado.transaction;
+            if (!tx || !tx.id) return fallo("Cerraste la pasarela sin terminar el pago. No se hizo ningún cobro.");
+            ocupado("Confirmando el pago…");
+            mostrarEstado("Estamos confirmando el pago con Wompi. Puede tardar unos segundos.");
+            try {
+              const r = await confirmar(tx.id, mostrarEstado);
+              if (r.data.estado === "aprobado") {
+                if (typeof lanzarConfeti === "function") lanzarConfeti();
+                return mensajeFinal("ok", "¡Pago aprobado!", r.message);
+              }
+              if (r.data.estadoWompi === "PENDING") return mensajeFinal("aviso", "Pago en proceso", r.message);
+              fallo(r.message);
+            } catch (err) {
+              fallo(`${err.message} Si el banco te cobró, el pago se registrará solo en unos minutos: no pagues de nuevo.`);
+            }
+          });
+        });
+      }
+
+      async function iniciar() {
+        if (!codigo) return mensajeFinal("aviso", "Falta el enlace de pago", "Abre el enlace completo que te envió el estudiante.");
+        // Regreso desde el banco: se confirma la transacción y se limpia la dirección
+        if (transaccionAlVolver) {
+          history.replaceState(null, "", `pagar.html?c=${encodeURIComponent(codigo)}`);
+          contenedor.innerHTML = '<p class="solicitud-cargando" role="status">Confirmando el pago con el banco…</p>';
+          try {
+            const r = await confirmar(transaccionAlVolver, () => {});
+            if (r.data.estado === "aprobado") {
+              if (typeof lanzarConfeti === "function") lanzarConfeti();
+              return mensajeFinal("ok", "¡Pago aprobado!", r.message);
+            }
+            if (r.data.estadoWompi === "PENDING") return mensajeFinal("aviso", "Pago en proceso", r.message);
+            RoumixAvisos.mostrar(r.message, "error", 6000);
+          } catch (err) {
+            RoumixAvisos.mostrar(err.message, "error", 6000);
+          }
+        }
+        try {
+          const { data } = await pedir("");
+          pintar(data);
+        } catch (err) {
+          mensajeFinal("aviso", "No encontramos este pago", err.message);
+        }
+      }
+
+      iniciar();
+    });
+  </script>
+</body>
+</html>

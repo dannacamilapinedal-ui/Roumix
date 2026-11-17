@@ -58,7 +58,7 @@ function nuevaReferencia(pagoId) {
 }
 
 const SELECT_BLOQUEO = `
-  SELECT p.*, c.estado AS contrato_estado, s.estado AS solicitud_estado, s.inmueble_titulo, v.version_condiciones
+  SELECT p.*, c.estado AS contrato_estado, c.estudiante_nombre, s.estado AS solicitud_estado, s.inmueble_titulo, v.version_condiciones
   FROM pagos p
   JOIN contratos c ON c.id = p.contrato_id
   JOIN solicitudes s ON s.id = p.solicitud_id
@@ -77,55 +77,66 @@ function bloqueoDeCobro(p) {
 // 1. Iniciar el pago (el estudiante abre la pasarela)
 // ============================================================================
 
+/**
+ * Crea un intento de pago en Wompi para un pago YA BLOQUEADO (FOR UPDATE) y validado.
+ * Lo usan el estudiante (iniciar) y el acudiente por su enlace (acudienteController).
+ * opciones: { autorId, autorRol, origen: 'estudiante' | 'acudiente', enlaceId?, pagadorNombre? }
+ */
+async function crearIntento(cliente, cfg, p, { autorId = null, autorRol, origen = 'estudiante', enlaceId = null, pagadorNombre = null }) {
+  const bloqueo = bloqueoDeCobro(p);
+  if (bloqueo) throw errorHttp(409, bloqueo);
+  if (p.intentos >= MAX_INTENTOS) throw errorHttp(429, 'Se superó el número de intentos de este pago. Escríbele al equipo de Roumix.');
+
+  // Un pago en proceso (p. ej. PSE esperando al banco) no se puede duplicar
+  const { rows: abiertos } = await cliente.query(
+    `SELECT referencia FROM pagos_intentos_wompi WHERE pago_id = $1 AND estado = 'PENDING' LIMIT 1`, [p.id]);
+  if (abiertos.length) {
+    throw errorHttp(409, 'Ya hay un pago en proceso con el banco. Espera unos minutos a que se confirme antes de intentar de nuevo.');
+  }
+  const { rows: [{ n }] } = await cliente.query(
+    `SELECT count(*)::int AS n FROM pagos_intentos_wompi WHERE pago_id = $1 AND created_at > now() - interval '1 hour'`, [p.id]);
+  if (n >= MAX_APERTURAS_HORA) throw errorHttp(429, 'Se abrió la pasarela muchas veces. Espera un momento e intenta de nuevo.');
+
+  const referencia = nuevaReferencia(p.id);
+  const montoCentavos = p.monto * 100;
+  await cliente.query(
+    `INSERT INTO pagos_intentos_wompi (pago_id, referencia, monto_centavos, moneda, modo, creado_por, origen, enlace_id, pagador_nombre)
+     VALUES ($1, $2, $3, 'COP', $4, $5, $6, $7, $8)`,
+    [p.id, referencia, montoCentavos, cfg.modo, autorRol === 'estudiante' ? autorId : null, origen, enlaceId, pagadorNombre]
+  );
+  await pagos.registrarEvento(cliente, {
+    pagoId: p.id, tipo: 'intento_iniciado', referencia, monto: p.monto,
+    detalle: `Pasarela Wompi abierta${origen === 'acudiente' ? ' por el acudiente (enlace de pago)' : ''}${cfg.modo === 'sandbox' ? ' (modo de pruebas)' : ''}.`,
+    autorId, autorRol
+  });
+  return {
+    llavePublica: cfg.publica,
+    modo: cfg.modo,
+    referencia,
+    montoCentavos,
+    moneda: 'COP',
+    // La firma protege referencia + monto + moneda
+    firmaIntegridad: wompi.firmaIntegridad({ referencia, montoCentavos, moneda: 'COP' }, cfg)
+  };
+}
+
 /** POST /api/pagos/:id/wompi */
 async function iniciar(req, res) {
   const cfg = wompi.config();
   if (!cfg.activo) throw errorHttp(503, 'La pasarela de pagos no está disponible en este momento.');
   const id = idEntero(req.params.id);
 
-  const intento = await enTransaccion(async (cliente) => {
+  const datos = await enTransaccion(async (cliente) => {
     const { rows } = await cliente.query(SELECT_BLOQUEO, [id]);
     const p = rows[0];
     if (!p || p.estudiante_id !== req.usuario.id) throw errorHttp(404, 'No tienes un pago con ese número.');
-    const bloqueo = bloqueoDeCobro(p);
-    if (bloqueo) throw errorHttp(409, bloqueo);
-    if (p.intentos >= MAX_INTENTOS) throw errorHttp(429, 'Superaste el número de intentos. Escríbele al equipo de Roumix.');
-
-    // Un pago en proceso (p. ej. PSE esperando al banco) no se puede duplicar
-    const { rows: abiertos } = await cliente.query(
-      `SELECT referencia FROM pagos_intentos_wompi WHERE pago_id = $1 AND estado = 'PENDING' LIMIT 1`, [id]);
-    if (abiertos.length) {
-      throw errorHttp(409, 'Ya tienes un pago en proceso con tu banco. Espera unos minutos a que se confirme antes de intentar de nuevo.');
-    }
-    const { rows: [{ n }] } = await cliente.query(
-      `SELECT count(*)::int AS n FROM pagos_intentos_wompi WHERE pago_id = $1 AND created_at > now() - interval '1 hour'`, [id]);
-    if (n >= MAX_APERTURAS_HORA) throw errorHttp(429, 'Abriste la pasarela muchas veces. Espera un momento e intenta de nuevo.');
-
-    const referencia = nuevaReferencia(id);
-    const montoCentavos = p.monto * 100;
-    await cliente.query(
-      `INSERT INTO pagos_intentos_wompi (pago_id, referencia, monto_centavos, moneda, modo, creado_por)
-       VALUES ($1, $2, $3, 'COP', $4, $5)`,
-      [id, referencia, montoCentavos, cfg.modo, req.usuario.id]
-    );
-    await pagos.registrarEvento(cliente, {
-      pagoId: id, tipo: 'intento_iniciado', referencia, monto: p.monto,
-      detalle: `Pasarela Wompi abierta${cfg.modo === 'sandbox' ? ' (modo de pruebas)' : ''}.`,
-      autorId: req.usuario.id, autorRol: 'estudiante'
-    });
-    return { referencia, montoCentavos };
+    return crearIntento(cliente, cfg, p, { autorId: req.usuario.id, autorRol: 'estudiante', origen: 'estudiante' });
   });
 
-  // Datos para el widget. La firma protege referencia + monto + moneda.
   res.json({
     status: 'success',
     data: {
-      llavePublica: cfg.publica,
-      modo: cfg.modo,
-      referencia: intento.referencia,
-      montoCentavos: intento.montoCentavos,
-      moneda: 'COP',
-      firmaIntegridad: wompi.firmaIntegridad({ referencia: intento.referencia, montoCentavos: intento.montoCentavos, moneda: 'COP' }, cfg),
+      ...datos,
       urlRetorno: `${notificaciones.urlBase(req)}/pages/pago.html?pago=${id}`,
       cliente: { correo: req.usuario.email, nombre: req.usuario.nombre }
     }
@@ -195,11 +206,22 @@ async function aplicarTransaccion(tx, { actor = null, ip = null, req = null } = 
           resumen: `Cobro de más: transacción ${tx.id} aprobada con el pago en estado "${p.estado}".`, datos: { referencia: it.referencia, transaccion: tx.id }, ip }, cliente);
         return { resultado: 'requiere_devolucion', pagoId: p.id, p, aviso: 'requiere_devolucion', tx };
       }
+      const porAcudiente = it.origen === 'acudiente';
       await pagos.aprobar(cliente, p, {
         ref: it.referencia, metodo,
-        detalle: `${wompi.NOMBRES_METODO[metodo]}: aprobado por Wompi${it.modo === 'sandbox' ? ' (modo de pruebas)' : ''} · transacción ${tx.id}.`,
+        detalle: `${wompi.NOMBRES_METODO[metodo]}: aprobado por Wompi${it.modo === 'sandbox' ? ' (modo de pruebas)' : ''} · transacción ${tx.id}` +
+          `${porAcudiente ? ` · pagó el acudiente${it.pagador_nombre ? ` (${it.pagador_nombre})` : ''} con el enlace de pago` : ''}.`,
         simulado: false, modoWompi: it.modo, transaccionId: tx.id, actor, autorRol: actor ? 'estudiante' : 'sistema', ip
       });
+      // Quién pagó (para el recibo) y el enlace del acudiente ya no sirve
+      await cliente.query('UPDATE pagos SET pagado_por = $2, pagador_nombre = $3 WHERE id = $1',
+        [p.id, porAcudiente ? 'acudiente' : 'estudiante', porAcudiente ? it.pagador_nombre : null]);
+      await cliente.query(
+        `UPDATE pagos_enlaces SET estado = CASE WHEN id = $2 THEN 'usado' ELSE 'revocado' END,
+           usado_en = CASE WHEN id = $2 THEN now() ELSE usado_en END
+         WHERE pago_id = $1 AND estado = 'activo'`,
+        [p.id, it.enlace_id]
+      );
       return { resultado: 'aprobado', pagoId: p.id, estado: 'aprobado', mensaje, p: { ...p, referencia: it.referencia }, aviso: 'aprobado' };
     }
 
@@ -302,4 +324,4 @@ async function recibirEvento(req, res) {
   res.json({ status: 'success', resultado });
 }
 
-module.exports = { iniciar, confirmar, recibirEvento, aplicarTransaccion, nuevaReferencia };
+module.exports = { iniciar, confirmar, recibirEvento, aplicarTransaccion, nuevaReferencia, crearIntento, SELECT_BLOQUEO, bloqueoDeCobro, enTransaccion, errorHttp };
