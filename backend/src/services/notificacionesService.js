@@ -667,6 +667,51 @@ async function notificarPago({ pago, evento, detalle, urlBase }) {
 }
 
 /**
+ * Cobros mensuales del débito automático: aprobado (estudiante y propietario), fallido o vencido
+ * (estudiante; si quedó vencido, también el equipo) y cobros por devolver (equipo).
+ */
+async function notificarCobro({ cobro, evento, detalle, proximo, urlBase }) {
+  try {
+    const pesos = (n) => '$' + Number(n || 0).toLocaleString('es-CO');
+    const boton = { texto: 'Ver mis pagos', url: urlBase + '/pages/pago.html?id=' + cobro.pago_id };
+    const ids = [cobro.estudiante_id, cobro.propietario_id].filter(Boolean);
+    const { rows } = ids.length ? await db.query("SELECT id, email, nombre FROM usuarios WHERE id = ANY($1) AND estado = 'activo'", [ids]) : { rows: [] };
+    const estudiante = rows.find((u) => u.id === cobro.estudiante_id);
+    const propietario = rows.find((u) => u.id === cobro.propietario_id);
+    const lugar = escapar(cobro.inmueble_titulo || '');
+    const mes = cobro.numero_mes;
+    const envios = [];
+    if (evento === 'aprobado') {
+      if (estudiante) envios.push(enviar({ para: estudiante.email, asunto: 'Cobramos el mes ' + mes + ' de tu arriendo', contenido: {
+        titulo: 'Débito automático aplicado',
+        parrafos: ['Cobramos ' + pesos(cobro.monto) + ' del mes ' + mes + ' de <strong>' + lugar + '</strong>.', 'Referencia: ' + escapar(cobro.referencia || '') + '.'], boton } }));
+      if (propietario) envios.push(enviar({ para: propietario.email, asunto: 'Recibimos el mes ' + mes + ' de tu arriendo', contenido: {
+        titulo: 'Pago mensual recibido',
+        parrafos: ['Canon: ' + pesos(cobro.monto) + ' · Comisión Roumix: ' + pesos(cobro.comision) + ' · Tu desembolso: <strong>' + pesos(cobro.neto_propietario) + '</strong>.'], boton } }));
+    }
+    if ((evento === 'fallido' || evento === 'vencido') && estudiante) {
+      envios.push(enviar({ para: estudiante.email, asunto: 'No pudimos cobrar el mes ' + mes + ' de tu arriendo', contenido: {
+        titulo: evento === 'vencido' ? 'El cobro mensual no se pudo hacer' : 'Falló el cobro mensual',
+        parrafos: [escapar(detalle || ''), evento === 'vencido'
+          ? 'Ya hicimos 3 intentos. El equipo de Roumix te escribirá para resolverlo. Roumix no cobra recargos; los de mora son los que diga tu contrato.'
+          : 'Lo intentaremos de nuevo el <strong>' + escapar(proximo || '') + '</strong>. Revisa tu saldo o cambia el medio de pago.'], boton } }));
+    }
+    if (evento === 'vencido' || evento === 'devolver') {
+      envios.push(enviar({ para: await correosAdministradores(),
+        asunto: evento === 'vencido' ? 'Cobro mensual vencido · mes ' + mes : 'Revisar cobro mensual de más · mes ' + mes,
+        contenido: {
+          titulo: evento === 'vencido' ? 'Un cobro mensual falló 3 veces' : 'Wompi aprobó un cobro mensual que no correspondía',
+          parrafos: [lugar + ' · mes ' + mes + ' · ' + pesos(cobro.monto) + '.', escapar(detalle || '')],
+          boton: { texto: 'Abrir el panel', url: urlBase + '/pages/admin.html#pagos' } } }));
+    }
+    return (await Promise.all(envios)).some(Boolean);
+  } catch (error) {
+    console.error('⚠️ Notificación de cobro mensual:', error.message);
+    return false;
+  }
+}
+
+/**
  * Al propietario: Roumix publicó condiciones nuevas de la comisión y debe aceptarlas.
  */
 async function notificarCondicionesNuevas({ propietario, version, cambios, urlBase }) {
@@ -718,6 +763,7 @@ module.exports = {
   notificarContrato,
   notificarPago,
   notificarCondicionesNuevas,
+  notificarCobro,
   enviarRecuperacion,
   urlBase,
   usarTransporte,

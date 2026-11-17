@@ -12,6 +12,7 @@ const { crearAviso } = require('../services/avisosService');
 const pagos = require('../services/pagosService');
 const wompi = require('../services/wompiService');
 const acudiente = require('./acudienteController');
+const debito = require('./debitoController');
 const { auditar } = require('../services/auditoriaService');
 
 const METODOS = { tarjeta_simulada: 'Tarjeta (simulada)', pse_simulado: 'PSE (simulado)', nequi_simulado: 'Nequi (simulado)' };
@@ -122,6 +123,8 @@ async function verPago(req, res) {
       metodo_nombre: wompi.NOMBRES_METODO[p.metodo] || METODOS[p.metodo] || null,
       // Enlace activo para el acudiente (solo cuándo vence; el código nunca se vuelve a mostrar)
       enlace: req.usuario.rol === 'estudiante' ? await acudiente.enlaceActivo(id) : null,
+      // Débito automático de los meses siguientes (estado, plan y cobros)
+      debito: await debito.resumenParaPago(id, req.usuario),
       // Qué pasarela se usa para pagar: Wompi (pruebas o real) o el simulador
       pasarela: cfg.activo ? { tipo: 'wompi', modo: cfg.modo } : { tipo: 'simulador' }
     }

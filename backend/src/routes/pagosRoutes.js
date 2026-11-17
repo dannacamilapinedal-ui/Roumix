@@ -3,6 +3,7 @@ const router = express.Router();
 const pagosController = require('../controllers/pagosController');
 const wompiController = require('../controllers/wompiController');
 const acudienteController = require('../controllers/acudienteController');
+const debitoController = require('../controllers/debitoController');
 const { requireAuth, requireRol } = require('../middleware/auth');
 
 // Pagos del primer canon: con Wompi si está configurado; si no, con el simulador.
@@ -29,6 +30,11 @@ router.post('/:id/enlace', requireRol('estudiante'), acudienteController.crearEn
 
 // DELETE /api/pagos/:id/enlace - El estudiante anula el enlace activo
 router.delete('/:id/enlace', requireRol('estudiante'), acudienteController.anularEnlace);
+
+// Débito automático mensual (meses 2 en adelante)
+router.get('/:id/debito/preparar', requireRol('estudiante'), debitoController.preparar);
+router.post('/:id/debito', requireRol('estudiante'), debitoController.activar);
+router.delete('/:id/debito', requireRol('estudiante'), debitoController.desactivar);
 
 // POST /api/pagos/:id/disputa - El estudiante reporta un problema con un pago aprobado
 router.post('/:id/disputa', requireRol('estudiante'), pagosController.abrirDisputa);

@@ -58,7 +58,9 @@ const RUTAS_ADMIN = [
   ['POST', /^\/pagos\/(\d+)\/devolucion$/, 'devolucion_registrada', 'pago'],
   ['POST', /^\/pagos\/(\d+)\/resolver-disputa$/, 'disputa_resuelta', 'pago'],
   ['POST', /^\/pagos\/(\d+)\/cancelar$/, 'pago_cancelado', 'pago'],
-  ['POST', /^\/condiciones\/avisar$/, 'condiciones_avisadas', 'condiciones']
+  ['POST', /^\/condiciones\/avisar$/, 'condiciones_avisadas', 'condiciones'],
+  ['POST', /^\/cobros\/procesar$/, 'cobros_procesados', 'cobro'],
+  ['POST', /^\/cobros\/(\d+)\/desembolso$/, 'desembolso_mensual_registrado', 'cobro']
 ];
 
 function accionAdmin(metodo, ruta) {

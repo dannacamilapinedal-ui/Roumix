@@ -8488,3 +8488,39 @@ html[data-tema="oscuro"] .pagar-aviso .checkout-exito-icono { background: rgba(2
 .verif-condiciones-nuevas li { margin: 2px 0; }
 .admin-condiciones { margin-bottom: var(--esp-4); }
 html[data-tema="oscuro"] .verif-condiciones-nuevas { background: rgba(222, 150, 70, 0.12); border-color: rgba(222, 150, 70, 0.3); color: #f0d3a8; }
+
+/* ==========================================================================
+   W-5b — Débito automático mensual
+   ========================================================================== */
+.debito {
+  margin-top: var(--esp-5); padding: 20px; border-radius: var(--radio-lg);
+  border: 1px solid var(--borde-arena); background: var(--superficie); text-align: left;
+}
+.debito-activo { border-color: var(--verde-800); }
+.debito-cabeza { display: flex; align-items: center; justify-content: space-between; gap: var(--esp-3); margin-bottom: var(--esp-2); }
+.debito-cabeza h3 { margin: 0; font-size: 1.05rem; color: var(--tinta-fuerte); }
+.debito-subtitulo { margin: var(--esp-3) 0 var(--esp-2); font-size: 0.72rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tinta-tenue); }
+.debito-cobros { list-style: none; margin: 0 0 var(--esp-3); padding: 0; border: 1px solid var(--borde-arena); border-radius: var(--radio-md); overflow: hidden; }
+.debito-cobro { display: flex; align-items: center; justify-content: space-between; gap: var(--esp-3); padding: 10px 14px; }
+.debito-cobro + .debito-cobro { border-top: 1px solid var(--borde-arena); }
+.debito-cobro > div:first-child { display: flex; flex-direction: column; min-width: 0; }
+.debito-cobro > div:first-child strong { font-size: 0.92rem; color: var(--tinta-fuerte); }
+.debito-cobro > div:first-child span { font-size: 0.8rem; color: var(--tinta-tenue); }
+.debito-cobro-monto { display: flex; align-items: center; gap: var(--esp-2); flex-wrap: wrap; justify-content: flex-end; }
+.debito-cobro-monto strong { font-size: 0.95rem; color: var(--tinta-fuerte); }
+.debito .btn-contact-wa-large { width: 100%; }
+.debito-form { margin-top: var(--esp-4); }
+.debito-form[hidden] { display: none; }
+.debito-campos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--esp-3); margin-bottom: var(--esp-3); }
+.debito-campos[hidden] { display: none; }
+.debito-campo-ancho { grid-column: 1 / -1; }
+.debito-campo .form-control { width: 100%; }
+.debito-franquicia { margin-left: 6px; color: var(--texto-verde-oscuro); font-weight: 800; text-transform: none; letter-spacing: 0; }
+@media (max-width: 640px) {
+  .debito { padding: 16px; }
+  .debito-cobro { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .debito-cobro-monto { justify-content: flex-start; }
+}
+html[data-tema="oscuro"] .debito-activo { border-color: #315c44; }
+.admin-subtitulo { margin: var(--esp-6) 0 var(--esp-3); padding-top: var(--esp-4); border-top: 1px solid var(--borde-arena); font-size: 1.1rem; color: var(--tinta-fuerte); }
+.debito .btn-contact-wa-large[hidden], .debito .btn-card-action[hidden] { display: none; }

@@ -667,7 +667,76 @@ document.addEventListener("DOMContentLoaded", async () => {
     contador.hidden = n === 0;
   }
 
+  // Cobros mensuales del débito automático (meses 2 en adelante)
+  const ESTADO_COBRO = { programado: ["Programado", "en_revision"], en_proceso: ["En proceso", "en_revision"], aprobado: ["Cobrado", "aprobada"],
+    fallido: ["Reintentando", "pendiente"], vencido: ["Vencido", "rechazada"], cancelado: ["Cancelado", "neutro"] };
+  async function cargarCobros() {
+    const contenedor = document.getElementById("lista-cobros-admin");
+    mostrarCarga(contenedor);
+    try {
+      const r = await RoumixAPI.admin(`/cobros?estado=${encodeURIComponent(document.getElementById("filtro-cobros").value)}`);
+      document.getElementById("btn-procesar-cobros").disabled = !r.habilitado;
+      if (!r.habilitado) {
+        document.getElementById("cobros-ayuda").textContent = r.motivo === "falta_llave_privada"
+          ? "Para cobrar por débito automático falta la llave privada de Wompi (WOMPI_PRIVATE_KEY) en Vercel."
+          : "El débito automático necesita Wompi activo.";
+      }
+      if (!r.data.length) return vacio(contenedor, "No hay cobros mensuales con este filtro.");
+      contenedor.innerHTML = listaTarjetas(r.data.map((c) => {
+        const [texto, tipo] = ESTADO_COBRO[c.estado] || [c.estado, "neutro"];
+        return tarjeta({
+          ref: `Cobro #${c.id} · mes ${c.numero_mes}${c.referencia ? ` · ${escaparHTML(c.referencia)}` : ""}`,
+          titulo: escaparHTML(c.inmueble_titulo),
+          sub: `${escaparHTML(c.estudiante_nombre || "—")} → ${escaparHTML(c.propietario_nombre || "—")} · ${escaparHTML(c.fuente_descripcion)}${c.modo === "sandbox" ? " · pruebas" : ""}`,
+          estado: chip(texto, tipo) + (c.desembolso_estado ? `<small>Desembolso ${c.desembolso_estado === "realizado" ? "realizado" : "pendiente"}</small>` : ""),
+          destacada: c.estado === "vencido" || (c.estado === "aprobado" && c.desembolso_estado === "pendiente"),
+          datos: [
+            ["Fecha de cobro", c.estado === "fallido" && c.proximo_intento ? `Reintento ${escaparHTML(c.proximo_intento)}` : escaparHTML(c.fecha_cobro)],
+            ["Canon", `<strong>${formatearPrecioCOP(c.monto)}</strong>`],
+            ["Comisión (5 %)", formatearPrecioCOP(c.comision)],
+            ["Al propietario", formatearPrecioCOP(c.neto_propietario)],
+            ["Intentos", String(c.intentos)],
+            ...(c.ultimo_error && c.estado !== "aprobado" ? [["Último error", escaparHTML(c.ultimo_error)]] : [])
+          ],
+          acciones: (c.estado === "aprobado" && c.desembolso_estado === "pendiente"
+            ? `<button type="button" class="btn-card-action" data-cobro-desembolso="${c.id}">Registrar desembolso</button>` : "") +
+            `<a class="btn-card-action" href="pago.html?id=${c.pago_id}" target="_blank" rel="noopener">Ver pago</a>`
+        });
+      }).join(""));
+    } catch (error) {
+      mostrarError(contenedor, error);
+    }
+  }
+  document.getElementById("filtro-cobros").addEventListener("change", cargarCobros);
+  document.getElementById("btn-procesar-cobros").addEventListener("click", async (e) => {
+    if (!confirm("¿Ejecutar ahora los cobros que vencen hoy? Se cobrará con el medio guardado de cada estudiante.")) return;
+    e.target.disabled = true;
+    try {
+      const r = await RoumixAPI.admin("/cobros/procesar", { method: "POST" });
+      RoumixAvisos.mostrar(r.message, "exito", 6000);
+      cargarCobros();
+    } catch (err) {
+      RoumixAvisos.mostrar(err.message, "error", 6000);
+    }
+    e.target.disabled = false;
+  });
+  document.getElementById("lista-cobros-admin").addEventListener("click", async (e) => {
+    const boton = e.target.closest("button[data-cobro-desembolso]");
+    if (!boton) return;
+    if (!confirm("¿Registrar que ya se transfirió el 95 % al propietario?")) return;
+    boton.disabled = true;
+    try {
+      const r = await RoumixAPI.admin(`/cobros/${boton.dataset.cobroDesembolso}/desembolso`, { method: "POST" });
+      RoumixAvisos.mostrar(r.message, "exito", 5000);
+      cargarCobros();
+    } catch (err) {
+      RoumixAvisos.mostrar(err.message, "error", 5000);
+      boton.disabled = false;
+    }
+  });
+
   async function cargarPagos() {
+    cargarCobros();
     const contenedor = document.getElementById("lista-pagos-admin");
     mostrarCarga(contenedor);
     try {

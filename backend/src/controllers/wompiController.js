@@ -154,6 +154,8 @@ async function iniciar(req, res) {
  */
 async function aplicarTransaccion(tx, { actor = null, ip = null, req = null } = {}) {
   const cfg = wompi.config();
+  // Los cobros mensuales del débito automático (referencias RMXM-) tienen su propia lógica
+  if (String(tx.reference || '').startsWith('RMXM-')) return require('./debitoController').aplicarCobro(tx, { req });
   const estado = String(tx.status || '').toUpperCase();
   if (!['PENDING', 'APPROVED', 'DECLINED', 'VOIDED', 'ERROR'].includes(estado)) return { resultado: 'estado_desconocido' };
 

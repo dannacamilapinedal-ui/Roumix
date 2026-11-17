@@ -6,6 +6,7 @@ const mensajesController = require('../controllers/mensajesController');
 const contratosController = require('../controllers/contratosController');
 const pagosController = require('../controllers/pagosController');
 const condicionesController = require('../controllers/condicionesController');
+const debitoController = require('../controllers/debitoController');
 const { requireAuth, requireRol } = require('../middleware/auth');
 const auditoriaAdmin = require('../middleware/auditoriaAdmin');
 const { auditar } = require('../services/auditoriaService');
@@ -56,6 +57,11 @@ router.post('/contratos/:id/cancelar', contratosController.cancelarContrato);
 // Condiciones de la comisión: aviso a propietarios de una versión nueva
 router.get('/condiciones', condicionesController.resumen);
 router.post('/condiciones/avisar', condicionesController.avisar);
+
+// Débito automático: cobros mensuales, ejecución manual y desembolsos
+router.get('/cobros', debitoController.listarAdmin);
+router.post('/cobros/procesar', debitoController.procesarAdmin);
+router.post('/cobros/:id/desembolso', debitoController.desembolsoAdmin);
 
 router.get('/pagos', pagosController.listarAdmin);
 router.get('/pagos/:id', pagosController.detalleAdmin);

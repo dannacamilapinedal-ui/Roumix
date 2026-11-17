@@ -171,11 +171,55 @@ mes cobrado.
   por propietario y versión (tabla `condiciones_avisos`).
 - **Aceptación:** en **Mi verificación**, el propietario ve qué cambia y acepta la versión nueva.
 
-## 7. Pruebas
+## 7. Débito automático mensual (Módulo W-5b)
+
+Después de pagar el primer mes, el estudiante puede activar el **débito automático** en la confirmación
+del pago. Así Roumix cobra cada mes el canon de los meses 2 en adelante con su tarjeta o su Nequi.
+
+**Requisitos:**
+- El primer mes está pagado y el contrato está formalizado, con al menos 2 meses.
+- El propietario aceptó las condiciones **2026-12**.
+- En el servidor está configurada `WOMPI_PRIVATE_KEY`. Sin ella no se activa ni se cobra.
+
+**Cómo se activa:**
+1. `GET /api/pagos/:id/debito/preparar` entrega los **términos de Wompi** y la **autorización de datos
+   personales**, que el estudiante debe aceptar, junto con la llave pública.
+2. El navegador **tokeniza directo con Wompi**:
+   - Tarjeta: `POST /tokens/cards`. Antes se valida en la página la franquicia, el número (Luhn), la
+     fecha de vencimiento y el CVC.
+   - Nequi: `POST /tokens/nequi`. El estudiante aprueba la suscripción en la app de Nequi.
+
+   **Los datos de la tarjeta nunca pasan por Roumix.**
+3. `POST /api/pagos/:id/debito`: el servidor crea la **fuente de pago** con la llave privada y guarda
+   solo su id y una descripción, por ejemplo "VISA •••• 4242". Luego programa los cobros.
+
+**Fecha de cada cobro:** se cobra el primer "día de pago" del contrato que cae **dentro** de cada mes,
+nunca antes de que ese mes empiece. Si se activa tarde, el mes que sigue vigente se cobra al día
+siguiente y los meses ya terminados no se cobran. Para fechas de fin de mes, el 31 de enero más un
+mes es el 28 de febrero.
+
+**Tarea diaria (3 a. m.):** cobra con `POST /transactions`, usando la fuente guardada, `recurrent: true`
+y la firma de integridad. El panel tiene además el botón **"Ejecutar los cobros de hoy"**. La misma
+tarea revisa con Wompi los cobros que llevan más de 2 horas "en proceso".
+
+**Comisión:** 5 % de cada mes, a cargo del propietario. El 95 % queda como desembolso pendiente, que
+el administrador registra en el panel.
+
+| Caso | Qué pasa |
+|---|---|
+| Fondos insuficientes, rechazo o error | Se reintenta al día siguiente y luego a los 2 días (3 intentos en 3 días). Se avisa al estudiante cada vez. |
+| Fallan los 3 intentos | El cobro queda **vencido**, sin más intentos automáticos, y se avisa al equipo. **Roumix no suma recargos**: los de mora son solo los del contrato. |
+| La tarea corre dos veces el mismo día | No se cobra dos veces: el cobro queda reservado "en proceso" antes de pedírselo a Wompi. |
+| El webhook llega después de aplicar el cobro | No cambia nada (idempotente). |
+| Wompi aprueba un cobro ya pagado o cancelado | Queda para devolver y se avisa al equipo. |
+| El estudiante desactiva el débito | Se cancelan los cobros futuros; los ya cobrados no cambian y uno en proceso se deja terminar. |
+| El propietario no aceptó las condiciones 2026-12 | El débito no se puede activar y la página lo explica. |
+
+## 8. Pruebas
 
 Ejecútalas desde `backend/` con `ROUMIX_PRUEBAS_BD=si npm test -- 08 09`.
 
-La prueba **10** (11 comprobaciones) cubre las condiciones nuevas y el aviso único. La prueba **09** suma 27 comprobaciones del enlace del acudiente: creación, huella, privacidad, vencimiento, anulación, PSE tardío y pago del propio estudiante.
+La prueba **11** (33 comprobaciones) cubre el débito: plan de fechas, activación, cobro, idempotencia, reintentos, vencimiento sin recargos, desembolso y desactivación. La prueba **10** (11 comprobaciones) cubre las condiciones nuevas y el aviso único. La prueba **09** suma 27 comprobaciones del enlace del acudiente: creación, huella, privacidad, vencimiento, anulación, PSE tardío y pago del propio estudiante.
 
 Son 33 comprobaciones con llaves inventadas: se simulan la API de Wompi y su webhook, firmados con el
 mismo algoritmo que usa Wompi. Cubren la firma, la verificación de eventos, los permisos, el rechazo,

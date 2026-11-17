@@ -146,7 +146,7 @@
       </section>
 
       <section class="admin-panel" id="panel-pagos" aria-labelledby="tab-pagos" hidden>
-        <p class="contrato-demo"><strong>Pagos demostrativos.</strong> Roumix aún no tiene un proveedor de pagos autorizado: no se mueve dinero real.</p>
+        <p class="contrato-demo" id="pagos-aviso"><strong>Pagos con Wompi.</strong> Con llaves de pruebas no se mueve dinero real. Las devoluciones se hacen en el panel de Wompi y se registran aquí.</p>
         <div id="pagos-totales" class="admin-metricas admin-metricas-pagos"></div>
         <div id="pagos-esperando"></div>
         <div class="admin-filtros">
@@ -162,6 +162,20 @@
           </select>
         </div>
         <div id="lista-pagos-admin" class="admin-lista"></div>
+
+        <h3 class="admin-subtitulo">Cobros mensuales · débito automático</h3>
+        <div class="admin-filtros">
+          <label for="filtro-cobros">Mostrar</label>
+          <select id="filtro-cobros">
+            <option value="todos" selected>Todos</option>
+            <option value="programados">Programados o en proceso</option>
+            <option value="por_desembolsar">Por desembolsar</option>
+            <option value="problemas">Fallidos o vencidos</option>
+          </select>
+          <button type="button" class="btn-card-action" id="btn-procesar-cobros">Ejecutar los cobros de hoy</button>
+        </div>
+        <p class="fotos-ayuda" id="cobros-ayuda">La tarea diaria cobra automáticamente a las 3 a. m. Este botón hace lo mismo ahora (útil para probar).</p>
+        <div id="lista-cobros-admin" class="admin-lista"></div>
       </section>
 
       <section class="admin-panel" id="panel-mensajes" aria-labelledby="tab-mensajes" hidden>

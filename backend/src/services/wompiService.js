@@ -159,7 +159,104 @@ function mensajeHumano(estado, mensajeWompi) {
   return 'Tu banco o medio de pago rechazó la transacción. No se hizo ningún cobro; puedes intentarlo de nuevo o usar otro medio.';
 }
 
+// ============================================================================
+// Débito automático: aceptación, fuentes de pago y cobros sin el cliente presente
+// ============================================================================
+
+/** Llamada a la API de Wompi con tiempo límite y errores claros. */
+async function llamar(metodo, ruta, { cuerpo = null, llave = null, cabeceras = {} } = {}, cfg = config()) {
+  if (!cfg.activo) throw Object.assign(new Error('Wompi no está configurado.'), { status: 503 });
+  const control = new AbortController();
+  const tiempo = setTimeout(() => control.abort(), 15000);
+  try {
+    const res = await fetch(`${cfg.api}${ruta}`, {
+      method: metodo,
+      headers: { ...(cuerpo ? { 'Content-Type': 'application/json' } : {}), ...(llave ? { Authorization: `Bearer ${llave}` } : {}), ...cabeceras },
+      body: cuerpo ? JSON.stringify(cuerpo) : undefined,
+      signal: control.signal
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const detalle = json.error && (json.error.reason || JSON.stringify(json.error.messages || '')).slice(0, 200);
+      throw Object.assign(new Error(`Wompi rechazó la solicitud${detalle ? `: ${detalle}` : '.'}`), { status: res.status >= 500 ? 502 : 422, wompi: json.error });
+    }
+    return json.data;
+  } catch (error) {
+    if (error.name === 'AbortError') throw Object.assign(new Error('Wompi tardó demasiado en responder. Intenta de nuevo.'), { status: 504 });
+    if (error.status) throw error;
+    throw Object.assign(new Error('No pudimos comunicarnos con Wompi. Intenta de nuevo en un momento.'), { status: 502 });
+  } finally {
+    clearTimeout(tiempo);
+  }
+}
+
+/** El débito necesita además la llave privada (crear fuentes y cobrar sin el cliente). */
+function configDebito() {
+  const cfg = config();
+  if (!cfg.activo) return { ...cfg, debito: false, motivo: cfg.motivo || 'wompi_inactivo' };
+  if (!cfg.privada) return { ...cfg, debito: false, motivo: 'falta_llave_privada' };
+  return { ...cfg, debito: true };
+}
+
+/**
+ * Tokens de aceptación del comercio: términos de uso y autorización de datos personales.
+ * El cliente debe VER los dos enlaces y aceptarlos antes de guardar su medio de pago.
+ */
+async function obtenerAceptacion(cfg = config()) {
+  let datos;
+  try {
+    datos = await llamar('GET', '/merchants/info', { cabeceras: { 'x-merchant-public-key': cfg.publica } }, cfg);
+  } catch (error) {
+    // Respaldo: la ruta anterior (Wompi anunció que dejará de existir)
+    datos = await llamar('GET', `/merchants/${encodeURIComponent(cfg.publica)}`, {}, cfg);
+  }
+  const terminos = datos && datos.presigned_acceptance;
+  const personales = datos && datos.presigned_personal_data_auth;
+  if (!terminos || !terminos.acceptance_token) throw Object.assign(new Error('Wompi no entregó los términos de aceptación.'), { status: 502 });
+  return {
+    aceptacion: { token: terminos.acceptance_token, enlace: terminos.permalink },
+    datosPersonales: personales ? { token: personales.acceptance_token, enlace: personales.permalink } : null
+  };
+}
+
+/** Crea la fuente de pago (tarjeta o Nequi ya tokenizados en el navegador). Requiere la llave privada. */
+async function crearFuentePago({ tipo, token, correo, aceptacion, datosPersonales }, cfg = configDebito()) {
+  if (!cfg.debito) throw Object.assign(new Error('El débito automático no está disponible: falta la llave privada de Wompi.'), { status: 503 });
+  return llamar('POST', '/payment_sources', {
+    llave: cfg.privada,
+    cuerpo: {
+      type: tipo,
+      token,
+      customer_email: correo,
+      acceptance_token: aceptacion,
+      ...(datosPersonales ? { accept_personal_auth: datosPersonales } : {})
+    }
+  }, cfg);
+}
+
+/** Cobra a una fuente de pago guardada, sin el cliente presente. */
+async function cobrarFuente({ referencia, montoCentavos, correo, fuenteId, metodo }, cfg = configDebito()) {
+  if (!cfg.debito) throw Object.assign(new Error('El débito automático no está disponible: falta la llave privada de Wompi.'), { status: 503 });
+  return llamar('POST', '/transactions', {
+    llave: cfg.privada,
+    cuerpo: {
+      amount_in_cents: montoCentavos,
+      currency: 'COP',
+      signature: firmaIntegridad({ referencia, montoCentavos, moneda: 'COP' }, cfg),
+      customer_email: correo,
+      reference: referencia,
+      payment_source_id: Number(fuenteId) || fuenteId,
+      recurrent: true,
+      ...(metodo === 'tarjeta' ? { payment_method: { installments: 1 } } : {})
+    }
+  }, cfg);
+}
+
 module.exports = {
+  configDebito,
+  obtenerAceptacion,
+  crearFuentePago,
+  cobrarFuente,
   config,
   firmaIntegridad,
   verificarEvento,

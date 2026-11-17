@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { limpiarCuentasSinConfirmar } = require('../services/limpiezaService');
+const { procesarCobros } = require('../controllers/debitoController');
 
 /**
  * GET /api/tareas/limpieza - Tarea programada (Vercel Cron Jobs, una vez al día).
@@ -16,7 +17,15 @@ router.get('/limpieza', async (req, res) => {
     return res.status(401).json({ status: 'error', message: 'No autorizado.' });
   }
   const eliminadas = await limpiarCuentasSinConfirmar();
-  res.json({ status: 'success', eliminadas });
+  // Cobros del débito automático que vencen hoy (y reintentos de los fallidos)
+  let cobros;
+  try {
+    cobros = await procesarCobros({ req });
+  } catch (error) {
+    console.error('⚠️ Tarea de cobros:', error.message);
+    cobros = { error: error.message };
+  }
+  res.json({ status: 'success', eliminadas, cobros });
 });
 
 module.exports = router;

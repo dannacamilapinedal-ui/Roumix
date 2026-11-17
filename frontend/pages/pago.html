@@ -520,6 +520,296 @@
         });
       }
 
+      // ---------- Débito automático mensual (W-5b) ----------
+      const ESTADO_COBRO = {
+        programado: ["Programado", "proceso"], en_proceso: ["En proceso", "proceso"], aprobado: ["Pagado", "ok"],
+        fallido: ["Se reintentará", "proceso"], vencido: ["No se pudo cobrar", "cerrada"], cancelado: ["Cancelado", "cerrada"]
+      };
+      const fechaLarga = (iso) => textoFecha(fechaDia(`${iso}T12:00:00-05:00`));
+
+      function filaCobro(c, verNeto) {
+        const [texto, tono] = ESTADO_COBRO[c.estado] || [c.estado, "neutro"];
+        const fecha = c.estado === "fallido" && c.proximo_intento ? `Reintento: ${fechaLarga(c.proximo_intento)}` : fechaLarga(c.fecha_cobro || c.fechaCobro);
+        return `
+          <li class="debito-cobro">
+            <div><strong>Mes ${c.numero_mes || c.numeroMes}</strong><span>${fecha}</span></div>
+            <div class="debito-cobro-monto">
+              <strong>${pesos(verNeto ? c.neto_propietario : c.monto)}</strong>
+              ${c.estado ? `<span class="solicitud-chip solicitud-chip-${tono}">${texto}</span>` : ""}
+            </div>
+          </li>`;
+      }
+
+      const POLITICA_DEBITO = (dia) => `Se cobra el primer día ${dia} que cae dentro de cada mes de tu contrato (nunca antes de que empiece).
+        Si un cobro falla, lo reintentamos 2 veces en los 3 días siguientes y te avisamos por correo.
+        <strong>Roumix no cobra recargos</strong>: si hay recargos por mora, son solo los que diga tu contrato. Puedes desactivarlo cuando quieras.`;
+
+      function debitoHTML(p) {
+        const d = p.debito;
+        if (!d) return "";
+        if (d.activo) {
+          return `
+            <section class="debito debito-activo" id="debito" aria-labelledby="debito-titulo">
+              <div class="debito-cabeza">
+                <h3 id="debito-titulo">Débito automático mensual</h3>
+                <span class="solicitud-chip solicitud-chip-ok">Activo</span>
+              </div>
+              <p class="checkout-texto">Cobramos cada mes con <strong>${escaparHTML(d.activo.descripcion)}</strong>. Te avisamos por correo cada cobro.</p>
+              <ol class="debito-cobros">${d.cobros.map((c) => filaCobro(c, false)).join("")}</ol>
+              <p class="contacto-nota">${POLITICA_DEBITO(d.diaPago)}</p>
+              <p class="pub-mensaje pub-mensaje-error" id="debito-error" role="alert" hidden></p>
+              <button type="button" class="btn-card-action btn-card-danger" id="btn-desactivar-debito">Desactivar débito automático</button>
+            </section>`;
+        }
+        const plan = d.plan || [];
+        const cobrados = (d.cobros || []).filter((c) => c.estado === "aprobado");
+        return `
+          <section class="debito" id="debito" aria-labelledby="debito-titulo">
+            <div class="debito-cabeza">
+              <h3 id="debito-titulo">Débito automático mensual</h3>
+              <span class="solicitud-chip solicitud-chip-cerrada">Inactivo</span>
+            </div>
+            ${d.disponible
+              ? `<p class="checkout-texto">Olvídate de pagar cada mes: Roumix cobra automáticamente el arriendo de los meses siguientes con tu tarjeta o tu Nequi. Sin costo para ti.</p>`
+              : `<p class="checkout-texto">${escaparHTML(d.mensaje || "El débito automático no está disponible para este arriendo.")}</p>`}
+            ${cobrados.length ? `<ol class="debito-cobros">${cobrados.map((c) => filaCobro(c, false)).join("")}</ol>` : ""}
+            ${plan.length ? `
+              <p class="debito-subtitulo">${d.disponible ? "Así se cobraría" : "Meses que se podrían cobrar"}</p>
+              <ol class="debito-cobros">${plan.map((m) => filaCobro(m, false)).join("")}</ol>` : ""}
+            ${d.disponible ? `
+              <p class="contacto-nota">${POLITICA_DEBITO(d.diaPago)}</p>
+              <button type="button" class="btn-contact-wa-large" id="btn-abrir-debito">Activar débito automático</button>
+              <div class="debito-form" id="debito-form" hidden></div>` : ""}
+          </section>`;
+      }
+
+      // Detección de franquicia y validación Luhn (en el navegador; la tarjeta va directo a Wompi)
+      function franquicia(numero) {
+        if (/^4/.test(numero)) return "Visa";
+        if (/^(5[1-5]|2(2[2-9]|[3-6]\d|7[01]|720))/.test(numero)) return "Mastercard";
+        if (/^3[47]/.test(numero)) return "American Express";
+        if (/^3(0[0-5]|[68])/.test(numero)) return "Diners Club";
+        return "";
+      }
+      function luhn(numero) {
+        let suma = 0;
+        let doble = false;
+        for (let i = numero.length - 1; i >= 0; i--) {
+          let n = Number(numero[i]);
+          if (doble) { n *= 2; if (n > 9) n -= 9; }
+          suma += n;
+          doble = !doble;
+        }
+        return numero.length >= 13 && suma % 10 === 0;
+      }
+
+      function formularioDebitoHTML(prep) {
+        return `
+          ${prep.modo === "sandbox" ? `<p class="contrato-demo" role="note"><strong>Modo de pruebas.</strong> Usa la tarjeta 4242 4242 4242 4242 (cualquier fecha futura y CVC) o los números de Nequi de prueba de Wompi.</p>` : ""}
+          <fieldset class="pago-metodos pago-quien">
+            <legend class="contacto-paso">¿Con qué pagas cada mes?</legend>
+            <label class="pago-metodo"><input type="radio" name="debito-medio" value="CARD" checked> Tarjeta crédito o débito</label>
+            <label class="pago-metodo"><input type="radio" name="debito-medio" value="NEQUI"> Nequi</label>
+          </fieldset>
+          <form id="debito-tarjeta" class="debito-campos" novalidate autocomplete="on">
+            <div class="debito-campo debito-campo-ancho">
+              <label for="dt-numero" class="contacto-paso">Número de la tarjeta <span id="dt-franquicia" class="debito-franquicia"></span></label>
+              <input id="dt-numero" class="form-control" inputmode="numeric" autocomplete="cc-number" maxlength="23" placeholder="0000 0000 0000 0000">
+            </div>
+            <div class="debito-campo">
+              <label for="dt-vence" class="contacto-paso">Vence (MM/AA)</label>
+              <input id="dt-vence" class="form-control" inputmode="numeric" autocomplete="cc-exp" maxlength="5" placeholder="MM/AA">
+            </div>
+            <div class="debito-campo">
+              <label for="dt-cvc" class="contacto-paso">CVC</label>
+              <input id="dt-cvc" class="form-control" inputmode="numeric" autocomplete="cc-csc" maxlength="4" placeholder="123">
+            </div>
+            <div class="debito-campo debito-campo-ancho">
+              <label for="dt-titular" class="contacto-paso">Nombre como aparece en la tarjeta</label>
+              <input id="dt-titular" class="form-control" autocomplete="cc-name" maxlength="80">
+            </div>
+          </form>
+          <form id="debito-nequi" class="debito-campos" novalidate hidden>
+            <div class="debito-campo debito-campo-ancho">
+              <label for="dn-celular" class="contacto-paso">Celular de tu cuenta Nequi</label>
+              <input id="dn-celular" class="form-control" inputmode="numeric" autocomplete="tel-national" maxlength="10" placeholder="3001234567">
+            </div>
+          </form>
+          <label class="checkout-confirmo"><input type="checkbox" id="debito-acepto">
+            <span>Acepto los <a href="${escaparHTML(prep.aceptacion.enlace)}" target="_blank" rel="noopener">términos y condiciones de Wompi</a>${prep.datosPersonales ? ` y autorizo el <a href="${escaparHTML(prep.datosPersonales.enlace)}" target="_blank" rel="noopener">tratamiento de mis datos personales</a>` : ""}, y que Roumix cobre cada mes el canon de mi contrato con este medio.</span>
+          </label>
+          <ul class="pago-confianza checkout-sellos">
+            <li>${ICONO_CANDADO} Los datos de tu tarjeta van directo a Wompi: Roumix no los ve ni los guarda</li>
+          </ul>
+          <p class="pago-wompi-estado" id="debito-estado" role="status" aria-live="polite" hidden></p>
+          <p class="pub-mensaje pub-mensaje-error" id="debito-error" role="alert" hidden></p>
+          <div class="checkout-botones">
+            <button type="button" class="btn-card-action" id="btn-cancelar-debito">Cancelar</button>
+            <button type="button" class="btn-contact-wa-large" id="btn-guardar-debito">${ICONO_CANDADO} Guardar y activar</button>
+          </div>`;
+      }
+
+      // Mensaje claro a partir del error de Wompi al tokenizar
+      function errorWompi(json) {
+        const msgs = (json && json.error && json.error.messages) || {};
+        if (msgs.number) return "Revisa el número de la tarjeta.";
+        if (msgs.exp_month || msgs.exp_year) return "Revisa la fecha de vencimiento de la tarjeta.";
+        if (msgs.cvc) return "Revisa el código de seguridad (CVC).";
+        if (msgs.card_holder) return "Escribe el nombre como aparece en la tarjeta.";
+        if (msgs.phone_number) return "Revisa el número de celular de Nequi.";
+        return "Wompi no pudo validar el medio de pago. Revisa los datos e intenta de nuevo.";
+      }
+
+      async function wompiDirecto(prep, metodo, ruta, cuerpo) {
+        let res;
+        try {
+          res = await fetch(`${prep.apiWompi}${ruta}`, {
+            method: metodo,
+            headers: { Authorization: `Bearer ${prep.llavePublica}`, ...(cuerpo ? { "Content-Type": "application/json" } : {}) },
+            body: cuerpo ? JSON.stringify(cuerpo) : undefined
+          });
+        } catch (e) {
+          throw new Error("No pudimos conectarnos con Wompi. Revisa tu conexión e intenta de nuevo.");
+        }
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(errorWompi(json));
+        return json.data;
+      }
+
+      function prepararDebito(p) {
+        const desactivar = document.getElementById("btn-desactivar-debito");
+        if (desactivar) {
+          desactivar.addEventListener("click", async () => {
+            if (!confirm("¿Desactivar el débito automático? Los meses siguientes los pagarás como diga tu contrato.")) return;
+            desactivar.disabled = true;
+            try {
+              const r = await RoumixAPI._request(`/pagos/${p.id}/debito`, { method: "DELETE" });
+              RoumixAvisos.mostrar(r.message, "info", 5000);
+              await cargar();
+            } catch (err) {
+              const aviso = document.getElementById("debito-error");
+              aviso.textContent = err.message; aviso.hidden = false;
+              desactivar.disabled = false;
+            }
+          });
+        }
+        const abrir = document.getElementById("btn-abrir-debito");
+        if (!abrir) return;
+        const caja = document.getElementById("debito-form");
+        abrir.addEventListener("click", async () => {
+          abrir.disabled = true;
+          abrir.textContent = "Preparando…";
+          let prep;
+          try {
+            ({ data: prep } = await RoumixAPI._request(`/pagos/${p.id}/debito/preparar`));
+          } catch (err) {
+            abrir.disabled = false;
+            abrir.textContent = "Activar débito automático";
+            return RoumixAvisos.mostrar(err.message, "error", 6000);
+          }
+          abrir.hidden = true;
+          caja.innerHTML = formularioDebitoHTML(prep);
+          caja.hidden = false;
+          conectarFormularioDebito(p, prep, caja, abrir);
+        });
+      }
+
+      function conectarFormularioDebito(p, prep, caja, abrir) {
+        const tarjeta = document.getElementById("debito-tarjeta");
+        const nequi = document.getElementById("debito-nequi");
+        const estado = document.getElementById("debito-estado");
+        const aviso = document.getElementById("debito-error");
+        const guardar = document.getElementById("btn-guardar-debito");
+        const textoGuardar = guardar.innerHTML;
+        const mostrarEstado = (t) => { estado.textContent = t; estado.hidden = !t; };
+        const fallo = (t) => { aviso.textContent = t; aviso.hidden = false; mostrarEstado(""); guardar.disabled = false; guardar.innerHTML = textoGuardar; };
+        const medio = () => caja.querySelector('input[name="debito-medio"]:checked').value;
+
+        caja.querySelectorAll('input[name="debito-medio"]').forEach((r) => r.addEventListener("change", () => {
+          tarjeta.hidden = medio() !== "CARD";
+          nequi.hidden = medio() !== "NEQUI";
+        }));
+        const numero = document.getElementById("dt-numero");
+        numero.addEventListener("input", () => {
+          const limpio = numero.value.replace(/\D/g, "").slice(0, 19);
+          numero.value = limpio.replace(/(\d{4})(?=\d)/g, "$1 ");
+          document.getElementById("dt-franquicia").textContent = franquicia(limpio);
+        });
+        const vence = document.getElementById("dt-vence");
+        vence.addEventListener("input", () => {
+          const d = vence.value.replace(/\D/g, "").slice(0, 4);
+          vence.value = d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d;
+        });
+        document.getElementById("btn-cancelar-debito").addEventListener("click", () => {
+          caja.hidden = true; caja.innerHTML = "";
+          abrir.hidden = false; abrir.disabled = false; abrir.textContent = "Activar débito automático";
+        });
+        [tarjeta, nequi].forEach((f) => f.addEventListener("submit", (e) => e.preventDefault()));
+
+        guardar.addEventListener("click", async () => {
+          aviso.hidden = true;
+          if (!document.getElementById("debito-acepto").checked) return fallo("Para activar el débito debes aceptar los términos de Wompi.");
+          let token;
+          let descripcion;
+          guardar.disabled = true;
+          guardar.textContent = "Guardando…";
+          try {
+            if (medio() === "CARD") {
+              const num = numero.value.replace(/\D/g, "");
+              const [mes, anio] = vence.value.split("/");
+              const cvc = document.getElementById("dt-cvc").value.replace(/\D/g, "");
+              const titular = document.getElementById("dt-titular").value.trim();
+              if (!luhn(num)) return fallo("El número de la tarjeta no es válido. Revísalo.");
+              const vencimiento = new Date(2000 + Number(anio), Number(mes), 0, 23, 59);
+              if (!(Number(mes) >= 1 && Number(mes) <= 12) || !anio || anio.length !== 2 || vencimiento < new Date()) return fallo("La fecha de vencimiento no es válida o la tarjeta ya venció.");
+              if (!/^\d{3,4}$/.test(cvc)) return fallo("El CVC tiene 3 o 4 dígitos.");
+              if (titular.length < 5) return fallo("Escribe el nombre como aparece en la tarjeta.");
+              mostrarEstado("Validando la tarjeta con Wompi…");
+              const t = await wompiDirecto(prep, "POST", "/tokens/cards", { number: num, cvc, exp_month: mes, exp_year: anio, card_holder: titular });
+              token = t.id;
+              descripcion = `${t.brand || franquicia(num) || "Tarjeta"} •••• ${t.last_four || num.slice(-4)}`;
+            } else {
+              const celular = document.getElementById("dn-celular").value.replace(/\D/g, "");
+              if (!/^3\d{9}$/.test(celular)) return fallo("Escribe el celular de 10 dígitos de tu cuenta Nequi.");
+              mostrarEstado("Te enviamos una solicitud a Nequi: ábrela en tu celular y apruébala.");
+              const t = await wompiDirecto(prep, "POST", "/tokens/nequi", { phone_number: celular });
+              let estadoNequi = t.status;
+              for (let i = 0; i < 40 && estadoNequi === "PENDING"; i++) {
+                await esperar(3000);
+                estadoNequi = (await wompiDirecto(prep, "GET", `/tokens/nequi/${encodeURIComponent(t.id)}`)).status;
+              }
+              if (estadoNequi !== "APPROVED") return fallo(estadoNequi === "PENDING" ? "No vimos la aprobación en Nequi. Intenta de nuevo." : "Nequi no aprobó la suscripción.");
+              token = t.id;
+              descripcion = `Nequi •••• ${celular.slice(-4)}`;
+            }
+            mostrarEstado("Guardando tu medio de pago…");
+            const r = await RoumixAPI._request(`/pagos/${p.id}/debito`, {
+              method: "POST",
+              body: JSON.stringify({ tipo: medio(), token, aceptacion: prep.aceptacion.token, datosPersonales: prep.datosPersonales ? prep.datosPersonales.token : null, acepto: true, descripcion })
+            });
+            RoumixAvisos.mostrar(r.message, "exito", 6000);
+            await cargar();
+          } catch (err) {
+            fallo(err.message);
+          }
+        });
+      }
+
+      // Propietario y administración: los cobros mensuales con su desembolso
+      function cobrosPropietarioHTML(p) {
+        const d = p.debito;
+        if (!d || (!d.activo && !(d.cobros || []).length)) return "";
+        return `
+          <section class="debito" aria-labelledby="cobros-titulo">
+            <div class="debito-cabeza">
+              <h3 id="cobros-titulo">Débito automático de los meses siguientes</h3>
+              <span class="solicitud-chip solicitud-chip-${d.activo ? "ok" : "cerrada"}">${d.activo ? "Activo" : "Inactivo"}</span>
+            </div>
+            <p class="checkout-texto">Roumix cobra cada mes al estudiante y retiene el ${d.porcentaje} %. Montos: ${p.mi_rol === "admin" ? "desembolso al propietario" : "tu desembolso"} de cada mes.</p>
+            <ol class="debito-cobros">${d.cobros.map((c) => filaCobro(c, true)).join("")}</ol>
+          </section>`;
+      }
+
       function error(texto) {
         contenedor.innerHTML = "";
         const p = document.createElement("p");
@@ -612,6 +902,7 @@
               ${p.referencia ? `<p class="pago-referencia">Referencia de la transacción: <code>${escaparHTML(p.referencia)}</code>${p.metodo_nombre ? ` · ${escaparHTML(p.metodo_nombre)}` : ""}${p.aprobado_en ? ` · ${momento(p.aprobado_en)}` : ""}${p.simulado === false ? " · Procesado por Wompi" : ""}</p>` : ""}
               ${p.devolucion_referencia ? `<p class="pago-nota">Devolución ${escaparHTML(p.devolucion_referencia)} · ${escaparHTML(p.devolucion_motivo || "")}</p>` : ""}
             </section>
+            ${cobrosPropietarioHTML(p)}
             ${historial}`;
         } else {
           // Estudiante: checkout por pasos con el resumen de costos al lado (o arriba en el celular)
@@ -723,6 +1014,7 @@
                     <button type="button" class="btn-contact-wa-large" id="btn-recibo">Descargar recibo (PDF)</button>
                     <a href="contrato.html?id=${p.contrato_id}" class="btn-card-action">Ver contrato</a>
                   </div>
+                  ${debitoHTML(p)}
                   ${disputaHTML}` : ""}
                 </section>`}
 
@@ -738,6 +1030,7 @@
             </div>`;
           prepararPasos(pasoInicial);
           prepararAcudiente(p);
+          prepararDebito(p);
           const recibo = document.getElementById("btn-recibo");
           if (recibo) {
             recibo.addEventListener("click", async () => {
