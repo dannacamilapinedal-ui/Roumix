@@ -67,9 +67,35 @@ mecanismo debe estar bajo control exclusivo del firmante).
 - Si el correo de la cuenta no está confirmado, no se envía el código.
 - **Auditoría:** al firmar se registra el código usado, el correo al que llegó y la huella del PDF firmado.
 
+## F-3 · Firma manuscrita y evidencias (hecho)
+
+Para firmar, la persona:
+1. Escribe su nombre **como aparece en su documento**. Debe empezar por el primer nombre del documento
+   e incluir otra palabra del mismo; se ignoran tildes y mayúsculas.
+2. **Dibuja su firma** con el dedo o el mouse en un recuadro. Se envía como PNG transparente, y el
+   servidor rechaza imágenes que no sean PNG, que tengan un tamaño anómalo o que estén vacías.
+3. Acepta el **consentimiento expreso**, el mismo texto que queda guardado.
+4. Escribe el **código** que llegó a su correo (F-2).
+
+Los errores de firma o de nombre **no gastan** el código.
+
+**Evidencias** (tabla `firmas_contrato`, de **solo adición**: un disparador impide modificar o borrar firmas):
+
+| Evidencia | Para qué sirve |
+|---|---|
+| Rol, usuario, nombre escrito y documento | Identifica al firmante |
+| Imagen PNG de la firma y su huella SHA-256 | La firma manuscrita digitalizada |
+| Texto exacto del consentimiento | Prueba que aceptó firmar electrónicamente |
+| Código usado y correo al que llegó | Control exclusivo del medio de firma |
+| Huella SHA-256 del PDF firmado | Vincula la firma con ese documento |
+| Fecha y hora, IP y dispositivo (navegador) | Trazabilidad |
+
+**Quién ve qué:**
+- La otra parte ve la imagen, el nombre, el documento y la fecha de cada firma.
+- El equipo de Roumix ve además la IP, el dispositivo y el correo completo.
+
 ## Siguientes módulos
-- **F-3 · Firma:** firma manuscrita dibujada, nombre y documento, consentimiento expreso y el código.
-  Evidencias guardadas: fecha y hora, IP, dispositivo y huella del PDF.
+
 - **F-4 · PDF firmado y certificado:** las firmas se estampan en el PDF y se agrega una página de
   certificado con las evidencias. Una página pública de verificación permite comprobar el documento
   por su código.
