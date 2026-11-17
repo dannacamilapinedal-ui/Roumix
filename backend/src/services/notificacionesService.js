@@ -385,6 +385,26 @@ async function enviarConfirmacionCuenta({ email, nombre, enlace }) {
 /**
  * Correo para crear una contraseña nueva (lo envía Roumix, no Supabase).
  */
+/**
+ * Código de un solo uso para firmar un contrato. Solo lo recibe el titular de la cuenta.
+ */
+async function enviarCodigoFirma({ para, nombre, codigo, contratoId, inmueble, minutos }) {
+  return enviar({
+    para,
+    asunto: `Tu código para firmar el contrato #${contratoId}`,
+    contenido: {
+      titulo: 'Código para firmar tu contrato',
+      parrafos: [
+        `Hola ${escapar(nombre || '')},`,
+        `Este es tu código para firmar el contrato #${contratoId}${inmueble ? ` de <strong>${escapar(inmueble)}</strong>` : ''}:`,
+        `<span style="display:inline-block;font-size:30px;font-weight:800;letter-spacing:8px;padding:10px 18px;border-radius:10px;background:#f5f0e6;color:#142219;">${escapar(codigo)}</span>`,
+        `Vence en ${minutos} minutos y sirve una sola vez. <strong>No lo compartas con nadie</strong>: con él se firma el contrato a tu nombre.`
+      ],
+      nota: 'Si no estás firmando un contrato en Roumix, ignora este correo y escríbele al equipo.'
+    }
+  });
+}
+
 async function enviarRecuperacion({ email, enlace }) {
   return enviar({
     para: email,
@@ -765,6 +785,7 @@ module.exports = {
   notificarCondicionesNuevas,
   notificarCobro,
   enviarRecuperacion,
+  enviarCodigoFirma,
   urlBase,
   usarTransporte,
   escapar

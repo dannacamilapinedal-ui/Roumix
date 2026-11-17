@@ -77,8 +77,8 @@ async function hastaFormalizado(est, nombre) {
   r = res(); await ct.crearBorrador(req(admin, { params: { id: solId }, body: { canonMensual: 800000, fechaInicio: enDias(15), duracionMeses: 6 } }), r);
   const ctId = r.cuerpo.data.id;
   await ct.enviarContrato(req(admin, { params: { id: ctId } }), res());
-  await ct.aceptarContrato(req(est, { params: { id: ctId }, body: { firma: nombre, confirmo: true } }), res());
-  await ct.aceptarContrato(req(prop, { params: { id: ctId }, body: { firma: 'Carlos Prueba Rodríguez', confirmo: true } }), res());
+  await ct.aceptarContrato(req(est, { params: { id: ctId }, body: { firma: nombre, confirmo: true, codigo: await ct.crearCodigoFirma(ctId, est.id) } }), res());
+  await ct.aceptarContrato(req(prop, { params: { id: ctId }, body: { firma: 'Carlos Prueba Rodríguez', confirmo: true, codigo: await ct.crearCodigoFirma(ctId, prop.id) } }), res());
   return solId;
 }
 
@@ -216,6 +216,7 @@ async function hastaFormalizado(est, nombre) {
       await db.query('DELETE FROM pagos_enlaces WHERE pago_id = ANY($1)', [pagosIds]);
       for (const t of ['devoluciones', 'desembolsos', 'comisiones']) await db.query(`DELETE FROM ${t} WHERE pago_id = ANY($1)`, [pagosIds]);
       await db.query('DELETE FROM pagos WHERE id = ANY($1)', [pagosIds]);
+      await db.query('DELETE FROM firmas_codigos WHERE contrato_id IN (SELECT id FROM contratos WHERE inmueble_id = $1)', [inmuebleId]);
       await db.query('DELETE FROM contratos_documentos WHERE contrato_id IN (SELECT id FROM contratos WHERE inmueble_id = $1)', [inmuebleId]);
       await db.query('DELETE FROM contratos WHERE inmueble_id = $1', [inmuebleId]);
       await db.query('DELETE FROM solicitudes WHERE inmueble_id = $1', [inmuebleId]);

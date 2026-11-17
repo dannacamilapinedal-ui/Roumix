@@ -16,6 +16,9 @@ router.get('/:id', requireRol('estudiante', 'propietario', 'admin'), contratosCo
 // GET /api/contratos/:id/pdf - El PDF sellado del contrato
 router.get('/:id/pdf', requireRol('estudiante', 'propietario', 'admin'), contratosController.descargarPdf);
 
+// POST /api/contratos/:id/codigo - Envía al correo el código de un solo uso para firmar
+router.post('/:id/codigo', requireRol('estudiante', 'propietario'), contratosController.solicitarCodigo);
+
 router.post('/:id/aceptar', requireRol('estudiante', 'propietario'), contratosController.aceptarContrato);
 
 module.exports = router;

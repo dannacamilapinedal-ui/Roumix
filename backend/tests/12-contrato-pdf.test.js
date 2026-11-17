@@ -133,6 +133,7 @@ async function crearUsuario(id, rol, nombre) {
     const todos = Object.values(ids);
     await db.query('DELETE FROM conversaciones WHERE usuario_id = ANY($1)', [todos]);
     if (inmuebleId) {
+      await db.query('DELETE FROM firmas_codigos WHERE contrato_id IN (SELECT id FROM contratos WHERE inmueble_id = $1)', [inmuebleId]);
       await db.query('DELETE FROM contratos_documentos WHERE contrato_id IN (SELECT id FROM contratos WHERE inmueble_id = $1)', [inmuebleId]);
       await db.query('DELETE FROM contratos WHERE inmueble_id = $1', [inmuebleId]);
       await db.query('DELETE FROM solicitudes WHERE inmueble_id = $1', [inmuebleId]);

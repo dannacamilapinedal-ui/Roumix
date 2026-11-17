@@ -8539,3 +8539,12 @@ html[data-tema="oscuro"] .debito-activo { border-color: #315c44; }
 @media (max-width: 640px) { .identidad-form { grid-template-columns: 1fr; } .identidad-ok { flex-direction: column; align-items: flex-start; } }
 html[data-tema="oscuro"] .identidad-tarjeta { border-color: rgba(222, 150, 70, 0.35); }
 html[data-tema="oscuro"] .identidad-ok { border-color: #3a342c; }
+
+/* F-2 — Código de un solo uso para firmar */
+.firma-codigo { margin: var(--esp-3) 0; padding: 14px 16px; border-radius: var(--radio-md); background: var(--fondo-crema-alt); }
+.firma-codigo-texto { margin: 0 0 var(--esp-2); font-size: 0.88rem; color: var(--tinta-media); }
+.firma-codigo-zona[hidden], .firma-codigo .btn-card-action[hidden] { display: none; }
+.firma-codigo-input { max-width: 200px; font-family: "JetBrains Mono", monospace; font-size: 1.4rem; letter-spacing: 0.3em; text-align: center; }
+.firma-reenviar { padding: 0; border: 0; background: none; color: var(--texto-verde-oscuro); font-weight: 700; text-decoration: underline; cursor: pointer; }
+.firma-reenviar:disabled { color: var(--tinta-tenue); text-decoration: none; cursor: default; }
+html[data-tema="oscuro"] .firma-codigo { background: rgba(255, 255, 255, 0.05); }

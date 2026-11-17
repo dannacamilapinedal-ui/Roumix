@@ -48,10 +48,26 @@ Cuando un abogado la revise:
 - este documento, que explica cómo se firma;
 - la lista de evidencias que guardará el F-3.
 
-## Siguientes módulos
+## F-2 · Código de un solo uso al correo (hecho)
 
-- **F-2 · Código al correo:** código de 6 dígitos al correo confirmado; dura 10 minutos y tiene
-  intentos limitados.
+Firmar el contrato exige un **código de 6 dígitos** que llega al **correo confirmado** de quien firma.
+Así se demuestra que la firma la hizo quien controla esa cuenta y ese correo (Decreto 2364: el
+mecanismo debe estar bajo control exclusivo del firmante).
+
+- Desde la página del contrato, la persona toca **"Enviar código a mi correo"**: `POST /api/contratos/:id/codigo`.
+  El código **solo** viaja en el correo; la respuesta de la API solo dice a qué correo llegó (oculto).
+- Del código se guarda solo su **huella SHA-256 con sal** (tabla `firmas_codigos`) y el correo al que se envió.
+- **Uso:**
+  - vence a los **10 minutos**;
+  - admite **5 intentos** (al 5.º error se anula);
+  - se usa **una sola vez**.
+- **Reenvío:**
+  - pedir otro anula el anterior;
+  - se puede pedir uno cada 60 segundos, con un máximo de 5 por hora.
+- Si el correo de la cuenta no está confirmado, no se envía el código.
+- **Auditoría:** al firmar se registra el código usado, el correo al que llegó y la huella del PDF firmado.
+
+## Siguientes módulos
 - **F-3 · Firma:** firma manuscrita dibujada, nombre y documento, consentimiento expreso y el código.
   Evidencias guardadas: fecha y hora, IP, dispositivo y huella del PDF.
 - **F-4 · PDF firmado y certificado:** las firmas se estampan en el PDF y se agrega una página de

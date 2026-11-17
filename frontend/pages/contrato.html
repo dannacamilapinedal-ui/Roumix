@@ -121,8 +121,8 @@
         document.title = `Contrato #${c.id} — Roumix`;
         const estado = ESTADOS[c.estado] || { texto: c.estado, tono: "neutro" };
         const aceptacion = (fecha, firma) => fecha
-          ? `<span class="contrato-acepto">✓ Aceptado por <strong>${escaparHTML(firma)}</strong><br><small>${momento(fecha)}</small></span>`
-          : `<span class="contrato-pendiente">Pendiente de aceptación</span>`;
+          ? `<span class="contrato-acepto">✓ Firmado por <strong>${escaparHTML(firma)}</strong><br><small>${momento(fecha)}</small></span>`
+          : `<span class="contrato-pendiente">Pendiente de firma</span>`;
         const volver = usuario.rol === "admin" ? "admin.html" : "solicitudes.html";
 
         contenedor.innerHTML = `
@@ -137,7 +137,7 @@
           <div class="contrato-demo" role="note">
             <strong>Contrato en PDF sellado.</strong> Descárgalo y léelo completo: es el documento definitivo y su huella permite
             comprobar que nadie lo cambió.${c.pdf.plantillaRevisada ? "" : " <strong>La plantilla aún está pendiente de revisión legal</strong>: úsala solo para pruebas del proyecto."}
-            La aceptación de abajo todavía es demostrativa; la firma electrónica con código y firma manuscrita llega en la próxima actualización.
+            Para firmarlo necesitas el código que te enviamos al correo; la firma dibujada y el certificado de evidencias llegan en la próxima actualización.
           </div>` : `
           <div class="contrato-demo" role="note">
             <strong>Documento demostrativo.</strong>
@@ -194,7 +194,7 @@
             </section>
 
             <section class="contrato-seccion">
-              <h2>6. Aceptación de las partes</h2>
+              <h2>6. Firma de las partes</h2>
               <div class="contrato-firmas">
                 <div><span class="contrato-rol">Arrendador</span>${aceptacion(c.aceptado_propietario_en, c.firma_propietario)}</div>
                 <div><span class="contrato-rol">Arrendatario</span>${aceptacion(c.aceptado_estudiante_en, c.firma_estudiante)}</div>
@@ -219,16 +219,25 @@
 
           ${c.puedo_aceptar ? `
           <form class="contrato-aceptar no-imprimir" id="form-aceptar" novalidate>
-            <h2>Aceptar el contrato</h2>
+            <h2>Firmar el contrato</h2>
             <p>Revisa que todo coincida con lo que acordaste. Si algo no está bien, <a href="mensajes.html?solicitud=${c.solicitud_id}">escríbele a Roumix</a> antes de aceptar.</p>
             <label for="firma" class="contacto-paso">Escribe tu nombre completo</label>
             <input type="text" id="firma" class="form-control" maxlength="120" autocomplete="name" placeholder="${escaparHTML(c.mi_rol === "estudiante" ? c.estudiante_nombre : c.propietario_nombre)}">
-            <label class="admin-check"><input type="checkbox" id="confirmo"> Leí las condiciones y entiendo que esta aceptación es demostrativa, no una firma electrónica con validez legal.</label>
+            <label class="admin-check"><input type="checkbox" id="confirmo"> Leí el contrato completo y acepto firmarlo electrónicamente con mi nombre y el código que llegue a mi correo.</label>
+            <div class="firma-codigo">
+              <p class="firma-codigo-texto">Para firmar te enviamos un <strong>código de 6 dígitos a tu correo</strong>. Así comprobamos que eres tú.</p>
+              <button type="button" class="btn-card-action" id="btn-codigo">Enviar código a mi correo</button>
+              <div class="firma-codigo-zona" id="codigo-zona" hidden>
+                <label for="codigo" class="contacto-paso">Código que llegó a <span id="codigo-correo"></span></label>
+                <input type="text" id="codigo" class="form-control firma-codigo-input" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="000000">
+                <p class="contacto-nota">Vence en 10 minutos. Revisa también la carpeta de spam. <button type="button" class="firma-reenviar" id="btn-reenviar" disabled>Reenviar código</button></p>
+              </div>
+            </div>
             <p class="pub-mensaje pub-mensaje-error" id="aceptar-error" role="alert" hidden></p>
-            <button type="submit" class="btn-contact-wa-large">Aceptar contrato</button>
+            <button type="submit" class="btn-contact-wa-large">Firmar contrato</button>
           </form>` : ""}
 
-          ${!c.puedo_aceptar && c.acepte && c.estado === "pendiente_aceptacion" ? `<p class="contrato-estado-msg no-imprimir">Ya aceptaste este contrato. Te avisaremos cuando la otra parte lo acepte.</p>` : ""}
+          ${!c.puedo_aceptar && c.acepte && c.estado === "pendiente_aceptacion" ? `<p class="contrato-estado-msg no-imprimir">Ya firmaste este contrato. Te avisaremos cuando la otra parte lo firme.</p>` : ""}
           ${c.estado === "formalizado" && c.mi_rol === "estudiante" ? `<p class="contrato-estado-msg no-imprimir">🎉 Contrato formalizado. El siguiente paso es el pago del primer mes a través de Roumix; te avisaremos cuando esté habilitado.</p>` : ""}`;
 
         const botonImprimir = document.getElementById("btn-imprimir");
@@ -260,17 +269,56 @@
         }
         const form = document.getElementById("form-aceptar");
         if (!form) return;
-        form.addEventListener("submit", async (e) => {
-          e.preventDefault();
-          const aviso = document.getElementById("aceptar-error");
-          const mostrar = (t) => { aviso.textContent = t; aviso.hidden = false; };
-          const firma = document.getElementById("firma").value.trim();
-          if (firma.length < 5) return mostrar("Escribe tu nombre completo.");
-          if (!document.getElementById("confirmo").checked) return mostrar("Confirma que leíste las condiciones.");
-          const boton = form.querySelector("button");
+        const aviso = document.getElementById("aceptar-error");
+        const mostrar = (t) => { aviso.textContent = t; aviso.hidden = false; };
+
+        // Código de un solo uso al correo (F-2)
+        const botonCodigo = document.getElementById("btn-codigo");
+        const reenviar = document.getElementById("btn-reenviar");
+        let cuenta = null;
+        function esperarReenvio(segundos) {
+          clearInterval(cuenta);
+          reenviar.disabled = true;
+          let resta = segundos;
+          reenviar.textContent = `Reenviar código (${resta} s)`;
+          cuenta = setInterval(() => {
+            resta -= 1;
+            if (resta <= 0) { clearInterval(cuenta); reenviar.disabled = false; reenviar.textContent = "Reenviar código"; return; }
+            reenviar.textContent = `Reenviar código (${resta} s)`;
+          }, 1000);
+        }
+        async function pedirCodigo(boton) {
+          aviso.hidden = true;
           boton.disabled = true;
           try {
-            const r = await RoumixAPI._request(`/contratos/${c.id}/aceptar`, { method: "POST", body: JSON.stringify({ firma, confirmo: true }) });
+            const r = await RoumixAPI._request(`/contratos/${c.id}/codigo`, { method: "POST" });
+            document.getElementById("codigo-correo").textContent = r.data.enviadoA;
+            document.getElementById("codigo-zona").hidden = false;
+            botonCodigo.hidden = true;
+            esperarReenvio(r.data.reenviarEn);
+            RoumixAvisos.mostrar(r.message, "exito", 5000);
+            document.getElementById("codigo").focus();
+          } catch (err) {
+            mostrar(err.message);
+            boton.disabled = false;
+          }
+        }
+        botonCodigo.addEventListener("click", () => pedirCodigo(botonCodigo));
+        reenviar.addEventListener("click", () => pedirCodigo(reenviar));
+
+        form.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          aviso.hidden = true;
+          const firma = document.getElementById("firma").value.trim();
+          if (firma.length < 5) return mostrar("Escribe tu nombre completo.");
+          if (!document.getElementById("confirmo").checked) return mostrar("Confirma que leíste el contrato y aceptas firmarlo electrónicamente.");
+          const codigo = document.getElementById("codigo").value.replace(/\D/g, "");
+          if (document.getElementById("codigo-zona").hidden) return mostrar("Primero pide el código: toca \"Enviar código a mi correo\".");
+          if (codigo.length !== 6) return mostrar("Escribe el código de 6 dígitos que llegó a tu correo.");
+          const boton = form.querySelector('button[type="submit"]');
+          boton.disabled = true;
+          try {
+            const r = await RoumixAPI._request(`/contratos/${c.id}/aceptar`, { method: "POST", body: JSON.stringify({ firma, confirmo: true, codigo }) });
             RoumixAvisos.mostrar(r.message, "exito", 5000);
             if (r.data.estado === "formalizado" && typeof lanzarConfeti === "function") lanzarConfeti();
             await cargar();
