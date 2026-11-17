@@ -517,7 +517,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function formularioContrato(s, c) {
     const v = c || {
-      canon_mensual: s.canon_mensual, deposito: "", dia_pago: 5, duracion_meses: s.duracion_meses,
+      canon_mensual: s.canon_mensual, dia_pago: 5, duracion_meses: s.duracion_meses,
       fecha_inicio: isoDia(s.fecha_ingreso) < hoyLocal() ? hoyLocal() : isoDia(s.fecha_ingreso),
       inmueble_direccion: "", servicios_incluidos: "", condiciones: ""
     };
@@ -525,7 +525,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       <form id="form-contrato" class="admin-contrato-form" novalidate>
         <div class="admin-contrato-grid">
           <label>Canon mensual (COP)<input type="number" id="ct-canon" min="1" step="1000" value="${escaparHTML(v.canon_mensual)}"></label>
-          <label>Depósito (COP, opcional)<input type="number" id="ct-deposito" min="0" step="1000" value="${escaparHTML(v.deposito ?? "")}"></label>
           <label>Fecha de inicio<input type="date" id="ct-inicio" value="${escaparHTML(isoDia(v.fecha_inicio))}"></label>
           <label>Duración (meses)<input type="number" id="ct-duracion" min="1" max="24" value="${escaparHTML(v.duracion_meses)}"></label>
           <label>Día de pago (1–28)<input type="number" id="ct-dia" min="1" max="28" value="${escaparHTML(v.dia_pago)}"></label>
@@ -534,7 +533,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         <label class="reporte-label" for="ct-servicios">Servicios incluidos</label>
         <input type="text" id="ct-servicios" maxlength="500" value="${escaparHTML(v.servicios_incluidos || "")}" placeholder="Ej: Agua, luz, gas e internet">
         <label class="reporte-label" for="ct-condiciones">Condiciones acordadas</label>
-        <textarea id="ct-condiciones" rows="4" maxlength="5000" placeholder="Ej: No se permiten mascotas. Visitas hasta las 10 p. m. El depósito se devuelve al entregar el inmueble en buen estado.">${escaparHTML(v.condiciones || "")}</textarea>
+        <textarea id="ct-condiciones" rows="4" maxlength="5000" placeholder="Ej: No se permiten mascotas. Visitas hasta las 10 p. m.">${escaparHTML(v.condiciones || "")}</textarea>
         <p class="pub-mensaje" id="ct-resultado" role="alert" hidden></p>
         <div class="admin-botones">
           <button type="submit" class="btn-search-action">${c ? "Guardar borrador" : "Crear borrador"}</button>
@@ -594,7 +593,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
     const datos = () => ({
       canonMensual: Number(document.getElementById("ct-canon").value),
-      deposito: document.getElementById("ct-deposito").value === "" ? null : Number(document.getElementById("ct-deposito").value),
       fechaInicio: document.getElementById("ct-inicio").value,
       duracionMeses: Number(document.getElementById("ct-duracion").value),
       diaPago: Number(document.getElementById("ct-dia").value),

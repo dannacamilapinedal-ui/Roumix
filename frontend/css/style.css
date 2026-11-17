@@ -8524,3 +8524,18 @@ html[data-tema="oscuro"] .verif-condiciones-nuevas { background: rgba(222, 150, 
 html[data-tema="oscuro"] .debito-activo { border-color: #315c44; }
 .admin-subtitulo { margin: var(--esp-6) 0 var(--esp-3); padding-top: var(--esp-4); border-top: 1px solid var(--borde-arena); font-size: 1.1rem; color: var(--tinta-fuerte); }
 .debito .btn-contact-wa-large[hidden], .debito .btn-card-action[hidden] { display: none; }
+
+/* F-1 — Documento de identidad para los contratos */
+.identidad-tarjeta { margin: 0 0 var(--esp-4); padding: 18px 20px; border-radius: var(--radio-lg); background: var(--superficie); border: 1px solid #f0d9a0; }
+.identidad-tarjeta[hidden] { display: none; }
+.identidad-tarjeta h2 { margin: 0 0 4px; font-size: 1rem; color: var(--tinta-fuerte); }
+.identidad-ayuda { margin: 0 0 var(--esp-3); font-size: 0.86rem; line-height: 1.5; color: var(--tinta-media); }
+.identidad-form { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--esp-3); }
+.identidad-form .form-control { width: 100%; }
+.identidad-ancho { grid-column: 1 / -1; }
+.identidad-botones { display: flex; justify-content: flex-end; gap: var(--esp-2); }
+.identidad-ok { display: flex; align-items: center; justify-content: space-between; gap: var(--esp-3); border-color: var(--borde-arena); }
+.identidad-ok p { margin: 0; font-size: 0.88rem; color: var(--tinta-media); }
+@media (max-width: 640px) { .identidad-form { grid-template-columns: 1fr; } .identidad-ok { flex-direction: column; align-items: flex-start; } }
+html[data-tema="oscuro"] .identidad-tarjeta { border-color: rgba(222, 150, 70, 0.35); }
+html[data-tema="oscuro"] .identidad-ok { border-color: #3a342c; }

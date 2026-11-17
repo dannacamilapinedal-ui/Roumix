@@ -67,6 +67,9 @@ async function crearUsuario(id, rol, nombre) {
     `INSERT INTO auth.users (instance_id, id, aud, role, email, email_confirmed_at, raw_user_meta_data, raw_app_meta_data, created_at, updated_at)
      VALUES ('00000000-0000-0000-0000-000000000000', $1, 'authenticated', 'authenticated', $2, now(), $3, '{}', now(), now())`,
     [id, `prueba-wompi-${rol}-${id.slice(0, 6)}-${sello}@roumix.test`, JSON.stringify({ rol, nombre })]);
+  // Documento de identidad inventado (pasaporte de prueba único): el contrato lo exige para enviarse
+  await db.query("INSERT INTO documentos_identidad (usuario_id, tipo, numero, nombre_completo) VALUES ($1, 'PA', $2, $3)",
+    [id, 'PRB' + crypto.randomBytes(5).toString('hex').toUpperCase(), `${nombre} Prueba`.split(' ').length > 1 ? `${nombre} Prueba` : nombre]);
   return (await db.query('SELECT id, nombre, email, rol, estado FROM usuarios WHERE id = $1', [id])).rows[0];
 }
 const pagoDeSol = async (id) => (await db.query('SELECT * FROM pagos WHERE solicitud_id = $1 ORDER BY id DESC LIMIT 1', [id])).rows[0];
@@ -250,6 +253,7 @@ async function hastaFormalizado(est, nombre) {
       await db.query('DELETE FROM desembolsos WHERE pago_id = ANY($1)', [pagosIds]);
       await db.query('DELETE FROM comisiones WHERE pago_id = ANY($1)', [pagosIds]);
       await db.query('DELETE FROM pagos WHERE id = ANY($1)', [pagosIds]);
+      await db.query('DELETE FROM contratos_documentos WHERE contrato_id IN (SELECT id FROM contratos WHERE inmueble_id = $1)', [inmuebleId]);
       await db.query('DELETE FROM contratos WHERE inmueble_id = $1', [inmuebleId]);
       await db.query('DELETE FROM solicitudes WHERE inmueble_id = $1', [inmuebleId]);
       await db.query('DELETE FROM inmuebles WHERE id = $1', [inmuebleId]);

@@ -53,6 +53,9 @@
         <p id="sol-garantia-texto">Roumix habla con el propietario por ti y te avisa cada novedad por correo. Nunca pagues nada por fuera de la plataforma.</p>
       </div>
 
+      <!-- Documento de identidad: lo exige el contrato de arrendamiento (F-1) -->
+      <section class="identidad-tarjeta" id="documento" aria-labelledby="identidad-titulo" hidden></section>
+
       <div id="lista-solicitudes" class="solicitudes-lista" aria-live="polite">
         <p class="solicitud-cargando" role="status">Cargando…</p>
       </div>
@@ -210,6 +213,80 @@
             </article>`;
         }).join("");
       }
+
+      // ---------- Documento de identidad para los contratos ----------
+      const cajaDocumento = document.getElementById("documento");
+      async function cargarDocumento(editar = false) {
+        let r;
+        try {
+          r = await RoumixAPI._request("/identidad");
+        } catch (e) {
+          return;
+        }
+        const d = r.data;
+        cajaDocumento.hidden = false;
+        if (d.registrado && !editar) {
+          cajaDocumento.className = "identidad-tarjeta identidad-ok";
+          cajaDocumento.innerHTML = `
+            <div>
+              <h2 id="identidad-titulo">Documento para tus contratos</h2>
+              <p>${escaparHTML(d.nombreCompleto)} · ${escaparHTML(d.tipoTexto)} ${escaparHTML(d.numero)}</p>
+            </div>
+            <button type="button" class="btn-card-action" id="btn-cambiar-documento">Cambiar</button>`;
+          document.getElementById("btn-cambiar-documento").addEventListener("click", () => cargarDocumento(true));
+          return;
+        }
+        cajaDocumento.className = "identidad-tarjeta";
+        cajaDocumento.innerHTML = `
+          <h2 id="identidad-titulo">${d.registrado ? "Cambia tu documento" : "Registra tu documento para el contrato"}</h2>
+          <p class="identidad-ayuda">Todo contrato de arrendamiento identifica a las partes con su documento. Roumix lo pone en tu contrato y no lo muestra en ningún otro lugar.</p>
+          <form id="form-documento" class="identidad-form" novalidate>
+            <div>
+              <label for="doc-tipo" class="contacto-paso">Tipo</label>
+              <select id="doc-tipo" class="form-control">
+                ${Object.entries(r.tipos).map(([valor, texto]) => `<option value="${valor}"${(d.tipo || "CC") === valor ? " selected" : ""}>${escaparHTML({ CC: "Cédula de ciudadanía", CE: "Cédula de extranjería", PPT: "Permiso por Protección Temporal", PA: "Pasaporte" }[valor] || texto)}</option>`).join("")}
+              </select>
+            </div>
+            <div>
+              <label for="doc-numero" class="contacto-paso">Número</label>
+              <input id="doc-numero" class="form-control" inputmode="numeric" maxlength="20" autocomplete="off" placeholder="Sin puntos">
+            </div>
+            <div class="identidad-ancho">
+              <label for="doc-nombre" class="contacto-paso">Nombre completo como aparece en el documento</label>
+              <input id="doc-nombre" class="form-control" maxlength="120" autocomplete="name" value="${escaparHTML(d.nombreCompleto || "")}">
+            </div>
+            <p class="pub-mensaje pub-mensaje-error identidad-ancho" id="doc-error" role="alert" hidden></p>
+            <div class="identidad-ancho identidad-botones">
+              ${d.registrado ? '<button type="button" class="btn-card-action" id="btn-doc-cancelar">Cancelar</button>' : ""}
+              <button type="submit" class="btn-search-action">Guardar documento</button>
+            </div>
+          </form>`;
+        const form = document.getElementById("form-documento");
+        const cancelar = document.getElementById("btn-doc-cancelar");
+        if (cancelar) cancelar.addEventListener("click", () => cargarDocumento());
+        form.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const aviso = document.getElementById("doc-error");
+          aviso.hidden = true;
+          const boton = form.querySelector('button[type="submit"]');
+          boton.disabled = true;
+          try {
+            const g = await RoumixAPI._request("/identidad", { method: "PUT", body: JSON.stringify({
+              tipo: document.getElementById("doc-tipo").value,
+              numero: document.getElementById("doc-numero").value,
+              nombreCompleto: document.getElementById("doc-nombre").value
+            }) });
+            RoumixAvisos.mostrar(g.message, "exito", 4000);
+            cargarDocumento();
+          } catch (err) {
+            aviso.textContent = err.message;
+            aviso.hidden = false;
+            boton.disabled = false;
+          }
+        });
+        if (location.hash === "#documento") cajaDocumento.scrollIntoView({ block: "start" });
+      }
+      cargarDocumento();
 
       async function cargar() {
         try {

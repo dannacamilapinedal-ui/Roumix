@@ -13,6 +13,9 @@ router.get('/mios', requireRol('estudiante', 'propietario'), contratosController
 router.get('/:id', requireRol('estudiante', 'propietario', 'admin'), contratosController.verContrato);
 
 // POST /api/contratos/:id/aceptar - Aceptación demostrativa de una de las partes
+// GET /api/contratos/:id/pdf - El PDF sellado del contrato
+router.get('/:id/pdf', requireRol('estudiante', 'propietario', 'admin'), contratosController.descargarPdf);
+
 router.post('/:id/aceptar', requireRol('estudiante', 'propietario'), contratosController.aceptarContrato);
 
 module.exports = router;

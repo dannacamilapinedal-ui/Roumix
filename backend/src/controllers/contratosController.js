@@ -16,6 +16,7 @@ const { crearAviso } = require('../services/avisosService');
 const pagos = require('../services/pagosService');
 const { auditar } = require('../services/auditoriaService');
 const { avisarPagoHabilitado } = require('./pagosController');
+const contratoPdf = require('../services/contratoPdfService');
 
 const PLAZO_ACEPTACION_DIAS = 7;
 const VIGENTES = ['borrador', 'enviado', 'pendiente_aceptacion'];
@@ -64,7 +65,9 @@ function fecha(valor, campo) {
 function validarCondiciones(body) {
   return {
     canon: entero(body.canonMensual, 'El canon mensual', 1, 100000000),
-    deposito: entero(body.deposito, 'El depósito', 0, 100000000, true),
+    // Ley 820 de 2003, art. 16: en vivienda urbana no se pueden exigir depósitos en dinero.
+    // Los contratos nuevos no registran depósito (se ignora si llega).
+    deposito: null,
     fechaInicio: fecha(body.fechaInicio, 'La fecha de inicio'),
     duracion: entero(body.duracionMeses, 'La duración', 1, 24),
     diaPago: entero(body.diaPago === undefined ? 5 : body.diaPago, 'El día de pago', 1, 28),
@@ -117,7 +120,13 @@ function vistaParte(c, rol) {
     acepte: rol === 'estudiante' ? Boolean(c.aceptado_estudiante_en) : Boolean(c.aceptado_propietario_en),
     puedo_aceptar: ['enviado', 'pendiente_aceptacion'].includes(c.estado) &&
       !(rol === 'estudiante' ? c.aceptado_estudiante_en : c.aceptado_propietario_en),
-    huella_valida: c.huella ? c.huella === calcularHuella(c) : null
+    huella_valida: c.huella ? c.huella === calcularHuella(c) : null,
+    // PDF sellado (F-1): huella del documento y estado de la plantilla legal
+    pdf: c.pdf_sha256 ? {
+      sha256: c.pdf_sha256,
+      plantilla: c.plantilla_version,
+      plantillaRevisada: c.plantilla_version === contratoPdf.PLANTILLA.version && contratoPdf.PLANTILLA.revisada
+    } : null
   };
 }
 
@@ -345,7 +354,10 @@ async function enviarContrato(req, res) {
   try {
     await cliente.query('BEGIN');
     const { rows } = await cliente.query(
-      `SELECT c.*, s.estado AS solicitud_estado FROM contratos c JOIN solicitudes s ON s.id = c.solicitud_id
+      `SELECT c.*, s.estado AS solicitud_estado, s.personas, i.barrio,
+              to_char(c.fecha_inicio, 'YYYY-MM-DD') AS inicio_iso,
+              to_char((c.fecha_inicio + make_interval(months => c.duracion_meses) - interval '1 day')::date, 'YYYY-MM-DD') AS fin_iso
+       FROM contratos c JOIN solicitudes s ON s.id = c.solicitud_id JOIN inmuebles i ON i.id = c.inmueble_id
        WHERE c.id = $1 FOR UPDATE OF c`,
       [id]
     );
@@ -356,10 +368,43 @@ async function enviarContrato(req, res) {
     if (fechaISO(c.fecha_inicio) < new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10)) {
       throw errorHttp(409, 'La fecha de inicio ya pasó. Corrígela antes de enviar.');
     }
+    // Un contrato de arrendamiento identifica a las partes con su documento
+    const { rows: idens } = await cliente.query(
+      'SELECT usuario_id, tipo, numero, nombre_completo FROM documentos_identidad WHERE usuario_id = ANY($1)',
+      [[c.estudiante_id, c.propietario_id]]);
+    const idEst = idens.find((r) => r.usuario_id === c.estudiante_id);
+    const idProp = idens.find((r) => r.usuario_id === c.propietario_id);
+    if (!idEst || !idProp) {
+      const quien = !idEst && !idProp ? 'el estudiante ni el propietario han' : !idEst ? 'el estudiante no ha' : 'el propietario no ha';
+      throw Object.assign(errorHttp(409, `No se puede enviar: ${quien} registrado su documento de identidad. Ya se le avisó.`),
+        { faltan: [!idEst && c.estudiante_id, !idProp && c.propietario_id].filter(Boolean) });
+    }
+    // En el contrato van los nombres tal como aparecen en el documento
+    c.estudiante_nombre = idEst.nombre_completo;
+    c.propietario_nombre = idProp.nombre_completo;
+    const docEst = contratoPdf.documentoTexto(idEst.tipo, idEst.numero);
+    const docProp = contratoPdf.documentoTexto(idProp.tipo, idProp.numero);
+    const ahora = new Date();
+    const { pdf, sha256 } = await contratoPdf.generarPdf({
+      contratoId: id,
+      fechaEmision: new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10),
+      arrendador: { nombre: idProp.nombre_completo, documento: docProp },
+      arrendatario: { nombre: idEst.nombre_completo, documento: docEst },
+      inmueble: { titulo: c.inmueble_titulo, direccion: c.inmueble_direccion, barrio: c.barrio },
+      canon: c.canon_mensual, personas: c.personas || 1, diaPago: c.dia_pago, duracion: c.duracion_meses,
+      fechaInicio: c.inicio_iso, fechaFin: c.fin_iso, servicios: c.servicios_incluidos, condiciones: c.condiciones
+    }, ahora);
     const huella = calcularHuella(c);
     await cliente.query(
-      `UPDATE contratos SET estado = 'enviado', enviado_en = now(), vence_en = now() + make_interval(days => $2), huella = $3 WHERE id = $1`,
-      [id, PLAZO_ACEPTACION_DIAS, huella]
+      `UPDATE contratos SET estado = 'enviado', enviado_en = now(), vence_en = now() + make_interval(days => $2), huella = $3,
+         estudiante_nombre = $4, propietario_nombre = $5, estudiante_documento = $6, propietario_documento = $7,
+         plantilla_version = $8, pdf_sha256 = $9
+       WHERE id = $1`,
+      [id, PLAZO_ACEPTACION_DIAS, huella, idEst.nombre_completo, idProp.nombre_completo, docEst, docProp, contratoPdf.PLANTILLA.version, sha256]
+    );
+    await cliente.query(
+      `INSERT INTO contratos_documentos (contrato_id, tipo, pdf, sha256, bytes, plantilla_version) VALUES ($1, 'original', $2, $3, $4, $5)`,
+      [id, pdf, sha256, pdf.length, contratoPdf.PLANTILLA.version]
     );
     await cliente.query(
       `INSERT INTO solicitudes_historial (solicitud_id, autor_id, autor_rol, nota_estudiante, nota_propietario, nota_interna)
@@ -371,6 +416,11 @@ async function enviarContrato(req, res) {
     await cliente.query('COMMIT');
   } catch (error) {
     await cliente.query('ROLLBACK');
+    // A quien le falta el documento se le pide registrarlo
+    for (const usuarioId of error.faltan || []) {
+      await crearAviso({ usuarioId, tipo: 'solicitud', titulo: 'Registra tu documento para el contrato',
+        cuerpo: 'Roumix necesita tu documento de identidad para preparar tu contrato de arriendo.', enlace: 'solicitudes.html#documento' });
+    }
     throw error;
   } finally {
     cliente.release();
@@ -425,7 +475,35 @@ async function cancelarVigenteDeSolicitud(cliente, solicitudId, motivo) {
   );
 }
 
+/**
+ * GET /api/contratos/:id/pdf — el PDF sellado del contrato (las partes, si ya fue enviado, y el admin).
+ * Se comprueba que el archivo guardado coincide con su huella antes de entregarlo.
+ */
+async function descargarPdf(req, res) {
+  const id = idEntero(req.params.id);
+  const { rows: [c] } = await db.query('SELECT id, estado, estudiante_id, propietario_id FROM contratos WHERE id = $1', [id]);
+  if (req.usuario.rol !== 'admin') {
+    const esParte = c && (req.usuario.rol === 'estudiante' ? c.estudiante_id : c.propietario_id) === req.usuario.id;
+    if (!esParte || c.estado === 'borrador') throw errorHttp(404, 'No tienes un contrato con ese número.');
+  } else if (!c) {
+    throw errorHttp(404, `No existe el contrato ${id}.`);
+  }
+  const { rows: [d] } = await db.query(
+    "SELECT tipo, pdf, sha256 FROM contratos_documentos WHERE contrato_id = $1 ORDER BY (tipo = 'firmado') DESC LIMIT 1", [id]);
+  if (!d) throw errorHttp(404, 'Este contrato se envió antes de que Roumix generara PDF.');
+  const integro = crypto.createHash('sha256').update(d.pdf).digest('hex') === d.sha256;
+  if (!integro) throw errorHttp(500, 'El archivo guardado no coincide con su huella. Escríbele al equipo de Roumix.');
+  res.set({
+    'Content-Type': 'application/pdf',
+    'Content-Disposition': `inline; filename="contrato-roumix-${id}${d.tipo === 'firmado' ? '-firmado' : ''}.pdf"`,
+    'Cache-Control': 'private, no-store',
+    'X-Roumix-Sha256': d.sha256
+  });
+  res.send(d.pdf);
+}
+
 module.exports = {
+  descargarPdf,
   ETIQUETAS,
   VIGENTES,
   misContratos,

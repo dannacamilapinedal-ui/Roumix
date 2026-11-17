@@ -19,6 +19,7 @@ const contratosRoutes = require('./routes/contratosRoutes');
 const pagosRoutes = require('./routes/pagosRoutes');
 const wompiRoutes = require('./routes/wompiRoutes');
 const acudienteRoutes = require('./routes/acudienteRoutes');
+const identidadRoutes = require('./routes/identidadRoutes');
 const errorHandler = require('./middleware/errorHandler');
 const { cabecerasSeguridad, opcionesCors } = require('./config/seguridad');
 
@@ -49,6 +50,7 @@ app.use('/api/contratos', contratosRoutes);
 app.use('/api/pagos', pagosRoutes);
 app.use('/api/wompi', wompiRoutes);
 app.use('/api/acudiente', acudienteRoutes);
+app.use('/api/identidad', identidadRoutes);
 app.use('/api/mapa', mapaRoutes);
 app.use('/api/config', configRoutes);
 app.use('/api/tareas', tareasRoutes);

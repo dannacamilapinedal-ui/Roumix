@@ -128,14 +128,21 @@
         contenedor.innerHTML = `
           <div class="contrato-barra no-imprimir">
             <a href="${volver}" class="msg-enlace">← Volver</a>
-            <button type="button" class="btn-card-action" id="btn-imprimir">Imprimir o guardar en PDF</button>
+            ${c.pdf
+              ? '<button type="button" class="btn-card-action" id="btn-pdf">Descargar contrato (PDF)</button>'
+              : '<button type="button" class="btn-card-action" id="btn-imprimir">Imprimir o guardar en PDF</button>'}
           </div>
 
+          ${c.pdf ? `
+          <div class="contrato-demo" role="note">
+            <strong>Contrato en PDF sellado.</strong> Descárgalo y léelo completo: es el documento definitivo y su huella permite
+            comprobar que nadie lo cambió.${c.pdf.plantillaRevisada ? "" : " <strong>La plantilla aún está pendiente de revisión legal</strong>: úsala solo para pruebas del proyecto."}
+            La aceptación de abajo todavía es demostrativa; la firma electrónica con código y firma manuscrita llega en la próxima actualización.
+          </div>` : `
           <div class="contrato-demo" role="note">
             <strong>Documento demostrativo.</strong>
             La aceptación en Roumix registra tu nombre, la fecha y la hora, pero <strong>no es una firma electrónica con validez legal</strong>.
-            Para un contrato con efectos legales, Roumix deberá integrar un proveedor de firma electrónica certificado.
-          </div>
+          </div>`}
 
           <article class="contrato-documento">
             <header class="contrato-cabeza">
@@ -149,8 +156,8 @@
             <section class="contrato-seccion">
               <h2>1. Partes</h2>
               <dl class="contrato-datos">
-                <dt>Arrendador (propietario)</dt><dd>${escaparHTML(c.propietario_nombre)}</dd>
-                <dt>Arrendatario (estudiante)</dt><dd>${escaparHTML(c.estudiante_nombre)}</dd>
+                <dt>Arrendador (propietario)</dt><dd>${escaparHTML(c.propietario_nombre)}${c.propietario_documento ? ` · ${escaparHTML(c.propietario_documento)}` : ""}</dd>
+                <dt>Arrendatario (estudiante)</dt><dd>${escaparHTML(c.estudiante_nombre)}${c.estudiante_documento ? ` · ${escaparHTML(c.estudiante_documento)}` : ""}</dd>
               </dl>
               <p class="contrato-nota">Roumix actúa únicamente como intermediario: prepara este documento y coordina el proceso. No es propietario del inmueble ni parte del contrato.</p>
             </section>
@@ -168,7 +175,7 @@
               <h2>3. Condiciones económicas y duración</h2>
               <dl class="contrato-datos">
                 <dt>Canon mensual</dt><dd><strong>${pesos(c.canon_mensual)}</strong></dd>
-                <dt>Depósito</dt><dd>${pesos(c.deposito)}</dd>
+                ${c.pdf ? "" : `<dt>Depósito</dt><dd>${pesos(c.deposito)}</dd>`}
                 <dt>Día de pago</dt><dd>El ${c.dia_pago} de cada mes</dd>
                 <dt>Inicio</dt><dd>${dia(c.fecha_inicio)}</dd>
                 <dt>Finalización</dt><dd>${dia(c.fecha_fin)} (${c.duracion_meses} ${c.duracion_meses === 1 ? "mes" : "meses"})</dd>
@@ -198,6 +205,11 @@
               ${c.vence_en && ["enviado", "pendiente_aceptacion"].includes(c.estado) ? `<p class="contrato-nota">Plazo para aceptar: hasta el ${momento(c.vence_en)}.</p>` : ""}
             </section>
 
+            ${c.pdf ? `
+            <footer class="contrato-huella">
+              Huella del PDF (SHA-256): <code>${escaparHTML(c.pdf.sha256)}</code>
+              <span class="contrato-huella-ok">Plantilla ${escaparHTML(c.pdf.plantilla)}${c.pdf.plantillaRevisada ? " · revisada" : " · pendiente de revisión legal"}</span>
+            </footer>` : ""}
             ${c.huella ? `
             <footer class="contrato-huella">
               Huella del documento (SHA-256): <code>${escaparHTML(c.huella)}</code>
@@ -219,7 +231,33 @@
           ${!c.puedo_aceptar && c.acepte && c.estado === "pendiente_aceptacion" ? `<p class="contrato-estado-msg no-imprimir">Ya aceptaste este contrato. Te avisaremos cuando la otra parte lo acepte.</p>` : ""}
           ${c.estado === "formalizado" && c.mi_rol === "estudiante" ? `<p class="contrato-estado-msg no-imprimir">🎉 Contrato formalizado. El siguiente paso es el pago del primer mes a través de Roumix; te avisaremos cuando esté habilitado.</p>` : ""}`;
 
-        document.getElementById("btn-imprimir").addEventListener("click", () => window.print());
+        const botonImprimir = document.getElementById("btn-imprimir");
+        if (botonImprimir) botonImprimir.addEventListener("click", () => window.print());
+        // Descarga del PDF sellado con la sesión del usuario
+        const botonPdf = document.getElementById("btn-pdf");
+        if (botonPdf) {
+          botonPdf.addEventListener("click", async () => {
+            botonPdf.disabled = true;
+            const texto = botonPdf.textContent;
+            botonPdf.textContent = "Descargando…";
+            try {
+              const r = await fetch(`${RoumixAPI.baseURL}/contratos/${c.id}/pdf`, { headers: { Authorization: `Bearer ${RoumixStorage.getToken()}` } });
+              if (!r.ok) throw new Error((await r.json().catch(() => ({}))).message || "No pudimos descargar el contrato.");
+              const url = URL.createObjectURL(await r.blob());
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `contrato-roumix-${c.id}.pdf`;
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+              setTimeout(() => URL.revokeObjectURL(url), 5000);
+            } catch (err) {
+              RoumixAvisos.mostrar(err.message, "error", 6000);
+            }
+            botonPdf.disabled = false;
+            botonPdf.textContent = texto;
+          });
+        }
         const form = document.getElementById("form-aceptar");
         if (!form) return;
         form.addEventListener("submit", async (e) => {
