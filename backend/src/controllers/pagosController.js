@@ -359,10 +359,11 @@ async function registrarDevolucion(req, res) {
     if (pago.estado === 'en_disputa') {
       await pagos.registrarEvento(cliente, { pagoId: id, tipo: 'disputa_resuelta', detalle: 'Resuelta con devolución al estudiante.', autorId: req.usuario.id, autorRol: 'admin' });
     }
+    const liberado = await pagos.liberarInmueble(cliente, pago.solicitud_id);
     await pagos.moverSolicitud(cliente, {
       solicitudId: pago.solicitud_id, de: 'pagado', a: 'cancelada',
       notaEstudiante: `Roumix te devolvió el pago (referencia ${ref}${pago.simulado ? ', simulado' : ''}). Motivo: ${texto}`,
-      notaPropietario: 'El arriendo no siguió adelante: Roumix devolvió el pago al estudiante y la comisión quedó anulada.',
+      notaPropietario: `El arriendo no siguió adelante: Roumix devolvió el pago al estudiante y la comisión quedó anulada.${liberado ? ' Tu publicación volvió a estar disponible en las búsquedas.' : ''}`,
       notaInterna: `Devolución del pago #${id} (${ref}): ${texto}`
     });
     return { ...pago, referenciaDevolucion: ref };

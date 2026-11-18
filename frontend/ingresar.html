@@ -257,10 +257,13 @@
       if (window.location.hash.includes("type=signup")) {
         history.replaceState(null, "", window.location.pathname + window.location.search);
         mostrarMensaje("¡Correo confirmado! Ya puedes iniciar sesión.", "exito");
-      } else if (window.location.hash.includes("error_description")) {
+      } else if (window.location.hash.includes("error_description") || window.location.hash.includes("error_code")) {
         const hash = new URLSearchParams(window.location.hash.slice(1));
         history.replaceState(null, "", window.location.pathname + window.location.search);
-        mostrarMensaje(`No se pudo confirmar el correo: ${hash.get("error_description")}`, "error");
+        const vencido = hash.get("error_code") === "otp_expired" || /expired|invalid/i.test(hash.get("error_description") || "");
+        mostrarMensaje(vencido
+          ? "El enlace del correo ya expiró o ya se usó. Si era para confirmar tu cuenta, intenta iniciar sesión; si era para cambiar la contraseña, pide uno nuevo con \"¿Olvidaste tu contraseña?\"."
+          : "No se pudo completar la acción del enlace del correo. Inténtalo de nuevo.", "error");
       } else if (redirigir) {
         mostrarMensaje("Inicia sesión para continuar.", "error");
       }
@@ -280,6 +283,8 @@
       }
       linkOlvide.addEventListener("click", () => modoRecuperar(true));
       linkVolver.addEventListener("click", () => modoRecuperar(false));
+      // Desde "Pedir un enlace nuevo" (restablecer.html) se abre directo la recuperación
+      if (params.get("recuperar")) modoRecuperar(true);
 
       labelTelefono.textContent = esPropietario ? "Celular (obligatorio · solo lo ve el equipo de Roumix)" : "Celular (opcional · solo lo ve el equipo de Roumix)";
 

@@ -89,6 +89,37 @@ async function habilitarPago(cliente, solicitudId) {
 }
 
 /**
+ * Marca como "arrendado" el inmueble de la solicitud (si estaba disponible o pausado):
+ * deja de verse en las búsquedas y no recibe solicitudes nuevas.
+ */
+async function marcarArrendado(cliente, solicitudId) {
+  await cliente.query(
+    `UPDATE inmuebles i SET estado = 'arrendado'
+     FROM solicitudes s WHERE s.id = $1 AND i.id = s.inmueble_id AND i.estado IN ('disponible', 'pausado')`,
+    [solicitudId]
+  );
+}
+
+/**
+ * Vuelve a publicar el inmueble cuando el arriendo no siguió adelante (devolución del pago),
+ * solo si lo había marcado arrendado y no hay otro arriendo vigente en él.
+ * Devuelve true si el inmueble volvió a quedar disponible.
+ */
+async function liberarInmueble(cliente, solicitudId) {
+  const { rowCount } = await cliente.query(
+    `UPDATE inmuebles i SET estado = 'disponible'
+     FROM solicitudes s
+     WHERE s.id = $1 AND i.id = s.inmueble_id AND i.estado = 'arrendado'
+       AND NOT EXISTS (
+         SELECT 1 FROM solicitudes o JOIN contratos c ON c.solicitud_id = o.id AND c.estado = 'formalizado'
+         WHERE o.inmueble_id = i.id AND o.id <> s.id AND o.estado IN ('pagado', 'completada')
+           AND (c.fecha_inicio + make_interval(months => c.duracion_meses)) > CURRENT_DATE)`,
+    [solicitudId]
+  );
+  return rowCount > 0;
+}
+
+/**
  * Registra un pago del primer canon como APROBADO (lo usan el simulador y Wompi).
  * - Marca el pago, registra la comisión del 10 % (a cargo del propietario) y deja
  *   pendiente el desembolso del resto.
@@ -127,9 +158,11 @@ async function aprobar(cliente, p, { ref, metodo, detalle, simulado, modoWompi =
   await moverSolicitud(cliente, {
     solicitudId: p.solicitud_id, de: 'pago_pendiente', a: 'pagado',
     notaEstudiante: `Roumix confirmó tu pago del primer mes (referencia ${ref}, ${etiqueta}).${variosMeses ? ' Ahora activa el débito automático de los meses siguientes: tu contrato lo pide y sin él no queda listo tu arriendo.' : ''}`,
-    notaPropietario: 'El estudiante pagó el primer mes. Roumix gestionará tu desembolso.',
+    notaPropietario: 'El estudiante pagó el primer mes. Roumix gestionará tu desembolso. Tu publicación quedó como arrendada y ya no aparece en las búsquedas.',
     notaInterna: `Pago #${p.id} aprobado (${ref}, ${etiqueta}). Comisión ${p.comision}, desembolso pendiente ${p.neto_propietario}.`
   });
+  // Con el arriendo cerrado, la publicación deja de aparecer en las búsquedas
+  await marcarArrendado(cliente, p.solicitud_id);
   await auditar({
     actor, actorRol: actor ? null : 'sistema', accion: 'pago_aprobado', entidad: 'pago', entidadId: p.id,
     resumen: `Pago del primer canon aprobado (${ref}, ${etiqueta}).`,
@@ -140,6 +173,8 @@ async function aprobar(cliente, p, { ref, metodo, detalle, simulado, modoWompi =
 
 module.exports = {
   aprobar,
+  marcarArrendado,
+  liberarInmueble,
   PORCENTAJE_COMISION,
   VERSION_CONDICIONES,
   repartir,

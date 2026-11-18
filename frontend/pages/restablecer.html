@@ -59,6 +59,7 @@
       </form>
 
       <a href="../ingresar.html" class="auth-footer-link restablecer-volver" id="link-acceso">← Volver a iniciar sesión</a>
+      <a href="../ingresar.html?recuperar=1" class="auth-footer-link restablecer-volver" id="link-nuevo-enlace" hidden>Pedir un enlace nuevo</a>
     </section>
   </main>
 
@@ -80,17 +81,32 @@
 
       // Supabase devuelve el token de recuperación (o el error) en el #hash del enlace.
       // Se guarda solo en memoria y se borra de la barra de direcciones de inmediato.
-      const datos = new URLSearchParams(window.location.hash.slice(1));
+      // El enlace que envía Roumix trae un código (token_hash) que solo se canjea al guardar;
+      // el de Supabase trae el access_token. Se guarda en la pestaña para que recargar no lo pierda.
+      const CLAVE = "roumix_recuperacion";
+      let datos = new URLSearchParams(window.location.hash.slice(1));
       history.replaceState(null, "", window.location.pathname);
-      const token = datos.get("type") === "recovery" ? datos.get("access_token") : null;
+      if (datos.get("type") === "recovery") {
+        try { sessionStorage.setItem(CLAVE, datos.toString()); } catch (e) {}
+      } else if (!datos.get("error_code") && !datos.get("error_description")) {
+        try { datos = new URLSearchParams(sessionStorage.getItem(CLAVE) || ""); } catch (e) {}
+      }
+      const esRecuperacion = datos.get("type") === "recovery";
+      const credencial = {
+        tokenHash: esRecuperacion ? datos.get("token_hash") : null,
+        tokenRecuperacion: esRecuperacion ? datos.get("access_token") : null
+      };
+      const olvidarEnlace = () => { try { sessionStorage.removeItem(CLAVE); } catch (e) {} };
 
-      if (!token) {
+      if (!credencial.tokenHash && !credencial.tokenRecuperacion) {
+        olvidarEnlace();
         form.hidden = true;
         document.getElementById("restablecer-ayuda").hidden = true;
         const motivo = datos.get("error_code") === "otp_expired" || /expired/i.test(datos.get("error_description") || "")
           ? "El enlace ya expiró o ya se usó."
           : "Este enlace no es válido.";
-        mostrar(`${motivo} Pide uno nuevo desde "¿Olvidaste tu contraseña?" en la página de inicio.`, "error");
+        mostrar(`${motivo} Pide uno nuevo y usa el enlace más reciente que te llegue.`, "error");
+        document.getElementById("link-nuevo-enlace").hidden = false;
         return;
       }
 
@@ -104,21 +120,36 @@
         e.preventDefault();
         const nueva = inputNueva.value;
         if (nueva.length < 8) return mostrar("La contraseña debe tener al menos 8 caracteres.", "error");
+        if (nueva.length > 72) return mostrar("La contraseña puede tener máximo 72 caracteres.", "error");
         if (nueva !== inputConfirmar.value) return mostrar("Las contraseñas no coinciden.", "error");
 
         boton.disabled = true;
         boton.textContent = "Guardando…";
         try {
-          const respuesta = await RoumixAPI.restablecerContrasena(token, nueva);
+          const respuesta = await RoumixAPI.restablecerContrasena(credencial, nueva);
+          olvidarEnlace();
           // Cualquier sesión guardada en este navegador quedó cerrada en el servidor
           RoumixStorage.limpiarSesion();
           form.hidden = true;
+          document.getElementById("restablecer-ayuda").hidden = true;
           mostrar(`${respuesta} Te llevaremos al inicio de sesión…`, "exito");
           setTimeout(() => window.location.replace("../ingresar.html"), 3500);
         } catch (error) {
-          mostrar(error.status === 401
-            ? 'El enlace expiró o ya se usó. Pide uno nuevo desde "¿Olvidaste tu contraseña?" en la página de inicio.'
-            : error.message, "error");
+          // El código del enlace ya se canjeó: el servidor devuelve la sesión de recuperación para reintentar
+          if (error.datos && error.datos.tokenRecuperacion) {
+            credencial.tokenRecuperacion = error.datos.tokenRecuperacion;
+            credencial.tokenHash = null;
+            try { sessionStorage.setItem(CLAVE, new URLSearchParams({ type: "recovery", access_token: credencial.tokenRecuperacion }).toString()); } catch (e) {}
+          }
+          if (error.status === 401) {
+            olvidarEnlace();
+            form.hidden = true;
+            document.getElementById("restablecer-ayuda").hidden = true;
+            mostrar(error.message || "El enlace expiró o ya se usó. Pide uno nuevo.", "error");
+            document.getElementById("link-nuevo-enlace").hidden = false;
+            return;
+          }
+          mostrar(error.message, "error");
           boton.disabled = false;
           boton.textContent = "Guardar contraseña";
         }

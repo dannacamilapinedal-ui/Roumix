@@ -17,8 +17,9 @@ router.post('/login', limiteIngreso, requireCaptcha, authController.login);
 // POST /api/auth/recuperar - Enviar el correo para crear una contraseña nueva
 router.post('/recuperar', requireCaptcha, authController.recuperar);
 
-// POST /api/auth/restablecer - Guardar la contraseña nueva (token del enlace del correo)
-router.post('/restablecer', requireAuth, authController.restablecer);
+// POST /api/auth/restablecer - Guardar la contraseña nueva (código o token del enlace del correo;
+// el controlador valida el enlace y que la cuenta esté activa)
+router.post('/restablecer', authController.restablecer);
 
 // POST /api/auth/refresh - Renovar el token de acceso
 router.post('/refresh', authController.refresh);

@@ -397,6 +397,22 @@ async function actualizarAdmin(req, res) {
       throw errorHttp(409, 'La solicitud está cerrada: solo se pueden agregar notas internas.');
     }
 
+    // Un inmueble ya arrendado por otra solicitud no puede volver a arrendarse: esta solo se puede cerrar
+    if (nuevo && !['rechazada', 'cancelada'].includes(nuevo)) {
+      const { rows: ocupado } = await cliente.query(
+        `SELECT o.id FROM solicitudes o
+         JOIN contratos c ON c.solicitud_id = o.id AND c.estado = 'formalizado'
+         JOIN inmuebles i ON i.id = o.inmueble_id AND i.estado = 'arrendado'
+         WHERE o.inmueble_id = $1 AND o.id <> $2 AND o.estado IN ('pagado', 'completada')
+           AND (c.fecha_inicio + make_interval(months => c.duracion_meses)) > CURRENT_DATE
+         LIMIT 1`,
+        [fila.inmueble_id, id]
+      );
+      if (ocupado.length) {
+        throw errorHttp(409, `Este inmueble ya se arrendó con la solicitud #${ocupado[0].id}. Rechaza o cancela esta solicitud y explícale al estudiante.`);
+      }
+    }
+
     // Roumix comparte la solicitud con el propietario cuando empieza a gestionarla
     compartidaAhora = !fila.compartida_propietario_en && nuevo && !['rechazada', 'cancelada'].includes(nuevo);
     if (notaPropietario && !fila.compartida_propietario_en && !compartidaAhora) {

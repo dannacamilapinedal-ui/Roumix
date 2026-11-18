@@ -55,6 +55,7 @@ const RoumixAPI = {
         : `Error en el servidor (${res.status})`;
       const err = new Error(json.message || porDefecto);
       err.status = res.status;
+      err.datos = json;
       throw err;
     }
     return json;
@@ -109,12 +110,11 @@ const RoumixAPI = {
   /**
    * Guarda la contraseña nueva usando el token que trae el enlace del correo
    */
-  restablecerContrasena: async function(tokenRecuperacion, password) {
-    const json = await this._request('/auth/restablecer', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${tokenRecuperacion}` },
-      body: JSON.stringify({ password })
-    }, false);
+  restablecerContrasena: async function({ tokenRecuperacion, tokenHash }, password) {
+    // Enlace de Roumix: va el código (tokenHash). Enlace de Supabase o reintento: va el token de recuperación.
+    const opciones = { method: 'POST', body: JSON.stringify(tokenRecuperacion ? { password } : { password, tokenHash }) };
+    if (tokenRecuperacion) opciones.headers = { Authorization: `Bearer ${tokenRecuperacion}` };
+    const json = await this._request('/auth/restablecer', opciones, false);
     return json.message;
   },
 

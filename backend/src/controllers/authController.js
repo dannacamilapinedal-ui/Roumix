@@ -297,7 +297,11 @@ async function recuperar(req, res) {
       email,
       options: { redirectTo: `${urlAplicacion(req)}/pages/restablecer.html` }
     });
-    const enlace = data && data.properties && data.properties.action_link;
+    // El enlace lleva directo a Roumix con el código (token_hash) y el código solo se canjea
+    // cuando la persona guarda la contraseña nueva. Así, los filtros de correo que "abren"
+    // los enlaces para revisarlos ya no gastan el enlace de un solo uso.
+    const hash = data && data.properties && data.properties.hashed_token;
+    const enlace = hash ? `${urlAplicacion(req)}/pages/restablecer.html#token_hash=${encodeURIComponent(hash)}&type=recovery` : null;
     if (enlace) {
       const enviado = await notificaciones.enviarRecuperacion({ email, enlace });
       if (!enviado) throw errorHttp(502, 'No pudimos enviar el correo en este momento. Inténtalo de nuevo en unos minutos.');
@@ -322,14 +326,44 @@ async function recuperar(req, res) {
 }
 
 /**
- * POST /api/auth/restablecer  (requireAuth con el token del enlace de recuperación)  { password }
+ * Token con el que se cambia la contraseña:
+ * - { tokenHash } del enlace que envía Roumix: se canjea aquí, una sola vez, por una sesión de recuperación;
+ * - o la cabecera Authorization con el access_token del enlace que envía Supabase.
+ * En ambos casos la cuenta debe existir en Roumix y estar activa.
+ */
+async function tokenDeRecuperacion(req) {
+  const tokenHash = texto((req.body || {}).tokenHash);
+  let token;
+  let usuarioId;
+  if (tokenHash) {
+    if (tokenHash.length > 200 || !/^[A-Za-z0-9_-]+$/.test(tokenHash)) throw errorHttp(401, 'El enlace no es válido. Pide uno nuevo.');
+    const { data, error } = await crearClienteSupabase().auth.verifyOtp({ type: 'recovery', token_hash: tokenHash });
+    if (error || !data || !data.session) throw errorHttp(401, 'El enlace expiró o ya se usó. Pide uno nuevo.');
+    token = data.session.access_token;
+    usuarioId = data.user && data.user.id;
+  } else {
+    const [tipo, valor] = String(req.headers.authorization || '').split(' ');
+    if (tipo !== 'Bearer' || !valor) throw errorHttp(401, 'El enlace no es válido. Pide uno nuevo.');
+    const { data, error } = await crearClienteSupabase().auth.getUser(valor);
+    if (error || !data || !data.user) throw errorHttp(401, 'El enlace expiró o ya se usó. Pide uno nuevo.');
+    token = valor;
+    usuarioId = data.user.id;
+  }
+  const { rows } = await db.query('SELECT estado FROM usuarios WHERE id = $1', [usuarioId]);
+  if (!rows.length) throw errorHttp(403, 'La cuenta no tiene un perfil en Roumix.');
+  if (rows[0].estado !== 'activo') throw errorHttp(403, 'Tu cuenta está suspendida. Escribe a Roumix si crees que es un error.');
+  return token;
+}
+
+/**
+ * POST /api/auth/restablecer  { password, tokenHash? }  (o Authorization con el token del enlace de Supabase)
  * Guarda la contraseña nueva en Supabase Auth y cierra todas las sesiones abiertas de la cuenta.
  */
 async function restablecer(req, res) {
   const password = typeof (req.body || {}).password === 'string' ? req.body.password : '';
   if (password.length < 8 || password.length > 72) throw errorHttp(400, 'La contraseña debe tener entre 8 y 72 caracteres.');
 
-  const token = req.headers.authorization.split(' ')[1];
+  const token = await tokenDeRecuperacion(req);
   const cabeceras = { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
 
   const respuesta = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
@@ -340,10 +374,15 @@ async function restablecer(req, res) {
   const json = await respuesta.json().catch(() => ({}));
 
   if (!respuesta.ok) {
-    if (json.error_code === 'same_password') throw errorHttp(400, 'La contraseña nueva debe ser diferente de la anterior.');
-    if (json.error_code === 'weak_password') throw errorHttp(400, 'La contraseña es demasiado débil. Usa letras y números.');
-    if (respuesta.status === 401 || respuesta.status === 403) throw errorHttp(401, 'El enlace expiró o ya se usó. Pide uno nuevo.');
-    throw errorHttp(502, 'No se pudo guardar la contraseña nueva. Inténtalo de nuevo.');
+    let status = 502;
+    let message = 'No se pudo guardar la contraseña nueva. Inténtalo de nuevo.';
+    if (json.error_code === 'same_password') { status = 400; message = 'La contraseña nueva debe ser diferente de la anterior.'; }
+    else if (json.error_code === 'weak_password') { status = 400; message = 'La contraseña es demasiado débil. Usa letras y números.'; }
+    else if (respuesta.status === 401 || respuesta.status === 403) { status = 401; message = 'El enlace expiró o ya se usó. Pide uno nuevo.'; }
+    // El código del enlace ya se canjeó: se devuelve la sesión de recuperación para que la
+    // persona pueda intentarlo otra vez con otra contraseña sin pedir un enlace nuevo.
+    const reintento = status !== 401 && (req.body || {}).tokenHash ? { tokenRecuperacion: token } : {};
+    return res.status(status).json({ status: 'error', message, ...reintento });
   }
 
   // Por seguridad se cierran todas las sesiones (incluida la del enlace)

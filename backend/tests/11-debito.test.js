@@ -137,6 +137,21 @@ async function hastaPrimerMesPagado(est, nombre, inicio) {
     const inicio = sumarDias(hoy, 10);
     const p1 = await hastaPrimerMesPagado(e1, 'Laura Prueba', inicio);
     ok(p1.estado === 'aprobado', `Primer mes pagado (pago #${p1.id}); contrato de 4 meses`);
+    const estadoInm = (await db.query('SELECT estado FROM inmuebles WHERE id = $1', [inmuebleId])).rows[0].estado;
+    ok(estadoInm === 'arrendado', 'Con el primer mes pagado, el inmueble pasa solo a "arrendado" y deja de aparecer en las búsquedas');
+    {
+      const eNueva = await falla(() => sol.crearSolicitud(req(e2, { body: { inmuebleId, fechaIngreso: inicio, duracionMeses: 2, personas: 1 } }), res()));
+      ok(eNueva && eNueva.status === 404, 'Un inmueble arrendado no recibe solicitudes nuevas → 404');
+      // Una solicitud que llegó antes de arrendarse no puede seguir avanzando: solo se cierra
+      await db.query("UPDATE inmuebles SET estado = 'disponible' WHERE id = $1", [inmuebleId]);
+      const rs = res(); await sol.crearSolicitud(req(e2, { body: { inmuebleId, fechaIngreso: inicio, duracionMeses: 2, personas: 1 } }), rs);
+      await db.query("UPDATE inmuebles SET estado = 'arrendado' WHERE id = $1", [inmuebleId]);
+      const otra = rs.cuerpo.data.id;
+      const eAvanza = await falla(() => sol.actualizarAdmin(req(admin, { params: { id: otra }, body: { estado: 'en_revision' } }), res()));
+      ok(eAvanza && eAvanza.status === 409 && /ya se arrendó/.test(eAvanza.message), 'Otra solicitud del inmueble ya arrendado no puede avanzar → 409');
+      const rc = res(); await sol.actualizarAdmin(req(admin, { params: { id: otra }, body: { estado: 'cancelada', notaEstudiante: 'El inmueble ya fue arrendado.' } }), rc);
+      ok(rc.cuerpo && rc.cuerpo.status === 'success', 'Esa solicitud sí se puede cancelar explicándole al estudiante');
+    }
 
     // 1. Primer mes pagado y el débito todavía sin activar: obligatorio y pendiente
     let r = res(); await pg.verPago(req(e1, { params: { id: p1.id } }), r);

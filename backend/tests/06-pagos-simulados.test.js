@@ -148,6 +148,8 @@ async function hastaFormalizado(est, nombre) {
     const des2 = (await db.query('SELECT * FROM desembolsos WHERE pago_id = $1', [p1.id])).rows[0];
     ok(des2.estado === 'realizado' && /^DSB-/.test(des2.referencia), `Desembolso registrado (${des2.referencia})`);
     ok(await estadoSol(s1) === 'completada', 'La solicitud quedó "Completada"');
+    ok((await db.query('SELECT estado FROM inmuebles WHERE id = $1', [inmuebleId])).rows[0].estado === 'arrendado',
+      'Al pagar el primer mes, el inmueble quedó "arrendado" (ya no aparece en las búsquedas)');
     e = await falla(() => pg.registrarDevolucion(req(admin, { params: { id: p1.id }, body: { motivo: 'Prueba de devolución tardía' } }), res()));
     ok(e && e.status === 409, 'Devolver después del desembolso → 409');
     e = await falla(() => pg.abrirDisputa(req(e1, { params: { id: p1.id }, body: { motivo: 'Otro problema con el inmueble.' } }), res()));
@@ -158,12 +160,16 @@ async function hastaFormalizado(est, nombre) {
     const p2 = await pagoDeSol(s2);
     ok(p2 && p2.estado === 'pendiente', 'Con la comisión ya aceptada, el pago se habilita en cuanto se formaliza el contrato');
     await pg.simularPago(req(e2, { params: { id: p2.id }, body: { metodo: 'pse_simulado', resultado: 'aprobado' } }), res());
+    // El arriendo del primer estudiante ya terminó: al devolver este pago el inmueble vuelve a publicarse
+    await db.query("UPDATE contratos SET fecha_inicio = '2020-01-01' WHERE solicitud_id = $1", [s1]);
     r = res(); await pg.registrarDevolucion(req(admin, { params: { id: p2.id }, body: { motivo: 'El propietario canceló el arriendo antes de la entrega.' } }), r);
     const dv = (await db.query('SELECT * FROM devoluciones WHERE pago_id = $1', [p2.id])).rows[0];
     ok((await pagoDeSol(s2)).estado === 'reembolsado' && dv && dv.monto === 800000 && /^DEV-/.test(dv.referencia), `Devolución completa registrada (${dv && dv.referencia})`);
     ok((await db.query('SELECT estado FROM comisiones WHERE pago_id = $1', [p2.id])).rows[0].estado === 'anulada' &&
        (await db.query('SELECT estado FROM desembolsos WHERE pago_id = $1', [p2.id])).rows[0].estado === 'anulado', 'Comisión y desembolso anulados');
     ok(await estadoSol(s2) === 'cancelada', 'La solicitud quedó cancelada');
+    ok((await db.query('SELECT estado FROM inmuebles WHERE id = $1', [inmuebleId])).rows[0].estado === 'disponible',
+      'Con el arriendo devuelto (y sin otro vigente), el inmueble vuelve a estar disponible');
 
     // 8. Cancelar un pago pendiente (tercer estudiante)
     const s3 = await hastaFormalizado(e3, 'Sara Prueba');
