@@ -118,7 +118,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const SECCIONES = {
     resumen: ["Resumen", "Lo que necesita atención hoy y las cifras de la plataforma."],
     solicitudes: ["Solicitudes", "Revisa cada solicitud de arriendo, compártela con el propietario y avanza su estado."],
-    contratos: ["Contratos", "Contratos demostrativos: prepáralos desde la solicitud, envíalos y sigue las aceptaciones."],
+    contratos: ["Contratos", "Contratos con firma electrónica: prepáralos desde la solicitud, envíalos y sigue las firmas."],
     pagos: ["Pagos", "Pagos del primer mes (con Wompi o simulados), comisión del 10 %, desembolsos, devoluciones y disputas."],
     mensajes: ["Mensajes", "Conversaciones de estudiantes y propietarios con el equipo de Roumix."],
     propietarios: ["Propietarios", "Verifica la identidad de los propietarios antes de que puedan publicar."],
@@ -466,7 +466,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     contador.hidden = data.conversaciones.pendientes === 0;
   }
 
-  // ---------------- Contratos (flujo demostrativo) ----------------
+  // ---------------- Contratos (firma electrónica F-1 a F-4) ----------------
   const ETIQUETA_CONTRATO = {
     borrador: "Borrador", enviado: "Enviado", pendiente_aceptacion: "Falta una aceptación",
     formalizado: "Formalizado", cancelado: "Cancelado", expirado: "Expirado"
@@ -570,7 +570,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       </details>` : "";
     return `
       <section class="admin-decision admin-seccion-contrato">
-        <h3>Contrato <small>(demostrativo)</small></h3>
+        <h3>Contrato</h3>
         ${cuerpo}
         ${cancelar}
         ${historial.length ? `<p class="fotos-ayuda">Anteriores: ${historial.map(c => `<a href="contrato.html?id=${c.id}" target="_blank" rel="noopener">#${c.id}</a> ${escaparHTML(ETIQUETA_CONTRATO[c.estado])}`).join(" · ")}</p>` : ""}

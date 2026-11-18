@@ -10,7 +10,8 @@ cada parte, prepara el contrato y gestiona el pago del primer mes.
 >
 > **Pagos:** el primer mes se cobra con **Wompi** (pasarela de Bancolombia) cuando sus llaves están
 > configuradas; sin ellas se usa el simulador. Ver [docs/pagos-wompi.md](docs/pagos-wompi.md).
-> La firma del contrato sigue siendo **demostrativa** (ver [Qué es demostrativo](#-qué-es-demostrativo)).
+> **Contratos:** se firman electrónicamente (código al correo + firma dibujada) y se entregan en PDF firmado con
+> certificado y código de verificación público. Ver [docs/firma-electronica.md](docs/firma-electronica.md).
 
 **En producción:** https://roumix-eight.vercel.app
 
@@ -140,8 +141,8 @@ $env:ROUMIX_PRUEBAS_BD="si"; npm test     # PowerShell
 npm test -- 05 06                         # solo algunas
 ```
 
-Son **382 comprobaciones de integración** en 14 archivos (`backend/tests/`), una por módulo: verificación
-de propietarios, publicaciones, solicitudes, mensajes, contratos, pagos simulados, auditoría, pagos con Wompi, pago por enlace del acudiente, condiciones de la comisión, débito automático mensual, contrato en PDF sellado, código de firma y firma manuscrita con evidencias. Llaman a los
+Son **409 comprobaciones de integración** en 15 archivos (`backend/tests/`), una por módulo: verificación
+de propietarios, publicaciones, solicitudes, mensajes, contratos, pagos simulados, auditoría, pagos con Wompi, pago por enlace del acudiente, condiciones de la comisión, débito automático mensual, contrato en PDF sellado, código de firma, firma manuscrita con evidencias y PDF firmado con verificación pública. Llaman a los
 controladores reales contra la base de datos configurada; cada prueba crea sus propios usuarios y datos
 (con correos `@roumix.test`) y **los borra al terminar**. No envían correos reales. Como escriben en la base
 de datos, piden confirmarlo con `ROUMIX_PRUEBAS_BD=si`. Detalle en [`docs/pruebas.md`](docs/pruebas.md).
@@ -170,7 +171,7 @@ de datos, piden confirmarlo con `ROUMIX_PRUEBAS_BD=si`. Detalle en [`docs/prueba
 
 | Parte | Cómo funciona hoy | Qué falta para que sea real |
 |-------|-------------------|-----------------------------|
-| **Firma del contrato** | Cada parte escribe su nombre y confirma; se guardan fecha, hora y la huella SHA-256 del documento. | Integrar un proveedor de firma electrónica certificado. |
+| **Plantilla del contrato** | Las partes firman electrónicamente (código al correo, firma dibujada y evidencias) y reciben el PDF firmado con certificado. La plantilla aún dice "pendiente de revisión legal". | Que un abogado revise la plantilla; opcional: firma digital certificada o estampa de tiempo de una entidad acreditada. |
 | **Pagos** | Con las llaves de Wompi configuradas, el cobro es real a través de Wompi (en modo de pruebas no mueve dinero). Sin ellas, un simulador interno aprueba o rechaza. Ver [docs/pagos-wompi.md](docs/pagos-wompi.md). | Para dinero real: verificar el comercio en Wompi y poner las llaves de producción. |
 | **Desembolsos y devoluciones** | El administrador hace la transferencia (o la devolución en el panel de Wompi) y la registra en Roumix. | Automatizar la dispersión a propietarios (p. ej., Pagos a terceros de Wompi). |
 

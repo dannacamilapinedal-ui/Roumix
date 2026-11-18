@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Contrato de arrendamiento gestionado por Roumix (flujo demostrativo).">
+  <meta name="description" content="Contrato de arrendamiento gestionado por Roumix, con firma electrónica de ambas partes.">
   <title>Contrato — Roumix</title>
   <script>try{if(localStorage.getItem("roumix_tema")==="oscuro"){document.documentElement.dataset.tema="oscuro";}}catch(e){}</script>
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
@@ -144,15 +144,19 @@
           <div class="contrato-barra no-imprimir">
             <a href="${volver}" class="msg-enlace">← Volver</a>
             ${c.pdf
-              ? '<button type="button" class="btn-card-action" id="btn-pdf">Descargar contrato (PDF)</button>'
+              ? `<button type="button" class="btn-card-action" id="btn-pdf">${c.estado === "formalizado" ? "Descargar contrato firmado (PDF)" : "Descargar contrato (PDF)"}</button>`
               : '<button type="button" class="btn-card-action" id="btn-imprimir">Imprimir o guardar en PDF</button>'}
           </div>
 
-          ${c.pdf ? `
+          ${c.pdf && c.firmado ? `
+          <div class="contrato-demo contrato-demo-ok" role="note">
+            <strong>Contrato firmado electrónicamente.</strong> Descarga el PDF firmado y guárdalo: tiene las firmas de ambas partes
+            y una página de certificado con las evidencias y el código de verificación.${c.pdf.plantillaRevisada ? "" : " <strong>La plantilla aún está pendiente de revisión legal</strong>: úsala solo para pruebas del proyecto."}
+          </div>` : c.pdf ? `
           <div class="contrato-demo" role="note">
             <strong>Contrato en PDF sellado.</strong> Descárgalo y léelo completo: es el documento definitivo y su huella permite
             comprobar que nadie lo cambió.${c.pdf.plantillaRevisada ? "" : " <strong>La plantilla aún está pendiente de revisión legal</strong>: úsala solo para pruebas del proyecto."}
-            Para firmarlo dibujas tu firma y escribes el código que te enviamos al correo; Roumix guarda las evidencias de cada firma. El PDF firmado con su certificado llega en la próxima actualización.
+            Para firmarlo dibujas tu firma y escribes el código que te enviamos al correo. Cuando ambas partes firmen, Roumix genera el PDF firmado con un certificado y un código de verificación.
           </div>` : `
           <div class="contrato-demo" role="note">
             <strong>Documento demostrativo.</strong>
@@ -220,9 +224,22 @@
               ${c.vence_en && ["enviado", "pendiente_aceptacion"].includes(c.estado) ? `<p class="contrato-nota">Plazo para aceptar: hasta el ${momento(c.vence_en)}.</p>` : ""}
             </section>
 
+            ${c.firmado ? `
+            <section class="contrato-verificacion no-imprimir" aria-labelledby="verif-titulo">
+              <h2 id="verif-titulo">Código de verificación</h2>
+              <p class="contrato-verificacion-codigo"><code>${escaparHTML(c.firmado.codigo)}</code></p>
+              <p class="contrato-nota">Está en la última página del PDF firmado. Con él, o con el propio archivo, cualquier persona
+                (por ejemplo, un juzgado o una entidad) puede comprobar que el contrato es auténtico y que no cambió.</p>
+              <a class="btn-card-action" href="verificar.html?codigo=${encodeURIComponent(c.firmado.codigo)}">Verificar este contrato</a>
+            </section>` : ""}
+
+            ${c.firmado ? `
+            <footer class="contrato-huella">
+              Huella del PDF firmado (SHA-256): <code>${escaparHTML(c.firmado.sha256)}</code>
+            </footer>` : ""}
             ${c.pdf ? `
             <footer class="contrato-huella">
-              Huella del PDF (SHA-256): <code>${escaparHTML(c.pdf.sha256)}</code>
+              Huella del PDF ${c.firmado ? "original, antes de firmar" : ""} (SHA-256): <code>${escaparHTML(c.pdf.sha256)}</code>
               <span class="contrato-huella-ok">Plantilla ${escaparHTML(c.pdf.plantilla)}${c.pdf.plantillaRevisada ? " · revisada" : " · pendiente de revisión legal"}</span>
             </footer>` : ""}
             ${c.huella ? `
@@ -278,11 +295,13 @@
               const url = URL.createObjectURL(await r.blob());
               const a = document.createElement("a");
               a.href = url;
-              a.download = `contrato-roumix-${c.id}.pdf`;
+              a.download = `contrato-roumix-${c.id}${c.estado === "formalizado" ? "-firmado" : ""}.pdf`;
               document.body.appendChild(a);
               a.click();
               a.remove();
               setTimeout(() => URL.revokeObjectURL(url), 5000);
+              // Si el PDF firmado se generó en esta descarga, se recarga para mostrar el código de verificación
+              if (c.estado === "formalizado" && !c.firmado) return cargar();
             } catch (err) {
               RoumixAvisos.mostrar(err.message, "error", 6000);
             }

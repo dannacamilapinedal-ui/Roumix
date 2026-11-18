@@ -1,13 +1,13 @@
 /**
- * Contratos de arrendamiento — flujo DEMOSTRATIVO.
+ * Contratos de arrendamiento con firma electrónica (F-1 a F-4).
  *
  * El contrato es entre el estudiante (arrendatario) y el propietario (arrendador);
- * Roumix solo prepara el documento y registra la aceptación de cada parte.
- * La aceptación (nombre escrito + fecha y hora) NO es una firma electrónica con
- * validez legal: para eso hay que integrar un proveedor certificado más adelante.
+ * Roumix prepara el PDF sellado (F-1) y cada parte lo firma con un código enviado a su
+ * correo (F-2) y su firma manuscrita dibujada (F-3), dejando evidencias de cada firma.
  *
- * Al aceptarlo ambas partes, el contrato queda "formalizado" y la solicitud pasa
- * sola a "contrato_formalizado" (estado que ningún usuario puede poner a mano).
+ * Al firmarlo ambas partes, el contrato queda "formalizado", la solicitud pasa sola a
+ * "contrato_formalizado" (estado que ningún usuario puede poner a mano) y Roumix genera
+ * el PDF firmado con su certificado y código de verificación público (F-4).
  */
 const crypto = require('crypto');
 const db = require('../config/db');
@@ -19,6 +19,7 @@ const { avisarPagoHabilitado } = require('./pagosController');
 const contratoPdf = require('../services/contratoPdfService');
 const codigoFirma = require('../services/codigoFirmaService');
 const firmaService = require('../services/firmaService');
+const contratoFirmado = require('../services/contratoFirmadoService');
 
 const PLAZO_ACEPTACION_DIAS = 7;
 const VIGENTES = ['borrador', 'enviado', 'pendiente_aceptacion'];
@@ -128,8 +129,35 @@ function vistaParte(c, rol) {
       sha256: c.pdf_sha256,
       plantilla: c.plantilla_version,
       plantillaRevisada: c.plantilla_version === contratoPdf.PLANTILLA.version && contratoPdf.PLANTILLA.revisada
+    } : null,
+    // PDF firmado con certificado (F-4): huella y código de verificación público
+    firmado: c.pdf_firmado_sha256 ? {
+      sha256: c.pdf_firmado_sha256,
+      codigo: c.codigo_verificacion,
+      verificarEn: `${contratoFirmado.URL_VERIFICAR}?codigo=${encodeURIComponent(c.codigo_verificacion || '')}`
     } : null
   };
+}
+
+/**
+ * Genera el PDF firmado de un contrato formalizado (si aún no existe) sin frenar la respuesta:
+ * si algo falla queda en el registro y se reintenta la próxima vez que alguien lo pida.
+ */
+async function generarFirmado(id, actor, ip) {
+  try {
+    const r = await contratoFirmado.asegurarPdfFirmado(id, firmaService.CONSENTIMIENTO);
+    if (r && r.nuevo) {
+      await auditar({
+        actor, accion: 'contrato_pdf_firmado', entidad: 'contrato', entidadId: id,
+        resumen: `Se generó el PDF firmado del contrato #${id} con su certificado (código ${r.codigo}).`,
+        datos: { codigo: r.codigo, sha256: r.sha256 }, ip
+      });
+    }
+    return r;
+  } catch (error) {
+    console.error(`⚠️ PDF firmado del contrato #${id}:`, error.message);
+    return null;
+  }
 }
 
 // ============================================================================
@@ -316,11 +344,15 @@ async function aceptarContrato(req, res) {
 
   const urlBase = notificaciones.urlBase(req);
   const enlace = `contrato.html?id=${id}`;
+  let firmado = null;
   if (formalizado) {
+    // F-4: PDF con las firmas estampadas, certificado y código de verificación
+    firmado = await generarFirmado(id, req.usuario, req.ip);
     for (const usuarioId of [c.estudiante_id, c.propietario_id]) {
-      await crearAviso({ usuarioId, tipo: 'solicitud', titulo: `Contrato #${id} formalizado`, cuerpo: c.inmueble_titulo, enlace });
+      await crearAviso({ usuarioId, tipo: 'solicitud', titulo: `Contrato #${id} formalizado`,
+        cuerpo: firmado ? `${c.inmueble_titulo} · Descarga el PDF firmado (código ${firmado.codigo}).` : c.inmueble_titulo, enlace });
     }
-    await notificaciones.notificarContrato({ contrato: c, evento: 'formalizado', urlBase });
+    await notificaciones.notificarContrato({ contrato: c, evento: 'formalizado', urlBase, verificacion: firmado && firmado.codigo });
     if (pagoHabilitado && pagoHabilitado.habilitado) {
       await avisarPagoHabilitado(pagoHabilitado, urlBase);
     } else if (pagoHabilitado && pagoHabilitado.motivo === 'comision_no_aceptada') {
@@ -341,9 +373,9 @@ async function aceptarContrato(req, res) {
   res.json({
     status: 'success',
     message: formalizado
-      ? '¡Contrato formalizado! Ambas partes lo aceptaron.'
-      : 'Aceptaste el contrato. Falta la aceptación de la otra parte.',
-    data: { id, estado: formalizado ? 'formalizado' : 'pendiente_aceptacion' }
+      ? '¡Contrato formalizado! Ambas partes lo firmaron.'
+      : 'Firmaste el contrato. Falta la firma de la otra parte.',
+    data: { id, estado: formalizado ? 'formalizado' : 'pendiente_aceptacion', firmado: firmado ? { codigo: firmado.codigo, sha256: firmado.sha256 } : null }
   });
 }
 
@@ -471,7 +503,7 @@ async function enviarContrato(req, res) {
     const docEst = contratoPdf.documentoTexto(idEst.tipo, idEst.numero);
     const docProp = contratoPdf.documentoTexto(idProp.tipo, idProp.numero);
     const ahora = new Date();
-    const { pdf, sha256 } = await contratoPdf.generarPdf({
+    const { pdf, sha256, cajasFirma } = await contratoPdf.generarPdf({
       contratoId: id,
       fechaEmision: new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10),
       arrendador: { nombre: idProp.nombre_completo, documento: docProp },
@@ -489,8 +521,8 @@ async function enviarContrato(req, res) {
       [id, PLAZO_ACEPTACION_DIAS, huella, idEst.nombre_completo, idProp.nombre_completo, docEst, docProp, contratoPdf.PLANTILLA.version, sha256]
     );
     await cliente.query(
-      `INSERT INTO contratos_documentos (contrato_id, tipo, pdf, sha256, bytes, plantilla_version) VALUES ($1, 'original', $2, $3, $4, $5)`,
-      [id, pdf, sha256, pdf.length, contratoPdf.PLANTILLA.version]
+      `INSERT INTO contratos_documentos (contrato_id, tipo, pdf, sha256, bytes, plantilla_version, cajas_firma) VALUES ($1, 'original', $2, $3, $4, $5, $6)`,
+      [id, pdf, sha256, pdf.length, contratoPdf.PLANTILLA.version, JSON.stringify(cajasFirma)]
     );
     await cliente.query(
       `INSERT INTO solicitudes_historial (solicitud_id, autor_id, autor_rol, nota_estudiante, nota_propietario, nota_interna)
@@ -574,6 +606,8 @@ async function descargarPdf(req, res) {
   } else if (!c) {
     throw errorHttp(404, `No existe el contrato ${id}.`);
   }
+  // Un contrato formalizado se entrega firmado; si aún no se generó (falló antes o es anterior al F-4), se genera ahora
+  if (c.estado === 'formalizado') await generarFirmado(id, req.usuario, req.ip);
   const { rows: [d] } = await db.query(
     "SELECT tipo, pdf, sha256 FROM contratos_documentos WHERE contrato_id = $1 ORDER BY (tipo = 'firmado') DESC LIMIT 1", [id]);
   if (!d) throw errorHttp(404, 'Este contrato se envió antes de que Roumix generara PDF.');

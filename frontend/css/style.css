@@ -8566,3 +8566,37 @@ html[data-tema="oscuro"] .firma-codigo { background: rgba(255, 255, 255, 0.05); 
 .contrato-evidencia { color: var(--tinta-tenue); font-family: "JetBrains Mono", monospace; font-size: 0.7rem; overflow-wrap: anywhere; }
 @media (max-width: 640px) { .firma-lienzo { height: 150px; } }
 html[data-tema="oscuro"] .firma-lienzo { border-color: #5a5045; }
+
+/* F-4 — PDF firmado y verificación pública */
+.contrato-demo-ok { border-style: solid; border-color: var(--verde-pastilla-borde); background: var(--verde-badge-bg); color: var(--verde-badge-text); }
+.contrato-verificacion { margin-top: var(--esp-4); padding: 16px 18px; border-radius: var(--radio-md); background: var(--fondo-crema-alt); border: 1px solid var(--borde-arena); }
+.contrato-verificacion h2 { margin: 0 0 6px; font-size: 0.95rem; color: var(--tinta-fuerte); }
+.contrato-verificacion-codigo { margin: 0 0 6px; }
+.contrato-verificacion-codigo code { font-family: var(--font-mono); font-size: 1.3rem; font-weight: 600; letter-spacing: 0.06em; color: var(--texto-verde-oscuro); overflow-wrap: anywhere; }
+.contrato-verificacion .btn-card-action { display: inline-flex; margin-top: var(--esp-2); text-decoration: none; }
+.verificar-titulo { margin: 0 0 8px; font-size: 1.6rem; color: var(--tinta-fuerte); }
+.verificar-intro { margin: 0 0 var(--esp-4); color: var(--tinta-media); line-height: 1.55; }
+.verificar-form { display: flex; flex-direction: column; gap: 6px; padding: 20px 22px; border-radius: var(--radio-lg); background: var(--superficie); border: 1px solid var(--borde-arena); box-shadow: var(--sombra-sm); }
+.verificar-form .form-control { width: 100%; }
+.verificar-form .btn-contact-wa-large { margin-top: var(--esp-2); }
+.verificar-codigo { font-family: var(--font-mono); font-size: 1.15rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.verificar-opcional { font-weight: 500; color: var(--tinta-tenue); text-transform: none; }
+.verificar-resultado { margin-top: var(--esp-4); padding: 20px 22px; border-radius: var(--radio-lg); border: 1px solid var(--borde-arena); background: var(--superficie); }
+.verificar-resultado-ok { border-color: var(--verde-pastilla-borde); }
+.verificar-resultado-mal { border-color: #e2a9a0; background: #fdf1ef; color: #7a2a1f; }
+.verificar-sello { margin: 0 0 var(--esp-3); font-size: 1.1rem; font-weight: 800; color: var(--texto-verde-oscuro); }
+.verificar-resultado-mal .verificar-sello { color: #9b2c1f; }
+.verificar-archivo { margin: 0 0 var(--esp-3); padding: 10px 14px; border-radius: var(--radio-md); font-size: 0.9rem; font-weight: 600; }
+.verificar-archivo-ok { background: var(--verde-badge-bg); color: var(--verde-badge-text); }
+.verificar-archivo-mal { background: #fdf1ef; color: #9b2c1f; }
+.verificar-subtitulo { margin: var(--esp-4) 0 6px; font-size: 0.95rem; color: var(--tinta-fuerte); }
+.verificar-firmantes { margin: 0 0 var(--esp-3); padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 0.9rem; color: var(--tinta-media); }
+.verificar-rol { display: block; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--acento-naranja); }
+@media (max-width: 640px) { .verificar-form, .verificar-resultado { padding: 16px; } .verificar-titulo { font-size: 1.35rem; } }
+html[data-tema="oscuro"] .contrato-demo-ok { background: rgba(120, 190, 140, 0.12); color: #bfe3c6; border-color: rgba(120, 190, 140, 0.4); }
+html[data-tema="oscuro"] .contrato-verificacion { background: rgba(255, 255, 255, 0.04); border-color: #3a342c; }
+html[data-tema="oscuro"] .contrato-verificacion-codigo code { color: #bfe3c6; }
+html[data-tema="oscuro"] .verificar-resultado-mal, html[data-tema="oscuro"] .verificar-archivo-mal { background: rgba(220, 90, 70, 0.12); color: #f2b8ad; border-color: rgba(220, 90, 70, 0.4); }
+html[data-tema="oscuro"] .verificar-archivo-ok { background: rgba(120, 190, 140, 0.12); color: #bfe3c6; }
+html[data-tema="oscuro"] .verificar-sello { color: #bfe3c6; }
+html[data-tema="oscuro"] .verificar-resultado-mal .verificar-sello { color: #f2b8ad; }

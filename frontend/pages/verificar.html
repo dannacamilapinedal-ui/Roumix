@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Comprueba que un contrato firmado en Roumix es auténtico y que el archivo no fue modificado.">
+  <meta name="referrer" content="no-referrer">
+  <title>Verificar un contrato — Roumix</title>
+  <script>try{if(localStorage.getItem("roumix_tema")==="oscuro"){document.documentElement.dataset.tema="oscuro";}}catch(e){}</script>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#142219">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body>
+  <header class="main-header login-header">
+    <div class="header-inner">
+      <div class="header-left">
+        <a href="/" class="logo">
+          <span class="logo-text">roumix</span><span class="logo-dot">.</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="pago-contenedor verificar">
+      <h1 class="verificar-titulo">Verificar un contrato firmado</h1>
+      <p class="verificar-intro">Comprueba que un contrato de arrendamiento firmado en Roumix es auténtico y que el archivo no cambió.
+        Escribe el <strong>código de verificación</strong> que aparece en la última página del PDF y, si quieres, adjunta el archivo.</p>
+
+      <form class="verificar-form" id="form-verificar" novalidate>
+        <label for="codigo" class="contacto-paso">Código de verificación</label>
+        <input type="text" id="codigo" class="form-control verificar-codigo" placeholder="RMX-XXXX-XXXX-XXXX" maxlength="24"
+          autocomplete="off" autocapitalize="characters" spellcheck="false">
+
+        <label for="archivo" class="contacto-paso">PDF firmado <span class="verificar-opcional">(opcional)</span></label>
+        <input type="file" id="archivo" class="form-control" accept="application/pdf,.pdf">
+        <p class="contacto-nota">El archivo no sale de tu dispositivo: solo se calcula su huella SHA-256 aquí mismo y se compara con la que guardó Roumix.
+          Si no tienes el código, puedes verificar solo con el archivo.</p>
+
+        <p class="pub-mensaje pub-mensaje-error" id="verificar-error" role="alert" hidden></p>
+        <button type="submit" class="btn-contact-wa-large">Verificar</button>
+      </form>
+
+      <div id="resultado" aria-live="polite"></div>
+    </div>
+  </main>
+
+  <footer class="app-footer">
+    <div class="footer-bottom">
+      <small>© 2026 Roumix · Vivienda universitaria en Villavicencio · Firma electrónica según la Ley 527 de 1999</small>
+    </div>
+  </footer>
+
+  <script src="../js/app.js"></script>
+  <script src="../js/api.js"></script>
+  <script>
+    // Verificación PÚBLICA (sin cuenta). Muestra solo iniciales, fechas y huellas: nada de nombres
+    // completos, documentos ni datos del inmueble.
+    document.addEventListener("DOMContentLoaded", () => {
+      const form = document.getElementById("form-verificar");
+      const campoCodigo = document.getElementById("codigo");
+      const campoArchivo = document.getElementById("archivo");
+      const error = document.getElementById("verificar-error");
+      const resultado = document.getElementById("resultado");
+      const ROLES = { arrendador: "Arrendador (propietario)", arrendatario: "Arrendatario (estudiante)" };
+      const momento = (v) => new Date(v).toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "long", timeStyle: "short" });
+      const FORMATO = /^RMX-[2-9A-Z]{4}-[2-9A-Z]{4}-[2-9A-Z]{4}$/;
+
+      function normalizar(valor) {
+        const limpio = String(valor || "").toUpperCase().replace(/[^0-9A-Z]/g, "");
+        const cuerpo = limpio.startsWith("RMX") ? limpio.slice(3) : limpio;
+        return cuerpo.length === 12 ? `RMX-${cuerpo.slice(0, 4)}-${cuerpo.slice(4, 8)}-${cuerpo.slice(8, 12)}` : String(valor || "").trim().toUpperCase();
+      }
+
+      async function huellaArchivo(archivo) {
+        const datos = await archivo.arrayBuffer();
+        const hash = await crypto.subtle.digest("SHA-256", datos);
+        return [...new Uint8Array(hash)].map((b) => b.toString(16).padStart(2, "0")).join("");
+      }
+
+      async function consultar(ruta) {
+        const r = await fetch(`${RoumixAPI.baseURL}/verificar/${ruta}`);
+        const cuerpo = await r.json().catch(() => ({}));
+        if (r.status === 404) return { noEncontrado: cuerpo.message };
+        if (!r.ok) throw new Error(cuerpo.message || "No pudimos verificar en este momento. Intenta de nuevo.");
+        return { datos: cuerpo.data };
+      }
+
+      function pintar(d, comparacion) {
+        const firmantes = (d.firmantes || []).map((f) => `
+          <li><span class="verificar-rol">${escaparHTML(ROLES[f.rol] || f.rol)}</span>
+            <strong>${escaparHTML(f.iniciales)}</strong> · firmó el ${escaparHTML(momento(f.firmadoEn))}</li>`).join("");
+        let archivo = "";
+        if (comparacion === true) {
+          archivo = '<p class="verificar-archivo verificar-archivo-ok">✓ El archivo que adjuntaste es exactamente el PDF firmado: no fue modificado.</p>';
+        } else if (comparacion === false) {
+          archivo = '<p class="verificar-archivo verificar-archivo-mal">✗ El archivo que adjuntaste NO coincide con el PDF firmado de este contrato. Puede haber sido modificado o ser otro documento.</p>';
+        }
+        resultado.innerHTML = `
+          <section class="verificar-resultado verificar-resultado-ok">
+            <p class="verificar-sello">✓ Contrato auténtico, firmado en Roumix</p>
+            ${archivo}
+            <dl class="contrato-datos">
+              <dt>Código</dt><dd><code>${escaparHTML(d.codigo)}</code></dd>
+              <dt>Contrato</dt><dd>N.º ${escaparHTML(String(d.contrato))} · ${d.estado === "formalizado" ? "Formalizado" : escaparHTML(d.estado)}</dd>
+              <dt>Formalizado</dt><dd>${d.formalizadoEn ? escaparHTML(momento(d.formalizadoEn)) : "—"}</dd>
+              <dt>Plantilla</dt><dd>${escaparHTML(d.plantilla || "—")}${d.plantillaRevisada ? " · revisada" : " · pendiente de revisión legal"}</dd>
+            </dl>
+            <h2 class="verificar-subtitulo">Firmantes</h2>
+            <ul class="verificar-firmantes">${firmantes}</ul>
+            <p class="contrato-evidencia">PDF firmado (SHA-256): ${escaparHTML(d.sha256Firmado || "—")}</p>
+            <p class="contrato-evidencia">PDF original, antes de firmar (SHA-256): ${escaparHTML(d.sha256Original || "—")}</p>
+            <p class="contacto-nota">Por privacidad solo se muestran las iniciales de los firmantes. Roumix conserva las evidencias completas de cada firma
+              (código enviado al correo, firma dibujada, fecha, IP y dispositivo) y puede entregarlas a una autoridad competente.</p>
+          </section>`;
+      }
+
+      function noEncontrado(texto) {
+        resultado.innerHTML = `
+          <section class="verificar-resultado verificar-resultado-mal">
+            <p class="verificar-sello">✗ No se pudo verificar</p>
+            <p>${escaparHTML(texto)}</p>
+          </section>`;
+      }
+
+      function mostrarError(texto) {
+        error.textContent = texto;
+        error.hidden = false;
+      }
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        error.hidden = true;
+        resultado.innerHTML = "";
+        const codigo = campoCodigo.value.trim() ? normalizar(campoCodigo.value) : "";
+        const archivo = campoArchivo.files && campoArchivo.files[0];
+        if (!codigo && !archivo) return mostrarError("Escribe el código de verificación o adjunta el PDF firmado.");
+        if (codigo && !FORMATO.test(codigo)) return mostrarError("El código tiene la forma RMX-XXXX-XXXX-XXXX (letras y números, sin 0, 1, I, L ni O).");
+        if (archivo && archivo.size > 20 * 1024 * 1024) return mostrarError("El archivo es demasiado grande para ser un contrato de Roumix.");
+        if (archivo && !(window.crypto && crypto.subtle)) return mostrarError("Tu navegador no permite calcular la huella del archivo. Verifica solo con el código.");
+        campoCodigo.value = codigo;
+        const boton = form.querySelector('button[type="submit"]');
+        boton.disabled = true;
+        boton.textContent = "Verificando…";
+        try {
+          const huella = archivo ? await huellaArchivo(archivo) : null;
+          if (codigo) {
+            const r = await consultar(encodeURIComponent(codigo));
+            if (r.noEncontrado) noEncontrado(r.noEncontrado);
+            else pintar(r.datos, huella ? huella === r.datos.sha256Firmado : null);
+          } else {
+            const r = await consultar(`huella/${huella}`);
+            if (r.noEncontrado) noEncontrado(r.noEncontrado);
+            else pintar(r.datos, true);
+          }
+          resultado.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        } catch (err) {
+          mostrarError(err.message);
+        }
+        boton.disabled = false;
+        boton.textContent = "Verificar";
+      });
+
+      // Enlace con el código (?codigo=RMX-…): se verifica de una vez
+      const inicial = new URLSearchParams(location.search).get("codigo");
+      if (inicial) {
+        campoCodigo.value = normalizar(inicial);
+        form.requestSubmit();
+      }
+    });
+  </script>
+</body>
+</html>

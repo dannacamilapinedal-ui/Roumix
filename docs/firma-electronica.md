@@ -94,8 +94,46 @@ Los errores de firma o de nombre **no gastan** el código.
 - La otra parte ve la imagen, el nombre, el documento y la fecha de cada firma.
 - El equipo de Roumix ve además la IP, el dispositivo y el correo completo.
 
-## Siguientes módulos
+## F-4 · PDF firmado, certificado y verificación pública (hecho)
 
-- **F-4 · PDF firmado y certificado:** las firmas se estampan en el PDF y se agrega una página de
-  certificado con las evidencias. Una página pública de verificación permite comprobar el documento
-  por su código.
+Cuando firma la segunda parte, Roumix toma el **PDF original sellado** (que no se modifica) y genera el
+**PDF firmado** (`contratos_documentos` tipo `firmado`):
+
+1. Estampa la firma dibujada de cada parte sobre su línea. Al enviar el contrato se guardó en qué
+   página y recuadro va cada firma (`cajas_firma`).
+2. Agrega una **página de certificado** con:
+   - el código de verificación;
+   - la fecha de formalización y la versión de la plantilla;
+   - la huella SHA-256 del PDF original;
+   - por cada firmante: nombre, documento, imagen de la firma, fecha y hora de Colombia, correo
+     **oculto** al que llegó el código y las huellas de la firma y del documento firmado;
+   - el texto del consentimiento.
+3. Guarda el PDF con su huella y le asigna al contrato un **código de verificación**
+   `RMX-XXXX-XXXX-XXXX` (aleatorio, sin 0/O ni 1/I/L para no confundirlos).
+
+Por privacidad, el certificado **no** muestra la IP, el dispositivo ni el correo completo: Roumix los
+conserva como evidencia.
+
+- Si la generación falla al formalizar, el contrato igual queda formalizado; el PDF firmado se genera
+  la siguiente vez que alguien lo descarga, con el mismo código. Es idempotente: nunca hay dos.
+- Ambas partes reciben un correo con el código; la página del contrato muestra el botón
+  **"Descargar contrato firmado"**, el código y la huella.
+- Queda en la auditoría como `contrato_pdf_firmado`.
+
+### Verificación pública
+
+`pages/verificar.html` (sin cuenta) permite comprobar un contrato:
+
+- **Con el código** (`GET /api/verificar/:codigo`), por ejemplo desde el enlace del certificado.
+- **Con el archivo**: el navegador calcula la huella SHA-256 del PDF (el archivo no se sube) y la compara
+  con la guardada (`GET /api/verificar/huella/:sha256`). Un solo byte cambiado hace que no coincida.
+
+La respuesta solo trae el número de contrato, el estado, las fechas, la plantilla, las huellas y las
+**iniciales** de los firmantes. No incluye nombres, documentos, correos, inmueble ni IP. Las búsquedas
+sin resultado tienen un límite de 20 cada 15 minutos por IP.
+
+## Siguientes pasos (fuera del código)
+
+- **Revisión legal** de la plantilla (ver arriba).
+- Opcional, para más fuerza probatoria: firma digital certificada de Roumix sobre el PDF o una estampa
+  de tiempo de una entidad de certificación acreditada por la ONAC.

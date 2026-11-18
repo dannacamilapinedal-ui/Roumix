@@ -575,14 +575,19 @@ async function notificarRespuestaRoumix({ usuarioId, conversacion, mensaje, urlB
 // ---------------------------------------------------------------------------
 // Contratos (flujo demostrativo: la aceptación no es una firma electrónica legal)
 // ---------------------------------------------------------------------------
-async function notificarContrato({ contrato, evento, parte, urlBase }) {
+async function notificarContrato({ contrato, evento, parte, urlBase, verificacion = null }) {
   try {
     const { rows } = await db.query(
       "SELECT id, email, nombre FROM usuarios WHERE id = ANY($1) AND estado = 'activo'",
       [[contrato.estudiante_id, contrato.propietario_id].filter(Boolean)]
     );
-    const boton = { texto: 'Ver el contrato', url: `${urlBase}/pages/contrato.html?id=${contrato.id}` };
-    const nota = 'Contrato demostrativo: la aceptación en Roumix no es una firma electrónica con validez legal.';
+    const formalizadoFirmado = evento === 'formalizado' && verificacion;
+    const boton = formalizadoFirmado
+      ? { texto: 'Descargar el contrato firmado', url: `${urlBase}/pages/contrato.html?id=${contrato.id}` }
+      : { texto: 'Ver el contrato', url: `${urlBase}/pages/contrato.html?id=${contrato.id}` };
+    const nota = formalizadoFirmado
+      ? `Código de verificación: ${verificacion}. Con él, cualquier persona puede comprobar el contrato en ${urlBase}/pages/verificar.html`
+      : 'El contrato se firma electrónicamente en Roumix con tu firma dibujada y un código que llega a tu correo.';
     const enviados = [];
     if (evento === 'enviado' || evento === 'formalizado') {
       for (const u of rows) {
@@ -594,7 +599,8 @@ async function notificarContrato({ contrato, evento, parte, urlBase }) {
             parrafos: [
               `Hola ${escapar(String(u.nombre || '').split(' ')[0])}, ${evento === 'enviado'
                 ? `Roumix preparó el contrato de <strong>${escapar(contrato.inmueble_titulo)}</strong> con las condiciones acordadas. Revísalo y acéptalo dentro de los próximos 7 días.`
-                : `ambas partes aceptaron el contrato de <strong>${escapar(contrato.inmueble_titulo)}</strong>.`}`,
+                : `ambas partes firmaron el contrato de <strong>${escapar(contrato.inmueble_titulo)}</strong>.${formalizadoFirmado
+                  ? ' Ya puedes descargar el PDF firmado, con las firmas y la página de certificado. Guárdalo: es tu copia del contrato.' : ''}`}`,
               evento === 'formalizado' && u.id === contrato.estudiante_id
                 ? 'El siguiente paso es el pago del primer mes, que se hará a través de Roumix. Te avisaremos cuando esté habilitado.'
                 : 'Si algo no coincide con lo acordado, escríbele al equipo de Roumix antes de aceptarlo.'

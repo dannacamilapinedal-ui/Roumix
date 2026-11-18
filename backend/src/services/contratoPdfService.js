@@ -187,8 +187,11 @@ async function generarPdf(d, fechaDocumento = new Date()) {
   escribir('Este contrato se firma electrónicamente a través de Roumix. El documento firmado incluye un certificado con las evidencias de cada firma.', { tam: 8.5, color: gris, despues: 12 });
   if (y - 90 < M + 20) nuevaPagina();
   const col = anchoTexto / 2 - 10;
+  const cajasFirma = [];
   for (const [i, [rol, parte]] of [['ARRENDADOR', d.arrendador], ['ARRENDATARIO', d.arrendatario]].entries()) {
     const x = M + i * (col + 20);
+    // Recuadro donde se estampará la firma dibujada (F-4): justo encima de la línea
+    cajasFirma.push({ rol: rol.toLowerCase(), pagina: doc.getPages().indexOf(pagina), x, y: y - 48, ancho: col, alto: 44 });
     pagina.drawLine({ start: { x, y: y - 50 }, end: { x: x + col, y: y - 50 }, thickness: 0.8, color: gris });
     pagina.drawText(limpio(parte.nombre), { x, y: y - 64, size: 9.5, font: negrita, color: rgb(0.12, 0.12, 0.12) });
     pagina.drawText(limpio(`${parte.documento} · ${rol}`), { x, y: y - 77, size: 8.5, font: normal, color: gris });
@@ -203,7 +206,7 @@ async function generarPdf(d, fechaDocumento = new Date()) {
   });
 
   const bytes = Buffer.from(await doc.save({ useObjectStreams: false }));
-  return { pdf: bytes, sha256: crypto.createHash('sha256').update(bytes).digest('hex') };
+  return { pdf: bytes, sha256: crypto.createHash('sha256').update(bytes).digest('hex'), cajasFirma };
 }
 
 module.exports = { PLANTILLA, TIPOS_DOCUMENTO, generarPdf, clausulas, documentoTexto };
