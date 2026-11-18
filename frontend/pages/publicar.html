@@ -204,8 +204,8 @@
                   <input type="number" id="pub-precio" class="form-control" min="1" step="10000" placeholder="420000">
                 </div>
                 <div class="form-group">
-                  <label for="pub-deposito" class="form-label">DEPÓSITO</label>
-                  <input type="text" id="pub-deposito" class="form-control" maxlength="100" placeholder="Ej: Un mes de arriendo">
+                  <span class="form-label">DEPÓSITO</span>
+                  <p class="pub-sin-deposito">No se cobra depósito: la Ley 820 de 2003 (art. 16) no permite exigirlo en vivienda urbana.</p>
                 </div>
               </div>
               <div class="form-row-two">
@@ -375,7 +375,6 @@
       const inputTransporte = document.getElementById("pub-transporte");
       const textDescripcion = document.getElementById("pub-descripcion");
       const inputArea = document.getElementById("pub-area");
-      const inputDeposito = document.getElementById("pub-deposito");
       const inputContrato = document.getElementById("pub-contrato");
       const inputFotos = document.getElementById("pub-fotos");
       const gridFotos = document.getElementById("fotos-grid");
@@ -651,7 +650,6 @@
           inputPrecio.value = item.precio;
           inputTransporte.value = item.transporte || "";
           inputArea.value = item.area || "";
-          inputDeposito.value = item.deposito || "";
           inputContrato.value = item.contratoMinimo || "";
           amenityChips.forEach(chip => marcarChip(chip, item.amenidades.includes(chip.dataset.value)));
           fotos = (item.galeria || []).filter(Boolean).map(url => ({ tipo: "existente", url }));
@@ -696,7 +694,7 @@
           amenidades: getAmenidades(),
           descripcion: textDescripcion.value.trim() || null,
           area: inputArea.value.trim() || null,
-          deposito: inputDeposito.value.trim() || null,
+          deposito: null,   // Ley 820 de 2003, art. 16: no se cobra depósito
           contratoMinimo: inputContrato.value.trim() || null,
           latitud: ubicacion.latitud,
           longitud: ubicacion.longitud

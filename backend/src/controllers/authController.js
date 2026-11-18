@@ -9,6 +9,8 @@ const { registrarFalloIngreso } = require('../middleware/limiteIngreso');
 const correosPropios = () => adminDisponible && notificaciones.correoActivo;
 
 const ROLES = ['estudiante', 'propietario'];
+// Versión de los términos y condiciones vigente (frontend/pages/terminos.html)
+const VERSION_TERMINOS = '2026-11';
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 function errorHttp(status, message) {
@@ -86,13 +88,17 @@ async function registro(req, res) {
 
   const telefono = normalizarTelefono(body.telefono);
   if (rol === 'propietario' && !telefono) {
-    throw errorHttp(400, 'Como propietario necesitas un celular para que los estudiantes te contacten por WhatsApp.');
+    throw errorHttp(400, 'Como propietario necesitas un celular para que el equipo de Roumix pueda contactarte.');
   }
 
   // Descarta correos que con seguridad no existen (dominio inexistente, temporales, errores de escritura)
   await validarCorreoParaRegistro(email);
 
-  const metadatos = { nombre, rol, telefono, universidad: texto(body.universidad) || null, acepto_politica: true };
+  // Queda registrada la versión de los términos y condiciones que aceptó (pages/terminos.html)
+  const metadatos = {
+    nombre, rol, telefono, universidad: texto(body.universidad) || null, acepto_politica: true,
+    ...(body.aceptoTerminos === true ? { acepto_terminos: VERSION_TERMINOS } : {})
+  };
 
   if (correosPropios()) {
     return registroConCorreoRoumix(req, res, { nombre, email, password, metadatos });

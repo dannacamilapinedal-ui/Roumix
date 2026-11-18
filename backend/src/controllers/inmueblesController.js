@@ -124,7 +124,8 @@ function validarInmueble(body) {
     transporte: textoOpcional(body.transporte, 'transporte', 150),
     amenidades: listaTextos(body.amenidades, 'amenidades', 20, 50),
     descripcion: textoOpcional(body.descripcion, 'descripcion', 3000),
-    deposito: textoOpcional(body.deposito, 'deposito', 100),
+    // Ley 820 de 2003, art. 16: en vivienda urbana no se puede exigir depósito (se ignora si llega)
+    deposito: null,
     contratoMinimo: textoOpcional(body.contratoMinimo, 'contratoMinimo', 50),
     disponibleDesde: textoOpcional(body.disponibleDesde, 'disponibleDesde', 50) || 'Inmediato',
     latitud: numeroOpcional(body.latitud, 'latitud', ZONA.latMin, ZONA.latMax),

@@ -119,7 +119,7 @@
           <div class="contract-terms-list">
             <div class="contract-term-row">
               <span>Depósito</span>
-              <strong id="det-deposito">–</strong>
+              <strong>No se cobra</strong>
             </div>
             <div class="contract-term-row">
               <span>Contrato mínimo</span>
@@ -160,7 +160,7 @@
           <div class="insignias-fila" id="det-insignias"></div>
           <p class="detalle-revision" id="det-revision" hidden></p>
           <p class="detalle-aviso-confianza">
-            Roumix no cobra por reservar. Nunca pagues depósitos sin visitar el inmueble y firmar un contrato.
+            Roumix no cobra por reservar ni pide depósito (la Ley 820 de 2003 no lo permite). Nunca pagues nada por fuera de Roumix.
             <a href="/#insignias">¿Qué significan las insignias?</a>
           </p>
 
@@ -261,7 +261,6 @@
       }
       document.getElementById("det-precio").innerHTML = `${item.precioFormato} <small>/mes</small>`;
       document.getElementById("det-descripcion").textContent = item.descripcion || "El propietario no agregó una descripción.";
-      document.getElementById("det-deposito").textContent = item.deposito || "Sin informar";
       document.getElementById("det-contrato").textContent = item.contratoMinimo || "Sin informar";
       document.getElementById("det-disponibilidad").textContent = item.disponibleDesde || "Inmediato";
 

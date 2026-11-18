@@ -8804,3 +8804,14 @@ html[data-tema="oscuro"] .admin-card-siguiente { color: #f0b46e; }
 html[data-tema="oscuro"] .auth-propietario-aviso { background: rgba(222, 150, 70, 0.1); border-color: rgba(222, 150, 70, 0.35); }
 html[data-tema="oscuro"] .auth-propietario-aviso p { color: #f0d3a6; }
 html[data-tema="oscuro"] .auth-propietario-cambio { color: #bfe3c6; }
+.pub-sin-deposito { margin: 0; padding: 10px 12px; border-radius: var(--radio-md); background: var(--verde-badge-bg); color: var(--verde-badge-text); font-size: 0.82rem; line-height: 1.4; }
+html[data-tema="oscuro"] .pub-sin-deposito { background: rgba(120, 190, 140, 0.12); color: #bfe3c6; }
+
+/* Términos y condiciones: índice */
+.terminos-indice { margin: 18px 0 8px; padding: 14px 18px; border-radius: var(--radio-md); background: var(--fondo-crema-alt); border: 1px solid var(--borde-suave); }
+.terminos-indice p { margin: 0 0 6px; font-size: 0.74rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--tinta-tenue); }
+.terminos-indice ol { margin: 0; padding-left: 20px; columns: 2; column-gap: 28px; font-size: 0.88rem; line-height: 1.8; }
+.terminos-indice a { color: var(--texto-verde-oscuro); }
+#terminos h2 { scroll-margin-top: 90px; }
+@media (max-width: 600px) { .terminos-indice ol { columns: 1; } }
+html[data-tema="oscuro"] .terminos-indice a { color: #bfe3c6; }
