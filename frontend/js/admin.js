@@ -268,6 +268,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     completada: "aprobada", cancelada: "neutro"
   };
   const chipSolicitud = (estado) => chip(ETIQUETAS.solicitud[estado] || estado, CHIP_SOLICITUD[estado] || "neutro");
+  // Lo que le toca hacer al equipo en cada estado (en la lista de solicitudes)
+  const SIGUIENTE_CORTO = {
+    recibida: "revisar y compartir con el propietario", en_revision: "esperar respuesta del propietario",
+    aceptada: "coordinar visita o negociar", visita_coordinada: "negociar condiciones", en_negociacion: "acordar condiciones",
+    contrato_pendiente: "preparar el contrato y recoger firmas", contrato_formalizado: "esperar el pago del primer mes",
+    pago_pendiente: "esperar el pago del primer mes", pagado: "registrar el desembolso"
+  };
   const fechaDia = (valor) => valor ? new Date(String(valor).slice(0, 10) + "T12:00:00").toLocaleDateString("es-CO", { dateStyle: "medium" }) : "—";
 
   async function cargarSolicitudes() {
@@ -284,7 +291,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           ref: `Solicitud #${s.id} · ${fecha(s.created_at)}`,
           titulo: escaparHTML(s.inmueble_titulo),
           sub: `Inmueble #${s.inmueble_id} · ${escaparHTML(s.barrio || "—")} · ${formatearPrecioCOP(s.canon_mensual)}/mes`,
-          estado: chipSolicitud(s.estado) + (s.compartida_propietario_en ? "" : "<small>Sin compartir al propietario</small>"),
+          estado: chipSolicitud(s.estado) + (SIGUIENTE_CORTO[s.estado] ? `<small class="admin-card-siguiente">Sigue: ${SIGUIENTE_CORTO[s.estado]}</small>` : ""),
           destacada: s.estado === "recibida",
           datos: [
             ["Estudiante", `${escaparHTML(s.estudiante_nombre || "Cuenta eliminada")}<small>${escaparHTML(s.estudiante_email || "")}</small>`],
@@ -311,7 +318,108 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (boton) abrirSolicitud(Number(boton.dataset.solicitud));
   });
 
-  async function abrirSolicitud(id) {
+  // Recorrido de una solicitud: cada estado cae en uno de estos pasos
+  const PASOS_SOLICITUD = [
+    { titulo: "Recibida", estados: ["recibida"] },
+    { titulo: "Con el propietario", estados: ["en_revision"] },
+    { titulo: "Aceptada", estados: ["aceptada", "visita_coordinada"] },
+    { titulo: "Negociación", estados: ["en_negociacion"] },
+    { titulo: "Contrato", estados: ["contrato_pendiente"] },
+    { titulo: "Pago", estados: ["contrato_formalizado", "pago_pendiente"] },
+    { titulo: "Lista", estados: ["pagado", "completada"] }
+  ];
+  const pasoDe = (estado) => PASOS_SOLICITUD.findIndex(p => p.estados.includes(estado));
+  // Qué pasa con cada cambio de estado (se muestra al elegirlo)
+  const EFECTO_ESTADO = {
+    en_revision: "Se comparte con el propietario, sin los datos del estudiante, y le llega un correo.",
+    aceptada: "El propietario aceptó la solicitud. Cuéntale al estudiante.",
+    visita_coordinada: "Ya hay fecha para que el estudiante conozca el lugar.",
+    en_negociacion: "Las partes ajustan canon, fechas y condiciones a través de Roumix.",
+    contrato_pendiente: "Ya hay acuerdo: se habilita preparar el contrato.",
+    rechazada: "La solicitud se cierra. Explícale el motivo al estudiante.",
+    cancelada: "La solicitud se cierra (por ejemplo, el estudiante desistió). Explícale el motivo."
+  };
+  const CIERRES = ["rechazada", "cancelada"];
+
+  /** La guía de "Lo que sigue": qué hacer ahora y los botones para hacerlo. */
+  function siguientePaso(s, contratos) {
+    const vigente = contratos.find(c => VIGENTES.includes(c.estado));
+    const avanzar = (estado, texto, principal) => s.siguientes.includes(estado)
+      ? `<button type="button" class="${principal ? "btn-search-action" : "btn-card-action"}" data-avanzar="${estado}">${texto}</button>` : "";
+    const escribir = (para, texto) => `<button type="button" class="btn-card-action" data-escribir="${para}">${texto}</button>`;
+    const guias = {
+      recibida: ["Revisa la solicitud y compártela con el propietario",
+        "Comprueba que las fechas, la duración y el número de personas tengan sentido para este inmueble. Si todo está bien, compártela: el propietario recibe un correo sin los datos del estudiante.",
+        avanzar("en_revision", "Compartir con el propietario", true) + escribir("estudiante", "Preguntarle algo al estudiante")],
+      en_revision: ["Espera la respuesta del propietario",
+        "El propietario ya conoce la solicitud. Cuando acepte, márcala como aceptada; si no puede, recházala explicándole el motivo al estudiante.",
+        avanzar("aceptada", "El propietario aceptó", true) + escribir("propietario", "Escribirle al propietario")],
+      aceptada: ["Coordina una visita o pasen a negociar",
+        "Si el estudiante quiere conocer el lugar, acuerden una visita. Si no hace falta, pasen directo a negociar las condiciones.",
+        avanzar("visita_coordinada", "Hay visita coordinada", true) + avanzar("en_negociacion", "Pasar a negociación")],
+      visita_coordinada: ["Después de la visita, negocien las condiciones",
+        "Si el estudiante sigue interesado, pasen a acordar canon, fecha de inicio, duración y reglas de la casa.",
+        avanzar("en_negociacion", "Pasar a negociación", true) + escribir("estudiante", "Escribirle al estudiante")],
+      en_negociacion: ["Acuerden las condiciones del contrato",
+        "Cuando las dos partes estén de acuerdo en canon, fechas y condiciones, pásala a «Contrato pendiente» para preparar el contrato.",
+        avanzar("contrato_pendiente", "Ya hay acuerdo: preparar contrato", true)],
+      contrato_pendiente: !vigente
+        ? ["Prepara el contrato", "Los datos de la solicitud ya vienen llenos. Ajusta lo acordado y crea el borrador; las partes todavía no lo verán.",
+          '<button type="button" class="btn-search-action" data-ir-contrato>Ir al contrato</button>']
+        : vigente.estado === "borrador"
+          ? ["Revisa el borrador y envíalo", "Cuando lo envíes, las partes reciben un correo para firmarlo y ya no se podrá editar. Ambas deben tener registrado su documento de identidad.",
+            '<button type="button" class="btn-search-action" data-ir-contrato>Ir al contrato</button>']
+          : ["Esperando las firmas", `Firmas: ${[vigente.aceptado_propietario_en, vigente.aceptado_estudiante_en].filter(Boolean).length} de 2. Si alguien no ha firmado, recuérdaselo por mensaje. Plazo para firmar: ${fecha(vigente.vence_en)}`,
+            '<button type="button" class="btn-card-action" data-ir-contrato>Ver el contrato</button>' +
+            (vigente.aceptado_estudiante_en ? "" : escribir("estudiante", "Recordarle al estudiante")) +
+            (vigente.aceptado_propietario_en ? "" : escribir("propietario", "Recordarle al propietario"))],
+      contrato_formalizado: ["El estudiante debe pagar el primer mes", "El contrato está firmado por ambas partes. El pago se habilita en Roumix y se sigue desde la sección Pagos.",
+        '<button type="button" class="btn-card-action" data-ir-panel="pagos">Ir a Pagos</button>'],
+      pago_pendiente: ["El estudiante debe pagar el primer mes", "El pago está habilitado. Si se demora, escríbele al estudiante.",
+        '<button type="button" class="btn-card-action" data-ir-panel="pagos">Ir a Pagos</button>' + escribir("estudiante", "Escribirle al estudiante")],
+      pagado: ["Registra el desembolso al propietario", "El pago se recibió. Transfiérele al propietario su parte y regístralo en Pagos.",
+        '<button type="button" class="btn-search-action" data-ir-panel="pagos">Ir a Pagos</button>'],
+      completada: ["Proceso terminado", "La solicitud se completó. No hay nada pendiente.", ""],
+      rechazada: ["Solicitud cerrada", "Fue rechazada. Puedes dejar notas internas, pero ya no cambia de estado.", ""],
+      cancelada: ["Solicitud cerrada", "Fue cancelada. Puedes dejar notas internas, pero ya no cambia de estado.", ""]
+    };
+    const [titulo, texto, botones] = guias[s.estado] || ["", "", ""];
+    if (!titulo) return "";
+    const cerrada = ["completada", "rechazada", "cancelada"].includes(s.estado);
+    return `
+      <section class="sol-siguiente${cerrada ? " sol-siguiente-cerrada" : ""}" aria-labelledby="sol-siguiente-titulo">
+        <p class="sol-siguiente-etiqueta">${cerrada ? "Estado" : "Lo que sigue"}</p>
+        <h3 id="sol-siguiente-titulo">${escaparHTML(titulo)}</h3>
+        <p>${escaparHTML(texto)}</p>
+        ${botones ? `<div class="sol-siguiente-botones">${botones}</div>` : ""}
+      </section>`;
+  }
+
+  /** Barra de pasos con el lugar de la solicitud en el recorrido. */
+  function barraPasos(s) {
+    let actual = pasoDe(s.estado);
+    let detenida = false;
+    if (actual === -1) {
+      // Cerrada: se marca el paso en el que estaba cuando se cerró
+      const ultimo = [...s.historial].reverse().find(h => h.estado_nuevo === s.estado && h.estado_anterior);
+      actual = Math.max(0, ultimo ? pasoDe(ultimo.estado_anterior) : 0);
+      detenida = true;
+    }
+    const lista = s.estado === "completada" || s.estado === "pagado";
+    return `
+      <ol class="sol-pasos${detenida ? " sol-pasos-detenida" : ""}" aria-label="Recorrido de la solicitud">
+        ${PASOS_SOLICITUD.map((p, i) => {
+          const estado = i < actual || (lista && i === actual) ? "hecho" : i === actual ? (detenida ? "detenido" : "actual") : "pendiente";
+          const nota = { hecho: "completado", actual: "paso actual", detenido: `aquí se ${s.estado === "rechazada" ? "rechazó" : "canceló"}`, pendiente: "pendiente" }[estado];
+          return `<li class="sol-paso sol-paso-${estado}"${estado === "actual" || estado === "detenido" ? ' aria-current="step"' : ""}>
+            <span class="sol-paso-punto" aria-hidden="true">${estado === "hecho" ? "✓" : estado === "detenido" ? "×" : i + 1}</span>
+            <span class="sol-paso-texto">${p.titulo}<span class="sr-only"> (${nota})</span></span>
+          </li>`;
+        }).join("")}
+      </ol>`;
+  }
+
+  async function abrirSolicitud(id, pestana) {
     contenidoSolicitud.innerHTML = '<p class="admin-cargando" role="status">Cargando…</p>';
     if (!dialogoSolicitud.open) dialogoSolicitud.showModal();
     let s;
@@ -326,83 +434,203 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (e) { /* la sección de contrato muestra el error al usarla */ }
     const compartida = Boolean(s.compartida_propietario_en);
     const cerrada = ["rechazada", "completada", "cancelada"].includes(s.estado);
-    const autor = (h) => h.autor_rol === "admin" ? `Roumix · ${escaparHTML(h.autor_nombre || "admin")}` : h.autor_rol === "estudiante" ? "Estudiante" : "Sistema";
+    const autor = (h) => h.autor_rol === "admin" ? `Roumix · ${escaparHTML(h.autor_nombre || "admin")}` : h.autor_rol === "estudiante" ? "Estudiante" : h.autor_rol === "propietario" ? "Propietario" : "Sistema";
+    const conContrato = contratos.length > 0 || ["contrato_pendiente", "contrato_formalizado", "pago_pendiente", "pagado", "completada"].includes(s.estado);
+    const avances = s.siguientes.filter(e => !CIERRES.includes(e));
+    const cierres = s.siguientes.filter(e => CIERRES.includes(e));
+    const opcionEstado = (e) => `
+      <label class="sol-opcion${CIERRES.includes(e) ? " sol-opcion-cierre" : ""}">
+        <input type="radio" name="sol-estado" value="${e}">
+        <span><strong>${escaparHTML(e === "en_negociacion" && s.estado === "contrato_pendiente" ? "Volver a negociación" : ETIQUETAS.solicitud[e])}</strong>
+          <small>${escaparHTML(e === "en_negociacion" && s.estado === "contrato_pendiente" ? "Cancela el contrato que esté en curso para renegociar." : EFECTO_ESTADO[e] || "")}</small></span>
+      </label>`;
+    const historialOrdenado = [...s.historial].reverse();
 
     contenidoSolicitud.innerHTML = `
-      <h2 id="dialogo-solicitud-titulo">Solicitud #${s.id} · ${escaparHTML(s.inmueble_titulo)}</h2>
-      <p>${chipSolicitud(s.estado)} ${compartida ? chip(`Compartida con el propietario el ${fecha(s.compartida_propietario_en)}`, "aprobada") : chip("El propietario aún no la conoce", "pendiente")}</p>
-      <div class="admin-detalle-grid">
-        <div>
-          <h3>Solicitud</h3>
-          <dl class="admin-datos">
-            <dt>Inmueble</dt><dd><a href="detalle.html?id=${s.inmueble_id}" target="_blank" rel="noopener">#${s.inmueble_id}</a> · ${escaparHTML(s.barrio || "—")} · ${escaparHTML(ETIQUETAS.estado[s.inmueble_estado] || s.inmueble_estado)}</dd>
-            <dt>Canon</dt><dd>${formatearPrecioCOP(s.canon_mensual)}/mes</dd>
-            <dt>Ingreso</dt><dd>${fechaDia(s.fecha_ingreso)}</dd>
-            <dt>Duración</dt><dd>${s.duracion_meses} mes(es)</dd>
-            <dt>Personas</dt><dd>${s.personas}${s.capacidad ? ` (capacidad: ${s.capacidad})` : ""}</dd>
-            <dt>Mensaje del estudiante</dt><dd class="admin-texto-largo">${escaparHTML(s.mensaje || "—")}</dd>
+      <header class="sol-cabeza">
+        <p class="sol-ref">Solicitud #${s.id} · recibida el ${fecha(s.created_at)}</p>
+        <h2 id="dialogo-solicitud-titulo">${escaparHTML(s.inmueble_titulo)}</h2>
+        <p class="sol-chips">${chipSolicitud(s.estado)} ${compartida ? chip("Compartida con el propietario", "aprobada") : chip("El propietario aún no la conoce", "pendiente")}</p>
+      </header>
+
+      ${barraPasos(s)}
+      ${siguientePaso(s, contratos)}
+
+      <div class="sol-tarjetas">
+        <section class="sol-tarjeta" aria-labelledby="sol-datos-titulo">
+          <h3 id="sol-datos-titulo">Lo que pide el estudiante</h3>
+          <dl class="sol-datos">
+            <div><dt>Canon</dt><dd>${formatearPrecioCOP(s.canon_mensual)}/mes</dd></div>
+            <div><dt>Ingreso</dt><dd>${fechaDia(s.fecha_ingreso)}</dd></div>
+            <div><dt>Duración</dt><dd>${s.duracion_meses} ${s.duracion_meses === 1 ? "mes" : "meses"}</dd></div>
+            <div><dt>Personas</dt><dd>${s.personas}${s.capacidad ? ` <small>de ${s.capacidad} posibles</small>` : ""}</dd></div>
           </dl>
-        </div>
-        <div>
-          <h3>Partes (solo Roumix)</h3>
-          <dl class="admin-datos">
-            <dt>Estudiante</dt><dd>${escaparHTML(s.estudiante_nombre || "Cuenta eliminada")}<br><small>${escaparHTML(s.estudiante_email || "")}${s.estudiante_telefono ? " · " + escaparHTML(s.estudiante_telefono) : ""}</small></dd>
-            <dt>Propietario</dt><dd>${escaparHTML(s.propietario_nombre || "—")}<br><small>${escaparHTML(s.propietario_email || "")}${s.propietario_telefono ? " · " + escaparHTML(s.propietario_telefono) : ""}</small></dd>
-          </dl>
-          <p class="fotos-ayuda">No compartas estos datos entre las partes: Roumix coordina toda la comunicación.</p>
-        </div>
+          <p class="sol-inmueble"><a href="detalle.html?id=${s.inmueble_id}" target="_blank" rel="noopener">Ver publicación #${s.inmueble_id}</a> · ${escaparHTML(s.barrio || "—")} · ${escaparHTML(ETIQUETAS.estado[s.inmueble_estado] || s.inmueble_estado)}</p>
+          ${s.mensaje ? `<blockquote class="sol-mensaje">${escaparHTML(s.mensaje)}</blockquote>` : '<p class="sol-vacio">El estudiante no dejó mensaje.</p>'}
+        </section>
+        <section class="sol-tarjeta" aria-labelledby="sol-partes-titulo">
+          <h3 id="sol-partes-titulo">Partes <span class="sol-privado">Solo Roumix</span></h3>
+          <div class="sol-parte">
+            <span class="sol-parte-rol">Estudiante</span>
+            <strong>${escaparHTML(s.estudiante_nombre || "Cuenta eliminada")}</strong>
+            <small>${escaparHTML(s.estudiante_email || "")}${s.estudiante_telefono ? " · " + escaparHTML(s.estudiante_telefono) : ""}</small>
+          </div>
+          <div class="sol-parte">
+            <span class="sol-parte-rol">Propietario</span>
+            <strong>${escaparHTML(s.propietario_nombre || "—")}</strong>
+            <small>${escaparHTML(s.propietario_email || "")}${s.propietario_telefono ? " · " + escaparHTML(s.propietario_telefono) : ""}</small>
+          </div>
+          <p class="sol-aviso">No compartas estos datos entre las partes: toda la comunicación pasa por Roumix.</p>
+        </section>
       </div>
 
-      <h3>Historial</h3>
-      <ol class="admin-historial-solicitud">
-        ${s.historial.map(h => `
-          <li>
-            <span class="admin-historial-meta">${fecha(h.created_at)} · ${autor(h)}</span>
-            ${h.estado_nuevo ? `<span>${h.estado_anterior ? `${escaparHTML(ETIQUETAS.solicitud[h.estado_anterior])} → ` : ""}<strong>${escaparHTML(ETIQUETAS.solicitud[h.estado_nuevo])}</strong></span>` : ""}
-            ${h.nota_estudiante ? `<p><em>Para el estudiante:</em> ${escaparHTML(h.nota_estudiante)}</p>` : ""}
-            ${h.nota_propietario ? `<p><em>Para el propietario:</em> ${escaparHTML(h.nota_propietario)}</p>` : ""}
-            ${h.nota_interna ? `<p class="admin-nota-interna"><em>Nota interna:</em> ${escaparHTML(h.nota_interna)}</p>` : ""}
-          </li>`).join("")}
-      </ol>
+      ${conContrato ? `<div id="sol-contrato">${seccionContrato(s, contratos)}</div>` : ""}
 
-      <div id="sol-contrato">${seccionContrato(s, contratos)}</div>
+      <div class="sol-acciones">
+        <div class="sol-pestanas" role="tablist" aria-label="Acciones sobre la solicitud">
+          <button type="button" role="tab" id="tab-sol-actualizar" aria-controls="sol-panel-actualizar" data-pestana="actualizar">${cerrada ? "Nota interna" : "Cambiar estado"}</button>
+          <button type="button" role="tab" id="tab-sol-escribir" aria-controls="sol-panel-escribir" data-pestana="escribir">Escribir a una parte</button>
+          <button type="button" role="tab" id="tab-sol-historial" aria-controls="sol-panel-historial" data-pestana="historial">Historial <span class="sol-contador">${s.historial.length}</span></button>
+        </div>
 
-      <form class="admin-decision" id="form-escribir-parte" novalidate>
-        <h3>Escribir a una de las partes</h3>
-        <p class="fotos-ayuda">El mensaje llega a la bandeja "Mensajes" del usuario y a su correo. Cada parte solo habla con Roumix.</p>
-        <fieldset class="admin-decisiones">
-          <legend class="sr-only">Destinatario</legend>
-          <label><input type="radio" name="para-parte" value="estudiante" checked> Al estudiante</label>
-          <label><input type="radio" name="para-parte" value="propietario" ${compartida ? "" : "disabled"}> Al propietario${compartida ? "" : " (primero pásala a \"En revisión\")"}</label>
-        </fieldset>
-        <label for="sol-parte-mensaje" class="reporte-label">Mensaje</label>
-        <textarea id="sol-parte-mensaje" rows="3" maxlength="2000" placeholder="Ej: Hola, ¿qué día te queda bien para la visita?"></textarea>
-        <p class="pub-mensaje" id="sol-parte-resultado" role="alert" hidden></p>
-        <button type="submit" class="btn-search-action">Enviar mensaje</button>
-      </form>
+        <form class="sol-panel" id="sol-panel-actualizar" role="tabpanel" aria-labelledby="tab-sol-actualizar" novalidate>
+          ${cerrada ? '<p class="sol-ayuda">La solicitud está cerrada. Puedes dejar una nota para el equipo; las partes no la ven.</p>' : `
+          <fieldset class="sol-opciones">
+            <legend>¿A qué estado pasa? <span>Ahora: ${escaparHTML(ETIQUETAS.solicitud[s.estado])}</span></legend>
+            ${avances.map(opcionEstado).join("")}
+            ${cierres.length ? `<p class="sol-opciones-separador">Cerrar la solicitud</p>${cierres.map(opcionEstado).join("")}` : ""}
+            <label class="sol-opcion sol-opcion-sin">
+              <input type="radio" name="sol-estado" value="">
+              <span><strong>No cambiar el estado</strong><small>Solo enviar un mensaje o dejar una nota.</small></span>
+            </label>
+          </fieldset>
+          <div class="sol-campos" id="sol-campos" hidden>
+            <div class="sol-campo">
+              <label for="sol-admin-nota-est" id="sol-etiqueta-est">Mensaje para el estudiante <span>opcional · le llega por correo</span></label>
+              <textarea id="sol-admin-nota-est" rows="2" maxlength="1000" placeholder="Ej: El propietario puede mostrarte la habitación el sábado a las 10 a. m."></textarea>
+            </div>
+            <div class="sol-campo" id="sol-campo-prop">
+              <label for="sol-admin-nota-prop">Mensaje para el propietario <span>opcional · le llega por correo</span></label>
+              <textarea id="sol-admin-nota-prop" rows="2" maxlength="1000" placeholder="Ej: Una estudiante quiere tu habitación desde el próximo mes, por 6 meses."></textarea>
+            </div>`}
+            <div class="sol-campo">
+              <label for="sol-admin-nota-int">Nota interna <span>opcional · solo la ve el equipo</span></label>
+              <textarea id="sol-admin-nota-int" rows="2" maxlength="1000" placeholder="Ej: Llamé al propietario, confirma disponibilidad."></textarea>
+            </div>
+            <p class="pub-mensaje" id="sol-admin-resultado" role="alert" hidden></p>
+            <button type="submit" class="btn-search-action" id="sol-guardar">${cerrada ? "Guardar nota" : "Guardar"}</button>
+          ${cerrada ? "" : "</div>"}
+        </form>
 
-      <form class="admin-decision" id="form-solicitud-admin" novalidate>
-        <h3>${cerrada ? "Agregar nota interna" : "Actualizar la solicitud"}</h3>
-        ${cerrada ? "" : `
-        <label for="sol-admin-estado" class="reporte-label">Nuevo estado</label>
-        <select id="sol-admin-estado">
-          <option value="">— Mantener "${escaparHTML(ETIQUETAS.solicitud[s.estado])}" —</option>
-          ${s.siguientes.map(e => `<option value="${e}">${escaparHTML(ETIQUETAS.solicitud[e])}</option>`).join("")}
-        </select>
-        <p class="fotos-ayuda">${compartida ? "" : "Al pasarla a \"En revisión\" se comparte con el propietario (sin datos del estudiante) y le llega un correo. "}Contrato formalizado, pago y pagado los pondrá el sistema en los próximos módulos: no se ponen a mano.</p>
-        <label for="sol-admin-nota-est" class="reporte-label">Mensaje para el estudiante (le llega por correo; obligatorio si rechazas o cancelas)</label>
-        <textarea id="sol-admin-nota-est" rows="2" maxlength="1000" placeholder="Ej: El propietario puede mostrarte la habitación el sábado a las 10 a. m."></textarea>
-        <label for="sol-admin-nota-prop" class="reporte-label">Mensaje para el propietario (le llega por correo)</label>
-        <textarea id="sol-admin-nota-prop" rows="2" maxlength="1000" placeholder="Ej: Una estudiante quiere tu habitación desde el próximo mes, por 6 meses."></textarea>`}
-        <label for="sol-admin-nota-int" class="reporte-label">Nota interna (solo la ve el equipo de Roumix)</label>
-        <textarea id="sol-admin-nota-int" rows="2" maxlength="1000" placeholder="Ej: Llamé al propietario, confirma disponibilidad."></textarea>
-        <p class="pub-mensaje" id="sol-admin-resultado" role="alert" hidden></p>
-        <button type="submit" class="btn-search-action">Guardar</button>
-      </form>`;
+        <form class="sol-panel" id="sol-panel-escribir" role="tabpanel" aria-labelledby="tab-sol-escribir" novalidate hidden>
+          <p class="sol-ayuda">Abre una conversación en la bandeja «Mensajes» de la persona y le llega un correo. Cada parte solo habla con Roumix.</p>
+          <fieldset class="sol-destinos">
+            <legend class="sr-only">Destinatario</legend>
+            <label class="sol-destino"><input type="radio" name="para-parte" value="estudiante" checked><span>Al estudiante</span></label>
+            <label class="sol-destino${compartida ? "" : " sol-destino-bloqueado"}"><input type="radio" name="para-parte" value="propietario" ${compartida ? "" : "disabled"}><span>Al propietario${compartida ? "" : "<small>Primero compártele la solicitud</small>"}</span></label>
+          </fieldset>
+          <div class="sol-campo">
+            <label for="sol-parte-mensaje">Mensaje</label>
+            <textarea id="sol-parte-mensaje" rows="4" maxlength="2000" placeholder="Ej: Hola, ¿qué día te queda bien para la visita?"></textarea>
+          </div>
+          <p class="pub-mensaje" id="sol-parte-resultado" role="alert" hidden></p>
+          <button type="submit" class="btn-search-action">Enviar mensaje</button>
+        </form>
 
-    activarSeccionContrato(s, contratos);
+        <div class="sol-panel" id="sol-panel-historial" role="tabpanel" aria-labelledby="tab-sol-historial" hidden>
+          <ol class="sol-linea">
+            ${historialOrdenado.map(h => `
+              <li class="sol-evento${h.estado_nuevo ? " sol-evento-estado" : ""}">
+                <span class="sol-evento-meta">${fecha(h.created_at)} · ${autor(h)}</span>
+                ${h.estado_nuevo ? `<p class="sol-evento-titulo">${h.estado_anterior ? `${escaparHTML(ETIQUETAS.solicitud[h.estado_anterior] || h.estado_anterior)} → ` : ""}<strong>${escaparHTML(ETIQUETAS.solicitud[h.estado_nuevo] || h.estado_nuevo)}</strong></p>` : ""}
+                ${h.nota_estudiante ? `<p class="sol-nota"><span>Al estudiante</span>${escaparHTML(h.nota_estudiante)}</p>` : ""}
+                ${h.nota_propietario ? `<p class="sol-nota"><span>Al propietario</span>${escaparHTML(h.nota_propietario)}</p>` : ""}
+                ${h.nota_interna ? `<p class="sol-nota sol-nota-interna"><span>Nota interna</span>${escaparHTML(h.nota_interna)}</p>` : ""}
+              </li>`).join("")}
+          </ol>
+        </div>
+      </div>`;
 
-    document.getElementById("form-escribir-parte").addEventListener("submit", async (e) => {
+    if (conContrato) activarSeccionContrato(s, contratos);
+
+    // En pantallas angostas la barra de pasos se desplaza: se centra en el paso actual
+    const barra = contenidoSolicitud.querySelector(".sol-pasos");
+    const pasoActual = barra && barra.querySelector('[aria-current="step"]');
+    if (pasoActual && barra.scrollWidth > barra.clientWidth) {
+      barra.scrollLeft = pasoActual.offsetLeft - barra.offsetLeft - (barra.clientWidth - pasoActual.offsetWidth) / 2;
+    }
+
+    // Pestañas (con flechas del teclado)
+    const pestanas = [...contenidoSolicitud.querySelectorAll("[data-pestana]")];
+    function mostrarPestana(nombre, enfocar) {
+      pestanas.forEach(b => {
+        const activa = b.dataset.pestana === nombre;
+        b.setAttribute("aria-selected", String(activa));
+        b.tabIndex = activa ? 0 : -1;
+        document.getElementById(b.getAttribute("aria-controls")).hidden = !activa;
+        if (activa && enfocar) b.focus();
+      });
+    }
+    pestanas.forEach((b, i) => {
+      b.addEventListener("click", () => mostrarPestana(b.dataset.pestana));
+      b.addEventListener("keydown", (e) => {
+        const salto = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
+        if (salto) mostrarPestana(pestanas[(i + salto + pestanas.length) % pestanas.length].dataset.pestana, true);
+      });
+    });
+    mostrarPestana(pestana || "actualizar");
+
+    // Formulario de cambio de estado: los campos aparecen al elegir una opción y se adaptan a ella
+    const form = document.getElementById("sol-panel-actualizar");
+    const campos = document.getElementById("sol-campos");
+    const guardar = document.getElementById("sol-guardar");
+    function alElegirEstado() {
+      const elegido = form.querySelector('input[name="sol-estado"]:checked');
+      if (!elegido || !campos) return;
+      const estado = elegido.value;
+      campos.hidden = false;
+      const cierra = CIERRES.includes(estado);
+      document.getElementById("sol-etiqueta-est").innerHTML = cierra
+        ? "Mensaje para el estudiante <span class=\"sol-obligatorio\">obligatorio · explícale el motivo</span>"
+        : "Mensaje para el estudiante <span>opcional · le llega por correo</span>";
+      // Al propietario solo se le escribe si ya conoce la solicitud (o se le comparte ahora)
+      document.getElementById("sol-campo-prop").hidden = !(compartida || estado === "en_revision");
+      guardar.textContent = estado ? `Pasar a «${estado === "en_negociacion" && s.estado === "contrato_pendiente" ? "Volver a negociación" : ETIQUETAS.solicitud[estado]}»` : "Guardar mensajes y nota";
+      guardar.classList.toggle("sol-guardar-cierre", cierra);
+    }
+    form.addEventListener("change", (e) => { if (e.target.name === "sol-estado") alElegirEstado(); });
+
+    // Botones de "Lo que sigue"
+    contenidoSolicitud.querySelectorAll("[data-avanzar]").forEach(b => b.addEventListener("click", () => {
+      mostrarPestana("actualizar");
+      const opcion = form.querySelector(`input[name="sol-estado"][value="${b.dataset.avanzar}"]`);
+      if (!opcion) return;
+      opcion.checked = true;
+      alElegirEstado();
+      form.scrollIntoView({ behavior: "smooth", block: "start" });
+      (document.getElementById(b.dataset.avanzar === "en_revision" ? "sol-admin-nota-prop" : "sol-admin-nota-est") || opcion).focus({ preventScroll: true });
+    }));
+    contenidoSolicitud.querySelectorAll("[data-escribir]").forEach(b => b.addEventListener("click", () => {
+      mostrarPestana("escribir");
+      const opcion = contenidoSolicitud.querySelector(`input[name="para-parte"][value="${b.dataset.escribir}"]`);
+      if (opcion && !opcion.disabled) opcion.checked = true;
+      const panel = document.getElementById("sol-panel-escribir");
+      panel.scrollIntoView({ behavior: "smooth", block: "start" });
+      document.getElementById("sol-parte-mensaje").focus({ preventScroll: true });
+    }));
+    contenidoSolicitud.querySelectorAll("[data-ir-contrato]").forEach(b => b.addEventListener("click", () => {
+      const seccion = document.getElementById("sol-contrato");
+      if (!seccion) return;
+      seccion.scrollIntoView({ behavior: "smooth", block: "start" });
+      const primero = seccion.querySelector("input, a, button");
+      if (primero) primero.focus({ preventScroll: true });
+    }));
+    contenidoSolicitud.querySelectorAll("[data-ir-panel]").forEach(b => b.addEventListener("click", () => {
+      dialogoSolicitud.close();
+      abrirPanel(b.dataset.irPanel);
+    }));
+
+    document.getElementById("sol-panel-escribir").addEventListener("submit", async (e) => {
       e.preventDefault();
       const resultado = document.getElementById("sol-parte-resultado");
       const mensaje = document.getElementById("sol-parte-mensaje").value.trim();
@@ -428,22 +656,26 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     });
 
-    const form = document.getElementById("form-solicitud-admin");
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const resultado = document.getElementById("sol-admin-resultado");
       const mostrar = (texto) => { resultado.textContent = texto; resultado.className = "pub-mensaje pub-mensaje-error"; resultado.hidden = false; };
-      const valor = (id) => { const el = document.getElementById(id); return el ? el.value.trim() : ""; };
-      const estado = valor("sol-admin-estado");
+      const valor = (id) => { const el = document.getElementById(id); return el && !el.closest("[hidden]") ? el.value.trim() : ""; };
+      const elegido = form.querySelector('input[name="sol-estado"]:checked');
+      if (!cerrada && !elegido) return mostrar("Elige a qué estado pasa la solicitud, o «No cambiar el estado».");
+      const estado = elegido ? elegido.value : "";
       const cuerpo = {
         estado: estado || undefined,
         notaEstudiante: valor("sol-admin-nota-est") || undefined,
         notaPropietario: valor("sol-admin-nota-prop") || undefined,
         notaInterna: valor("sol-admin-nota-int") || undefined
       };
-      if (!estado && !cuerpo.notaEstudiante && !cuerpo.notaPropietario && !cuerpo.notaInterna) return mostrar("Elige un nuevo estado o escribe al menos una nota.");
-      if ((estado === "rechazada" || estado === "cancelada") && !cuerpo.notaEstudiante) return mostrar("Explícale al estudiante por qué se cierra la solicitud.");
-      if ((estado === "rechazada" || estado === "cancelada") && !confirm(`¿Confirmas marcar la solicitud #${s.id} como "${ETIQUETAS.solicitud[estado]}"? Se cerrará.`)) return;
+      if (!estado && !cuerpo.notaEstudiante && !cuerpo.notaPropietario && !cuerpo.notaInterna) return mostrar(cerrada ? "Escribe la nota." : "Escribe al menos un mensaje o una nota.");
+      if (CIERRES.includes(estado) && !cuerpo.notaEstudiante) {
+        mostrar("Explícale al estudiante por qué se cierra la solicitud.");
+        return document.getElementById("sol-admin-nota-est").focus();
+      }
+      if (CIERRES.includes(estado) && !confirm(`¿Confirmas marcar la solicitud #${s.id} como "${ETIQUETAS.solicitud[estado]}"? Se cerrará.`)) return;
 
       const boton = form.querySelector('button[type="submit"]');
       boton.disabled = true;
@@ -468,7 +700,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // ---------------- Contratos (firma electrónica F-1 a F-4) ----------------
   const ETIQUETA_CONTRATO = {
-    borrador: "Borrador", enviado: "Enviado", pendiente_aceptacion: "Falta una aceptación",
+    borrador: "Borrador", enviado: "Enviado", pendiente_aceptacion: "Falta una firma",
     formalizado: "Formalizado", cancelado: "Cancelado", expirado: "Expirado"
   };
   const CHIP_CONTRATO = {
@@ -500,8 +732,8 @@ document.addEventListener("DOMContentLoaded", async () => {
           estado: chipContrato(c.estado) + (c.vence_en && ["enviado", "pendiente_aceptacion"].includes(c.estado) ? `<small>Vence ${fecha(c.vence_en)}</small>` : ""),
           destacada: c.estado === "borrador",
           datos: [
-            ["Arrendador", `${escaparHTML(c.propietario_nombre)}<small>${c.aceptado_propietario_en ? "✓ Aceptó" : "Falta aceptar"}</small>`],
-            ["Arrendatario", `${escaparHTML(c.estudiante_nombre)}<small>${c.aceptado_estudiante_en ? "✓ Aceptó" : "Falta aceptar"}</small>`]
+            ["Arrendador", `${escaparHTML(c.propietario_nombre)}<small>${c.aceptado_propietario_en ? "✓ Firmó" : "Falta firmar"}</small>`],
+            ["Arrendatario", `${escaparHTML(c.estudiante_nombre)}<small>${c.aceptado_estudiante_en ? "✓ Firmó" : "Falta firmar"}</small>`]
           ],
           acciones: `<button type="button" class="btn-card-action" data-solicitud-contrato="${c.solicitud_id}">Gestionar</button>`
         })).join(""))}`;
@@ -523,43 +755,85 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
     return `
       <form id="form-contrato" class="admin-contrato-form" novalidate>
-        <div class="admin-contrato-grid">
-          <label>Canon mensual (COP)<input type="number" id="ct-canon" min="1" step="1000" value="${escaparHTML(v.canon_mensual)}"></label>
-          <label>Fecha de inicio<input type="date" id="ct-inicio" value="${escaparHTML(isoDia(v.fecha_inicio))}"></label>
-          <label>Duración (meses)<input type="number" id="ct-duracion" min="1" max="24" value="${escaparHTML(v.duracion_meses)}"></label>
-          <label>Día de pago (1–28)<input type="number" id="ct-dia" min="1" max="28" value="${escaparHTML(v.dia_pago)}"></label>
-          <label>Dirección del inmueble<input type="text" id="ct-direccion" maxlength="200" value="${escaparHTML(v.inmueble_direccion || "")}" placeholder="Ej: Calle 40 # 30-15, apto 201"></label>
-        </div>
-        <label class="reporte-label" for="ct-servicios">Servicios incluidos</label>
-        <input type="text" id="ct-servicios" maxlength="500" value="${escaparHTML(v.servicios_incluidos || "")}" placeholder="Ej: Agua, luz, gas e internet">
-        <label class="reporte-label" for="ct-condiciones">Condiciones acordadas</label>
-        <textarea id="ct-condiciones" rows="4" maxlength="5000" placeholder="Ej: No se permiten mascotas. Visitas hasta las 10 p. m.">${escaparHTML(v.condiciones || "")}</textarea>
+        <fieldset class="ct-grupo">
+          <legend>Dinero</legend>
+          <div class="admin-contrato-grid">
+            <label>Canon mensual (COP)<input type="number" id="ct-canon" min="1" step="1000" inputmode="numeric" value="${escaparHTML(v.canon_mensual)}"><small id="ct-canon-texto"></small></label>
+            <label>Día de pago de cada mes<input type="number" id="ct-dia" min="1" max="28" inputmode="numeric" value="${escaparHTML(v.dia_pago)}"><small>Entre 1 y 28</small></label>
+          </div>
+          <p class="ct-nota">Sin depósito: la Ley 820 de 2003 (art. 16) no permite exigirlo.</p>
+        </fieldset>
+        <fieldset class="ct-grupo">
+          <legend>Fechas</legend>
+          <div class="admin-contrato-grid">
+            <label>Fecha de inicio<input type="date" id="ct-inicio" value="${escaparHTML(isoDia(v.fecha_inicio))}"></label>
+            <label>Duración (meses)<input type="number" id="ct-duracion" min="1" max="24" inputmode="numeric" value="${escaparHTML(v.duracion_meses)}"><small id="ct-fin"></small></label>
+          </div>
+        </fieldset>
+        <fieldset class="ct-grupo">
+          <legend>Inmueble</legend>
+          <label>Dirección<input type="text" id="ct-direccion" maxlength="200" value="${escaparHTML(v.inmueble_direccion || "")}" placeholder="Ej: Calle 40 # 30-15, apto 201"></label>
+          <label>Servicios incluidos en el canon<input type="text" id="ct-servicios" maxlength="500" value="${escaparHTML(v.servicios_incluidos || "")}" placeholder="Ej: Agua, luz, gas e internet"></label>
+        </fieldset>
+        <fieldset class="ct-grupo">
+          <legend>Condiciones acordadas</legend>
+          <label class="sr-only" for="ct-condiciones">Condiciones acordadas</label>
+          <textarea id="ct-condiciones" rows="4" maxlength="5000" placeholder="Ej: No se permiten mascotas. Visitas hasta las 10 p. m.">${escaparHTML(v.condiciones || "")}</textarea>
+          <small class="ct-nota">Reglas de la casa y lo que hayan pactado. Quedan en el PDF del contrato.</small>
+        </fieldset>
         <p class="pub-mensaje" id="ct-resultado" role="alert" hidden></p>
         <div class="admin-botones">
-          <button type="submit" class="btn-search-action">${c ? "Guardar borrador" : "Crear borrador"}</button>
-          ${c ? `<button type="button" class="btn-card-action" id="ct-enviar">Enviar a las partes</button>` : ""}
+          ${c ? `<button type="button" class="btn-search-action" id="ct-enviar">Enviar a las partes para firmar</button>` : ""}
+          <button type="submit" class="${c ? "btn-card-action" : "btn-search-action"}">${c ? "Guardar borrador" : "Crear borrador"}</button>
           ${c ? `<a class="btn-card-action" href="contrato.html?id=${c.id}" target="_blank" rel="noopener">Vista previa</a>` : ""}
         </div>
       </form>`;
+  }
+
+  // Mini recorrido del contrato: borrador → enviado → firmas → formalizado
+  function pasosContrato(c) {
+    const firmas = c ? [c.aceptado_propietario_en, c.aceptado_estudiante_en].filter(Boolean).length : 0;
+    const actual = !c || c.estado === "borrador" ? 0 : c.estado === "formalizado" ? 4 : 2;
+    const pasos = ["Borrador", "Enviado", `Firmas (${firmas}/2)`, "Formalizado"];
+    return `<ol class="ct-pasos" aria-label="Estado del contrato">${pasos.map((p, i) => {
+      const estado = i < actual ? "hecho" : i === actual ? "actual" : "pendiente";
+      return `<li class="ct-paso ct-paso-${estado}"${estado === "actual" ? ' aria-current="step"' : ""}>${p}</li>`;
+    }).join("")}</ol>`;
   }
 
   function seccionContrato(s, contratos) {
     const vigente = contratos.find(c => VIGENTES.includes(c.estado));
     const formalizado = contratos.find(c => c.estado === "formalizado");
     const historial = contratos.filter(c => c !== vigente && c !== formalizado);
+    const firma = (fechaFirma, nombre, rol) => `
+      <div class="ct-firma${fechaFirma ? " ct-firma-ok" : ""}">
+        <span class="sol-parte-rol">${rol}</span>
+        ${fechaFirma ? `<strong>✓ Firmó</strong><small>${escaparHTML(nombre || "")} · ${fecha(fechaFirma)}</small>` : "<strong>Falta firmar</strong>"}
+      </div>`;
     let cuerpo;
     if (formalizado) {
-      cuerpo = `<p>${chipContrato("formalizado")} Contrato <a href="contrato.html?id=${formalizado.id}" target="_blank" rel="noopener">#${formalizado.id}</a> aceptado por ambas partes el ${fecha(formalizado.formalizado_en)}.</p>`;
+      cuerpo = `${pasosContrato(formalizado)}
+        <p class="ct-texto">Contrato #${formalizado.id} firmado por ambas partes el ${fecha(formalizado.formalizado_en)}.</p>
+        ${formalizado.codigo_verificacion ? `<p class="ct-texto">Código de verificación: <code>${escaparHTML(formalizado.codigo_verificacion)}</code></p>` : ""}
+        <div class="admin-botones"><a class="btn-card-action" href="contrato.html?id=${formalizado.id}" target="_blank" rel="noopener">Ver contrato firmado</a></div>`;
     } else if (vigente && vigente.estado === "borrador") {
-      cuerpo = `<p>${chipContrato("borrador")} Contrato #${vigente.id}: las partes todavía no lo ven. Al enviarlo ya no se podrá editar.</p>${formularioContrato(s, vigente)}`;
+      cuerpo = `${pasosContrato(vigente)}
+        <p class="ct-texto">Las partes todavía no lo ven. Revisa los datos y envíalo; una vez enviado ya no se puede editar.</p>
+        ${formularioContrato(s, vigente)}`;
     } else if (vigente) {
-      cuerpo = `
-        <p>${chipContrato(vigente.estado)} Contrato <a href="contrato.html?id=${vigente.id}" target="_blank" rel="noopener">#${vigente.id}</a> enviado el ${fecha(vigente.enviado_en)} · vence ${fecha(vigente.vence_en)}</p>
-        <p><small>Propietario: ${vigente.aceptado_propietario_en ? `✓ aceptó (${escaparHTML(vigente.firma_propietario)})` : "pendiente"} · Estudiante: ${vigente.aceptado_estudiante_en ? `✓ aceptó (${escaparHTML(vigente.firma_estudiante)})` : "pendiente"}</small></p>`;
+      cuerpo = `${pasosContrato(vigente)}
+        <p class="ct-texto">Enviado el ${fecha(vigente.enviado_en)} · las partes tienen hasta el ${fecha(vigente.vence_en)} para firmarlo.</p>
+        <div class="ct-firmas">
+          ${firma(vigente.aceptado_propietario_en, vigente.firma_propietario, "Propietario")}
+          ${firma(vigente.aceptado_estudiante_en, vigente.firma_estudiante, "Estudiante")}
+        </div>
+        <div class="admin-botones"><a class="btn-card-action" href="contrato.html?id=${vigente.id}" target="_blank" rel="noopener">Ver contrato</a></div>`;
     } else if (s.estado === "contrato_pendiente") {
-      cuerpo = `<p class="fotos-ayuda">Prepara el contrato con las condiciones que acordaron las partes. Los datos de la solicitud ya vienen llenos.</p>${formularioContrato(s, null)}`;
+      cuerpo = `${pasosContrato(null)}
+        <p class="ct-texto">Los datos de la solicitud ya vienen llenos: ajusta lo que acordaron las partes y crea el borrador.</p>
+        ${formularioContrato(s, null)}`;
     } else {
-      cuerpo = `<p class="fotos-ayuda">El contrato se prepara cuando la solicitud está en "Contrato pendiente".</p>`;
+      cuerpo = '<p class="ct-texto">No hay un contrato en curso.</p>';
     }
     const cancelar = vigente ? `
       <details class="admin-cancelar-contrato">
@@ -569,11 +843,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         <button type="button" class="btn-card-action btn-card-danger" id="ct-cancelar">Cancelar contrato #${vigente.id}</button>
       </details>` : "";
     return `
-      <section class="admin-decision admin-seccion-contrato">
-        <h3>Contrato</h3>
+      <section class="sol-tarjeta admin-seccion-contrato" aria-labelledby="ct-titulo">
+        <h3 id="ct-titulo">Contrato${vigente || formalizado ? ` <small>#${(vigente || formalizado).id}</small>` : ""}</h3>
         ${cuerpo}
         ${cancelar}
-        ${historial.length ? `<p class="fotos-ayuda">Anteriores: ${historial.map(c => `<a href="contrato.html?id=${c.id}" target="_blank" rel="noopener">#${c.id}</a> ${escaparHTML(ETIQUETA_CONTRATO[c.estado])}`).join(" · ")}</p>` : ""}
+        ${historial.length ? `<p class="ct-anteriores">Anteriores: ${historial.map(c => `<a href="contrato.html?id=${c.id}" target="_blank" rel="noopener">#${c.id}</a> ${escaparHTML(ETIQUETA_CONTRATO[c.estado])}`).join(" · ")}</p>` : ""}
       </section>`;
   }
 
@@ -603,6 +877,24 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const form = document.getElementById("form-contrato");
     if (form) {
+      // Ayudas debajo de los campos: el canon en pesos y la fecha en que termina
+      const ayudas = () => {
+        const canon = Number(document.getElementById("ct-canon").value);
+        document.getElementById("ct-canon-texto").textContent = canon > 0 ? `${formatearPrecioCOP(canon)} al mes` : "";
+        const [a, m, d] = document.getElementById("ct-inicio").value.split("-").map(Number);
+        const meses = Number(document.getElementById("ct-duracion").value);
+        let texto = "";
+        if (a && m && d && Number.isInteger(meses) && meses > 0) {
+          // Igual que el servidor: inicio + meses (sin pasarse del último día del mes) − 1 día
+          const mesFin = new Date(a, m - 1 + meses, 1);
+          const ultimo = new Date(mesFin.getFullYear(), mesFin.getMonth() + 1, 0).getDate();
+          const fin = new Date(mesFin.getFullYear(), mesFin.getMonth(), Math.min(d, ultimo) - 1);
+          texto = `Termina el ${fin.toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" })}`;
+        }
+        document.getElementById("ct-fin").textContent = texto;
+      };
+      form.addEventListener("input", ayudas);
+      ayudas();
       form.addEventListener("submit", async (e) => {
         e.preventDefault();
         const boton = form.querySelector('button[type="submit"]');
