@@ -119,7 +119,7 @@ async function hastaFormalizado(est, nombre) {
     const e3 = await crearUsuario(ids.e3, 'estudiante', 'Sara Prueba');
     prop = await crearUsuario(ids.prop, 'propietario', 'Carlos');
     await db.query(`INSERT INTO verificaciones_propietario (propietario_id, estado, nombre_completo, acepta_comision, version_condiciones, acepta_comision_en)
-      VALUES ($1, 'aprobado', 'Carlos Prueba Rodríguez', true, '2026-11', now())`, [ids.prop]);
+      VALUES ($1, 'aprobado', 'Carlos Prueba Rodríguez', true, '2027-01', now())`, [ids.prop]);
     admin = (await db.query("SELECT id, nombre, email, rol, estado FROM usuarios WHERE rol = 'admin' LIMIT 1")).rows[0];
     inmuebleId = (await db.query(
       `INSERT INTO inmuebles (propietario_id, titulo, tipo, tipo_label, precio, barrio, universidad, latitud, longitud, imagen_principal, galeria, estado, moderacion)

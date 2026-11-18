@@ -1,4 +1,4 @@
-// Prueba del módulo W-5a (condiciones de comisión versión 2026-12 y aviso a propietarios).
+// Prueba del módulo W-5a (condiciones de comisión vigentes —2027-01— y aviso a propietarios).
 // Solo avisa a su propio propietario de prueba: nunca a los propietarios reales.
 const path = require('path');
 const crypto = require('crypto');
@@ -36,27 +36,29 @@ const sello = Date.now();
       VALUES ($1, 'aprobado', 'Elena Prueba Ruiz', true, '2026-11', now() - interval '5 days')`, [idProp]);
 
     // 1. El texto nuevo
-    ok(verificacion.VERSION_CONDICIONES === '2026-12' && /10 % del primer canon/.test(verificacion.CONDICIONES_COMISION)
-      && /5 % de cada canon mensual cobrado/.test(verificacion.CONDICIONES_COMISION) && !/simulados/.test(verificacion.CONDICIONES_COMISION),
-      'Versión 2026-12: mantiene el 10 % del primer mes y agrega el 5 % de cada mes cobrado por débito automático');
-    ok(verificacion.TEXTOS_CONDICIONES['2026-11'] && verificacion.CAMBIOS_CONDICIONES.length === 3, 'Se conserva el texto de la versión anterior y la lista de cambios');
+    ok(verificacion.VERSION_CONDICIONES === '2027-01' && verificacion.PORCENTAJE_COMISION_MENSUAL === 10
+      && /10 % de cada canon cobrado/.test(verificacion.CONDICIONES_COMISION) && /débito automático, que el contrato hace obligatorio/.test(verificacion.CONDICIONES_COMISION)
+      && !/simulados/.test(verificacion.CONDICIONES_COMISION),
+      'Versión 2027-01: todos los meses por Roumix (débito automático obligatorio) y 10 % de cada canon cobrado');
+    ok(verificacion.TEXTOS_CONDICIONES['2026-11'] && verificacion.TEXTOS_CONDICIONES['2026-12'] && verificacion.CAMBIOS_CONDICIONES.length === 5,
+      'Se conservan los textos de las versiones anteriores y la lista de cambios');
 
     // 2. Lo que ve el propietario que aceptó la versión anterior
     let r = res(); await propCtrl.obtenerVerificacion(req(prop), r);
     let v = r.cuerpo.data;
-    ok(v.aceptaComision === true && v.condicionesAlDia === false && v.versionAceptada === '2026-11' && v.versionCondiciones === '2026-12',
+    ok(v.aceptaComision === true && v.condicionesAlDia === false && v.versionAceptada === '2026-11' && v.versionCondiciones === '2027-01',
       'Con la versión 2026-11 aceptada: "condiciones nuevas por aceptar" (no al día)');
 
     // 3. Resumen del panel
     r = res(); await cond.resumen(req(null), r);
     const antes = r.cuerpo.data;
-    ok(antes.version === '2026-12' && antes.por_aceptar >= 1 && antes.por_avisar >= 1, `Panel: ${antes.por_aceptar} por aceptar, ${antes.por_avisar} por avisar`);
+    ok(antes.version === '2027-01' && antes.por_aceptar >= 1 && antes.por_avisar >= 1, `Panel: ${antes.por_aceptar} por aceptar, ${antes.por_avisar} por avisar`);
 
     // 4. Aviso (solo a la propietaria de prueba)
     const { avisados, correos: enviados } = await cond.avisarPropietarios([prop], null, 'https://roumix.prueba');
     ok(avisados === 1 && enviados === 1, 'Aviso enviado: en la plataforma y por correo');
     const correo = correos.find((c) => /actualizó las condiciones/.test(c.subject));
-    ok(correo && /5 %/.test(correo.html) && /verificacion\.html#condiciones/.test(correo.html), 'El correo explica el 5 % y enlaza a Mi verificación');
+    ok(correo && /10 %/.test(correo.html) && /verificacion\.html#condiciones/.test(correo.html), 'El correo explica el 10 % y enlaza a Mi verificación');
     r = res(); await msg.misAvisos(req(prop), r);
     ok(r.cuerpo.data.some((a) => /actualizó las condiciones/.test(a.titulo) && a.enlace === 'verificacion.html#condiciones'), 'Aparece el aviso en la campana de la propietaria');
     const otra = await cond.avisarPropietarios([prop], null, 'https://roumix.prueba');
@@ -65,9 +67,9 @@ const sello = Date.now();
     // 5. Acepta las condiciones nuevas
     r = res(); await propCtrl.aceptarCondiciones(req(prop, { body: { acepto: true } }), r);
     v = r.cuerpo.data;
-    ok(v.condicionesAlDia === true && v.versionAceptada === '2026-12', 'Al aceptar queda al día con la versión 2026-12');
+    ok(v.condicionesAlDia === true && v.versionAceptada === '2027-01', 'Al aceptar queda al día con la versión 2027-01');
     const fila = (await db.query('SELECT version_condiciones FROM verificaciones_propietario WHERE propietario_id = $1', [idProp])).rows[0];
-    ok(fila.version_condiciones === '2026-12', 'La base de datos guarda la versión aceptada');
+    ok(fila.version_condiciones === '2027-01', 'La base de datos guarda la versión aceptada');
     r = res(); await cond.resumen(req(null), r);
     ok(r.cuerpo.data.por_aceptar === antes.por_aceptar - 1, 'El panel ya no la cuenta entre las pendientes');
   } catch (err) {

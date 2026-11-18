@@ -971,8 +971,18 @@ document.addEventListener("DOMContentLoaded", async () => {
           ? "Para cobrar por débito automático falta la llave privada de Wompi (WOMPI_PRIVATE_KEY) en Vercel."
           : "El débito automático necesita Wompi activo.";
       }
-      if (!r.data.length) return vacio(contenedor, "No hay cobros mensuales con este filtro.");
-      contenedor.innerHTML = listaTarjetas(r.data.map((c) => {
+      const faltan = r.sinDebito || [];
+      const avisoFaltan = faltan.length ? `
+        <div class="admin-aviso-debito" role="note">
+          <strong>${faltan.length} arriendo(s) con el primer mes pagado y sin débito automático</strong> (el contrato lo exige):
+          <ul>${faltan.map((f) => `<li><a href="pago.html?id=${f.pago_id}" target="_blank" rel="noopener">Pago #${f.pago_id}</a> · ${escaparHTML(f.inmueble_titulo)} · ${escaparHTML(f.estudiante_nombre || "—")}</li>`).join("")}</ul>
+        </div>` : "";
+      if (!r.data.length) {
+        vacio(contenedor, "No hay cobros mensuales con este filtro.");
+        if (avisoFaltan) contenedor.insertAdjacentHTML("afterbegin", avisoFaltan);
+        return;
+      }
+      contenedor.innerHTML = avisoFaltan + listaTarjetas(r.data.map((c) => {
         const [texto, tipo] = ESTADO_COBRO[c.estado] || [c.estado, "neutro"];
         return tarjeta({
           ref: `Cobro #${c.id} · mes ${c.numero_mes}${c.referencia ? ` · ${escaparHTML(c.referencia)}` : ""}`,
@@ -983,7 +993,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           datos: [
             ["Fecha de cobro", c.estado === "fallido" && c.proximo_intento ? `Reintento ${escaparHTML(c.proximo_intento)}` : escaparHTML(c.fecha_cobro)],
             ["Canon", `<strong>${formatearPrecioCOP(c.monto)}</strong>`],
-            ["Comisión (5 %)", formatearPrecioCOP(c.comision)],
+            [`Comisión (${Number(c.porcentaje_comision)} %)`, formatearPrecioCOP(c.comision)],
             ["Al propietario", formatearPrecioCOP(c.neto_propietario)],
             ["Intentos", String(c.intentos)],
             ...(c.ultimo_error && c.estado !== "aprobado" ? [["Último error", escaparHTML(c.ultimo_error)]] : [])
@@ -1013,7 +1023,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("lista-cobros-admin").addEventListener("click", async (e) => {
     const boton = e.target.closest("button[data-cobro-desembolso]");
     if (!boton) return;
-    if (!confirm("¿Registrar que ya se transfirió el 95 % al propietario?")) return;
+    if (!confirm("¿Registrar que ya se transfirió al propietario su parte de este cobro?")) return;
     boton.disabled = true;
     try {
       const r = await RoumixAPI.admin(`/cobros/${boton.dataset.cobroDesembolso}/desembolso`, { method: "POST" });

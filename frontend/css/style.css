@@ -8815,3 +8815,12 @@ html[data-tema="oscuro"] .pub-sin-deposito { background: rgba(120, 190, 140, 0.1
 #terminos h2 { scroll-margin-top: 90px; }
 @media (max-width: 600px) { .terminos-indice ol { columns: 1; } }
 html[data-tema="oscuro"] .terminos-indice a { color: #bfe3c6; }
+
+/* Pago: falta activar el débito automático obligatorio */
+.debito-falta { margin: 0 0 16px; padding: 12px 14px; border-radius: 12px; background: #fdf0dc; border: 1px solid #f0c98f; color: #6b3d0a; font-size: 0.92rem; line-height: 1.5; text-align: left; }
+.debito-falta a { color: inherit; font-weight: 700; }
+html[data-tema="oscuro"] .debito-falta { background: rgba(222, 150, 70, 0.14); border-color: rgba(222, 150, 70, 0.4); color: #f0bf85; }
+.admin-aviso-debito { margin: 0 0 14px; padding: 12px 14px; border-radius: 12px; background: #fdf0dc; border: 1px solid #f0c98f; color: #6b3d0a; font-size: 0.9rem; line-height: 1.5; }
+.admin-aviso-debito ul { margin: 6px 0 0; padding-left: 18px; }
+.admin-aviso-debito a { color: inherit; font-weight: 700; }
+html[data-tema="oscuro"] .admin-aviso-debito { background: rgba(222, 150, 70, 0.14); border-color: rgba(222, 150, 70, 0.4); color: #f0bf85; }

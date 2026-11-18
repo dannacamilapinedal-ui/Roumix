@@ -171,6 +171,25 @@ mes cobrado.
   por propietario y versión (tabla `condiciones_avisos`).
 - **Aceptación:** en **Mi verificación**, el propietario ve qué cambia y acepta la versión nueva.
 
+### Versión 2027-01: 10 % de cada mes cobrado
+
+La versión **2027-01** hace que **todos los meses se paguen por Roumix**: el primero con un pago único y los
+siguientes por **débito automático obligatorio** (lo exige la cláusula de pago del contrato, plantilla
+`arriendo-vivienda-2027-01-borrador`). Roumix retiene el **10 % de cada canon** y el propietario recibe el 90 %.
+
+- La constante es `PORCENTAJE_COMISION_MENSUAL` en `verificacionService.js`.
+- Cada débito y cada cobro guardan su `porcentaje_comision`: **los débitos ya activos conservan el 5 %**
+  con el que se activaron. Solo los nuevos usan el 10 %.
+- **El pago del primer mes solo se habilita si el propietario aceptó la versión vigente.** Quien aceptó una
+  anterior recibe el aviso desde el panel; al aceptar, sus pagos en espera se habilitan solos.
+- **El estudiante no puede desactivar el débito** (`DELETE /api/pagos/:id/debito` responde 409). Sí puede
+  **cambiar el medio de pago**: activar otra vez crea un débito nuevo que hereda los cobros pendientes con su
+  mismo porcentaje y deja el anterior como "Reemplazado por otro medio de pago".
+- **Solo el equipo cancela un débito** (por ejemplo, si el contrato termina antes):
+  `POST /api/admin/pagos/:id/debito/cancelar { motivo }`, con aviso al estudiante y al propietario.
+- Tras el primer pago, la página de pago muestra "Falta activarlo" y el panel (**Cobros mensuales**) lista los
+  arriendos con el primer mes pagado que aún no tienen débito.
+
 ## 7. Débito automático mensual (Módulo W-5b)
 
 Después de pagar el primer mes, el estudiante puede activar el **débito automático** en la confirmación
@@ -178,7 +197,7 @@ del pago. Así Roumix cobra cada mes el canon de los meses 2 en adelante con su 
 
 **Requisitos:**
 - El primer mes está pagado y el contrato está formalizado, con al menos 2 meses.
-- El propietario aceptó las condiciones **2026-12**.
+- El propietario aceptó las condiciones vigentes (**2027-01**).
 - En el servidor está configurada `WOMPI_PRIVATE_KEY`. Sin ella no se activa ni se cobra.
 
 **Cómo se activa:**
@@ -202,7 +221,8 @@ mes es el 28 de febrero.
 y la firma de integridad. El panel tiene además el botón **"Ejecutar los cobros de hoy"**. La misma
 tarea revisa con Wompi los cobros que llevan más de 2 horas "en proceso".
 
-**Comisión:** 5 % de cada mes, a cargo del propietario. El 95 % queda como desembolso pendiente, que
+**Comisión:** 10 % de cada mes desde la versión 2027-01 (5 % en los débitos activados antes), a cargo del
+propietario. El resto queda como desembolso pendiente, que
 el administrador registra en el panel.
 
 | Caso | Qué pasa |
@@ -212,14 +232,15 @@ el administrador registra en el panel.
 | La tarea corre dos veces el mismo día | No se cobra dos veces: el cobro queda reservado "en proceso" antes de pedírselo a Wompi. |
 | El webhook llega después de aplicar el cobro | No cambia nada (idempotente). |
 | Wompi aprueba un cobro ya pagado o cancelado | Queda para devolver y se avisa al equipo. |
-| El estudiante desactiva el débito | Se cancelan los cobros futuros; los ya cobrados no cambian y uno en proceso se deja terminar. |
-| El propietario no aceptó las condiciones 2026-12 | El débito no se puede activar y la página lo explica. |
+| El estudiante intenta desactivar el débito | **409**: es obligatorio por contrato. Puede cambiar el medio de pago. |
+| El equipo cancela el débito (con motivo) | Se cancelan los cobros futuros; los ya cobrados no cambian y uno en proceso se deja terminar. |
+| El propietario no aceptó las condiciones vigentes | El débito no se puede activar y la página lo explica. |
 
 ## 8. Pruebas
 
 Ejecútalas desde `backend/` con `ROUMIX_PRUEBAS_BD=si npm test -- 08 09`.
 
-La prueba **11** (33 comprobaciones) cubre el débito: plan de fechas, activación, cobro, idempotencia, reintentos, vencimiento sin recargos, desembolso y desactivación. La prueba **10** (11 comprobaciones) cubre las condiciones nuevas y el aviso único. La prueba **09** suma 27 comprobaciones del enlace del acudiente: creación, huella, privacidad, vencimiento, anulación, PSE tardío y pago del propio estudiante.
+La prueba **11** (39 comprobaciones) cubre el débito: plan de fechas, activación, cobro, idempotencia, reintentos, vencimiento sin recargos, desembolso y desactivación. La prueba **10** (11 comprobaciones) cubre las condiciones nuevas y el aviso único. La prueba **09** suma 27 comprobaciones del enlace del acudiente: creación, huella, privacidad, vencimiento, anulación, PSE tardío y pago del propio estudiante.
 
 Son 33 comprobaciones con llaves inventadas: se simulan la API de Wompi y su webhook, firmados con el
 mismo algoritmo que usa Wompi. Cubren la firma, la verificación de eventos, los permisos, el rechazo,

@@ -13,7 +13,7 @@ const crypto = require('crypto');
 const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
 
 const PLANTILLA = {
-  version: 'arriendo-vivienda-2026-12-borrador',
+  version: 'arriendo-vivienda-2027-01-borrador',
   revisada: false,
   revisadaPor: null,       // p. ej. 'Consultorio Jurídico Universidad Santo Tomás'
   revisadaEn: null
@@ -51,7 +51,8 @@ function clausulas(d) {
     ]],
     ['SEGUNDA. CANON DE ARRENDAMIENTO', [
       `El canon mensual es de ${pesos(d.canon)} pesos colombianos.`,
-      `El primer mes se paga a través de la plataforma Roumix antes de la entrega del inmueble. Los meses siguientes se pagan el día ${d.diaPago} de cada mes, por débito automático si el ARRENDATARIO lo activa en Roumix, o en la forma que las partes acuerden a través de Roumix.`,
+      `Todos los cánones se pagan a través de la plataforma Roumix. El primer mes se paga antes de la entrega del inmueble. Los meses siguientes se pagan por débito automático, que el ARRENDATARIO activa en Roumix después de pagar el primer mes, con una tarjeta o una cuenta Nequi a su elección; el cobro se hace el día ${d.diaPago} de cada mes. El ARRENDATARIO puede cambiar el medio de pago, pero no desactivar el débito mientras el contrato esté vigente.`,
+      'Las partes no harán pagos del canon por fuera de Roumix. Un pago hecho por otro medio no libera a ninguna de las partes de lo previsto en este contrato.',
       'El canon podrá reajustarse cada doce (12) meses de ejecución del contrato, en una proporción que no supere el cien por ciento (100 %) del incremento del índice de precios al consumidor (IPC) del año calendario anterior, de acuerdo con el artículo 20 de la Ley 820 de 2003.'
     ]],
     ['TERCERA. TÉRMINO', [

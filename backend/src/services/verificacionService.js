@@ -15,23 +15,30 @@ const ESTADOS = ['pendiente', 'aprobado', 'rechazado', 'requiere_informacion'];
 const RELACIONES = ['propietario', 'administrador', 'familiar', 'otro'];
 // Versión vigente de las condiciones de la comisión. Cada versión que se publica queda aquí
 // (el texto exacto que aceptó cada propietario se puede consultar por su versión).
-const VERSION_CONDICIONES = '2026-12';
-const PORCENTAJE_COMISION_MENSUAL = 5;
+const VERSION_CONDICIONES = '2027-01';
+// 10 % de cada canon que Roumix cobre: el primero y, con débito automático, los siguientes
+const PORCENTAJE_COMISION_MENSUAL = 10;
 
 const TEXTOS_CONDICIONES = {
   '2026-11': 'Roumix cobra al propietario una comisión del 10 % del primer canon mensual, una sola vez, cuando el arriendo se concreta a través de la plataforma (contrato formalizado y primer pago confirmado). Mientras el proyecto esté en fase de demostración, los pagos son simulados y no se mueve dinero real.',
   '2026-12': 'Roumix cobra al propietario una comisión del 10 % del primer canon mensual, una sola vez, cuando el arriendo se concreta a través de la plataforma (contrato formalizado y primer pago confirmado). ' +
     'Además, si el estudiante activa el débito automático, Roumix cobra a través de Wompi los cánones de los meses siguientes y retiene una comisión del ' + PORCENTAJE_COMISION_MENSUAL + ' % de cada canon mensual cobrado; el resto se desembolsa al propietario. ' +
     'Si el estudiante no activa el débito automático, los meses siguientes se pagan como diga el contrato y Roumix no cobra comisión sobre ellos. ' +
-    'Los pagos los procesa Wompi (Bancolombia); Roumix no guarda datos de tarjetas ni de cuentas.'
+    'Los pagos los procesa Wompi (Bancolombia); Roumix no guarda datos de tarjetas ni de cuentas.',
+  '2027-01': 'Todos los cánones del contrato se pagan a través de Roumix: el primero cuando el contrato está formalizado y los siguientes por débito automático, que el contrato hace obligatorio para el estudiante. ' +
+    'Roumix cobra al propietario una comisión del ' + PORCENTAJE_COMISION_MENSUAL + ' % de cada canon cobrado y le desembolsa el resto. ' +
+    'El propietario se compromete a no recibir pagos del canon por fuera de Roumix. ' +
+    'La comisión es a cargo del propietario y no se suma a lo que paga el estudiante. Los pagos los procesa Wompi (Bancolombia); Roumix no guarda datos de tarjetas ni de cuentas.'
 };
 const CONDICIONES_COMISION = TEXTOS_CONDICIONES[VERSION_CONDICIONES];
 
 // Lo que cambió frente a la versión anterior (para avisar a quien ya había aceptado)
 const CAMBIOS_CONDICIONES = [
   'El 10 % del primer mes no cambia.',
-  'Nuevo: si tu inquilino activa el débito automático, Roumix cobra cada mes por ti y retiene el ' + PORCENTAJE_COMISION_MENSUAL + ' % de ese mes. Tú recibes el ' + (100 - PORCENTAJE_COMISION_MENSUAL) + ' %.',
-  'Si no aceptas, nada cambia para ti: tus inquilinos no podrán activar el débito automático y los meses siguientes se pagan como diga el contrato.'
+  'Cambia: todos los meses se pagan por Roumix. Después del primer mes, tu inquilino debe activar el débito automático (el contrato lo exige).',
+  'Cambia: Roumix retiene el ' + PORCENTAJE_COMISION_MENSUAL + ' % de cada mes cobrado (antes era el 5 % en los meses siguientes). Tú recibes el ' + (100 - PORCENTAJE_COMISION_MENSUAL) + ' %.',
+  'Los débitos automáticos que ya estén activos conservan el porcentaje con el que se activaron.',
+  'Mientras no las aceptes, Roumix no habilita el pago de arriendos nuevos con tus inmuebles.'
 ];
 
 /** Devuelve la verificación del propietario y la crea en "pendiente" si aún no existe. */

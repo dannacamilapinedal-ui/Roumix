@@ -66,7 +66,7 @@ async function avisarPropietarios(lista, autorId, urlBase) {
     await crearAviso({
       usuarioId: p.id, tipo: 'verificacion',
       titulo: 'Roumix actualizó las condiciones de la comisión',
-      cuerpo: 'Nuevo: débito automático mensual (5 % de cada mes cobrado). Revísalas y acéptalas en Mi verificación.',
+      cuerpo: `Comisión del ${verificacion.PORCENTAJE_COMISION_MENSUAL} % de cada mes que Roumix cobre por ti. Revísalas y acéptalas en Mi verificación.`,
       enlace: 'verificacion.html#condiciones'
     });
     const enviado = await notificaciones.notificarCondicionesNuevas({ propietario: p, version, cambios: verificacion.CAMBIOS_CONDICIONES, urlBase });

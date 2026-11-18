@@ -43,7 +43,7 @@ async function crearUsuario(id, rol, nombre, nombreDoc) {
     const est = await crearUsuario(ids.est, 'estudiante', 'Laura', 'Laura Gómez Ñañez');
     const prop = await crearUsuario(ids.prop, 'propietario', 'Carlos', 'Carlos Andrés Rodríguez');
     await db.query(`INSERT INTO verificaciones_propietario (propietario_id, estado, nombre_completo, acepta_comision, version_condiciones, acepta_comision_en)
-      VALUES ($1, 'aprobado', 'Carlos Andrés Rodríguez', true, '2026-12', now())`, [ids.prop]);
+      VALUES ($1, 'aprobado', 'Carlos Andrés Rodríguez', true, '2027-01', now())`, [ids.prop]);
     const admin = (await db.query("SELECT id, nombre, email, rol, estado FROM usuarios WHERE rol = 'admin' LIMIT 1")).rows[0];
     inmuebleId = (await db.query(
       `INSERT INTO inmuebles (propietario_id, titulo, tipo, tipo_label, precio, barrio, universidad, latitud, longitud, imagen_principal, galeria, estado, moderacion)

@@ -261,7 +261,7 @@ async function listarAdmin(req, res) {
       FROM solicitudes s JOIN contratos c ON c.solicitud_id = s.id AND c.estado = 'formalizado'
       LEFT JOIN usuarios u ON u.id = s.propietario_id
       LEFT JOIN verificaciones_propietario v ON v.propietario_id = s.propietario_id
-      WHERE s.estado = 'contrato_formalizado' AND NOT COALESCE(v.acepta_comision, false)`)
+      WHERE s.estado = 'contrato_formalizado' AND NOT (COALESCE(v.acepta_comision, false) AND v.version_condiciones = $1)`, [pagos.VERSION_CONDICIONES])
   ]);
   const t = totales.rows[0];
   res.json({
@@ -286,7 +286,7 @@ async function habilitarAdmin(req, res) {
     const mensajes = {
       sin_contrato: 'La solicitud no tiene un contrato formalizado.',
       estado: 'La solicitud no está en "Contrato formalizado".',
-      comision_no_aceptada: 'El propietario todavía no ha aceptado las condiciones de la comisión. Se le recordó en la plataforma.'
+      comision_no_aceptada: 'El propietario todavía no ha aceptado las condiciones vigentes de la comisión. Se le recordó en la plataforma.'
     };
     if (r.motivo === 'comision_no_aceptada') {
       const { rows } = await db.query('SELECT propietario_id FROM solicitudes WHERE id = $1', [solicitudId]);

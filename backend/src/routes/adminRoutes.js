@@ -62,6 +62,7 @@ router.post('/condiciones/avisar', condicionesController.avisar);
 router.get('/cobros', debitoController.listarAdmin);
 router.post('/cobros/procesar', debitoController.procesarAdmin);
 router.post('/cobros/:id/desembolso', debitoController.desembolsoAdmin);
+router.post('/pagos/:id/debito/cancelar', debitoController.cancelarAdmin);
 
 router.get('/pagos', pagosController.listarAdmin);
 router.get('/pagos/:id', pagosController.detalleAdmin);

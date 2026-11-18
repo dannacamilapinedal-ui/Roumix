@@ -51,7 +51,8 @@ async function moverSolicitud(cliente, { solicitudId, de, a, notaEstudiante = nu
 
 /**
  * Habilita el pago del primer canon de una solicitud con contrato formalizado.
- * Requiere que el propietario haya aceptado las condiciones de la comisión.
+ * Requiere que el propietario haya aceptado las condiciones VIGENTES de la comisión: con ellas acepta
+ * también el débito automático obligatorio de los meses siguientes.
  * Debe llamarse dentro de una transacción (cliente).
  * Devuelve { habilitado, pagoId?, motivo? }.
  */
@@ -69,7 +70,7 @@ async function habilitarPago(cliente, solicitudId) {
   const s = rows[0];
   if (!s) return { habilitado: false, motivo: 'sin_contrato' };
   if (s.estado !== 'contrato_formalizado') return { habilitado: false, motivo: 'estado' };
-  if (!s.acepta_comision) return { habilitado: false, motivo: 'comision_no_aceptada' };
+  if (!(s.acepta_comision && s.version_condiciones === VERSION_CONDICIONES)) return { habilitado: false, motivo: 'comision_no_aceptada' };
 
   const { comision, neto } = repartir(s.canon_mensual);
   const { rows: [pago] } = await cliente.query(
@@ -119,10 +120,13 @@ async function aprobar(cliente, p, { ref, metodo, detalle, simulado, modoWompi =
     `INSERT INTO desembolsos (pago_id, propietario_id, monto) VALUES ($1, $2, $3)`,
     [p.id, p.propietario_id, p.neto_propietario]
   );
+  // Con más de un mes, el contrato pide el débito automático para los meses siguientes
+  const { rows: [k] } = await cliente.query('SELECT duracion_meses FROM contratos WHERE id = $1', [p.contrato_id]);
+  const variosMeses = Boolean(k && k.duracion_meses >= 2);
   const etiqueta = simulado ? 'pago demostrativo' : (modoWompi === 'sandbox' ? 'Wompi, modo de pruebas' : 'Wompi');
   await moverSolicitud(cliente, {
     solicitudId: p.solicitud_id, de: 'pago_pendiente', a: 'pagado',
-    notaEstudiante: `Roumix confirmó tu pago del primer mes (referencia ${ref}, ${etiqueta}).`,
+    notaEstudiante: `Roumix confirmó tu pago del primer mes (referencia ${ref}, ${etiqueta}).${variosMeses ? ' Ahora activa el débito automático de los meses siguientes: tu contrato lo pide y sin él no queda listo tu arriendo.' : ''}`,
     notaPropietario: 'El estudiante pagó el primer mes. Roumix gestionará tu desembolso.',
     notaInterna: `Pago #${p.id} aprobado (${ref}, ${etiqueta}). Comisión ${p.comision}, desembolso pendiente ${p.neto_propietario}.`
   });

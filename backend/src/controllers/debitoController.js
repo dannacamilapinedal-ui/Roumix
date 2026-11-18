@@ -13,8 +13,9 @@
  *   POST /api/admin/cobros/:id/desembolso
  *
  * Reglas:
- *   - Solo con el primer mes PAGADO, contrato formalizado y el propietario con las condiciones 2026-12.
- *   - Comisión del 5 % de cada mes (a cargo del propietario); el 95 % queda como desembolso pendiente.
+ *   - Solo con el primer mes PAGADO, contrato formalizado y el propietario con las condiciones vigentes.
+ *   - Comisión de cada mes según PORCENTAJE_COMISION_MENSUAL (10 % desde la versión 2027-01, a cargo del
+ *     propietario); el resto queda como desembolso pendiente. Cada débito guarda el porcentaje con el que se activó.
  *   - Si un cobro falla: 3 intentos en 3 días (día 0, +1, +3). Sin recargos de Roumix.
  *   - Roumix guarda solo el id de la fuente de pago de Wompi y una descripción ("Visa •••• 4242").
  */
@@ -112,10 +113,12 @@ const SELECT_CONTEXTO = `
   WHERE p.id = $1`;
 
 /** ¿Se puede activar el débito para este pago? { ok, motivo, mensaje } */
-function elegibilidad(ctx, plan) {
+function elegibilidad(ctx, plan, { reemplazo = false } = {}) {
   if (ctx.contrato_estado !== 'formalizado') return { ok: false, motivo: 'contrato', mensaje: 'El contrato no está formalizado.' };
-  if (ctx.pago_estado !== 'aprobado') return { ok: false, motivo: 'primer_mes', mensaje: 'Primero se paga el primer mes; después puedes activar el débito automático.' };
+  if (ctx.pago_estado !== 'aprobado') return { ok: false, motivo: 'primer_mes', mensaje: 'Primero se paga el primer mes; después activas el débito automático.' };
   if (ctx.duracion_meses < 2) return { ok: false, motivo: 'un_mes', mensaje: 'Tu contrato es de un solo mes: no hay meses siguientes por cobrar.' };
+  // Cambiar el medio de un débito activo no depende de la versión de las condiciones: los cobros conservan las suyas
+  if (reemplazo) return { ok: true };
   if (!(ctx.acepta_comision && ctx.version_condiciones === verificacion.VERSION_CONDICIONES)) {
     return { ok: false, motivo: 'propietario', mensaje: 'Disponible cuando el propietario acepte las condiciones nuevas de Roumix. Ya le avisamos.' };
   }
@@ -139,8 +142,14 @@ async function resumenParaPago(pagoId, usuario) {
   const pendientesDeProgramar = calcularPlan(ctx).filter((m) => !cobros.some((c) => c.numero_mes === m.numeroMes));
   const eleg = elegibilidad(ctx, pendientesDeProgramar);
   const verComision = usuario.rol !== 'estudiante';
+  const activo = Boolean(debito && debito.estado === 'activo');
+  // Obligatorio por contrato cuando hay meses siguientes por cobrar
+  const obligatorio = ctx.duracion_meses >= 2;
   return {
     porcentaje: PORCENTAJE,
+    obligatorio,
+    pendiente: obligatorio && !activo && ctx.pago_estado === 'aprobado' && pendientesDeProgramar.length > 0,
+    puedeCambiar: Boolean(cfg.debito && activo),
     disponible: Boolean(cfg.debito && eleg.ok),
     motivo: !cfg.debito ? 'pasarela' : (eleg.ok ? null : eleg.motivo),
     mensaje: !cfg.debito ? 'El débito automático todavía no está habilitado en Roumix.' : (eleg.mensaje || null),
@@ -169,7 +178,8 @@ async function preparar(req, res) {
   const id = idEntero(req.params.id);
   const ctx = await contextoDelEstudiante(db, id, req.usuario);
   const plan = calcularPlan(ctx);
-  const eleg = elegibilidad(ctx, plan);
+  const reemplazo = await tieneDebitoActivo(db, ctx.contrato_id);
+  const eleg = elegibilidad(ctx, plan, { reemplazo });
   if (!eleg.ok) throw errorHttp(409, eleg.mensaje);
   const terminos = await wompi.obtenerAceptacion(cfg);
   res.json({
@@ -187,6 +197,11 @@ async function preparar(req, res) {
 
 const DESCRIPCION_SEGURA = /^[\p{L}\d •*.-]{3,40}$/u;
 
+async function tieneDebitoActivo(cliente, contratoId) {
+  const { rows } = await cliente.query("SELECT 1 FROM debitos_automaticos WHERE contrato_id = $1 AND estado = 'activo'", [contratoId]);
+  return rows.length > 0;
+}
+
 /** POST /api/pagos/:id/debito  { tipo: 'CARD'|'NEQUI', token, aceptacion, datosPersonales, acepto: true, descripcion } */
 async function activar(req, res) {
   const cfg = wompi.configDebito();
@@ -199,11 +214,10 @@ async function activar(req, res) {
   if (!String(b.aceptacion || '').trim()) throw errorHttp(400, 'Faltan los términos de aceptación de Wompi.');
 
   // Validación previa (sin bloquear) para no crear una fuente de pago que no se usará
+  // Si ya hay un débito activo, el medio nuevo lo REEMPLAZA (el débito es obligatorio: no se apaga, se cambia)
   const ctx0 = await contextoDelEstudiante(db, id, req.usuario);
-  const eleg0 = elegibilidad(ctx0, calcularPlan(ctx0));
+  const eleg0 = elegibilidad(ctx0, calcularPlan(ctx0), { reemplazo: await tieneDebitoActivo(db, ctx0.contrato_id) });
   if (!eleg0.ok) throw errorHttp(409, eleg0.mensaje);
-  const { rows: activos } = await db.query("SELECT 1 FROM debitos_automaticos WHERE contrato_id = $1 AND estado = 'activo'", [ctx0.contrato_id]);
-  if (activos.length) throw errorHttp(409, 'Ya tienes el débito automático activo.');
 
   // La fuente se crea en Wompi con la llave privada (servidor). Roumix guarda solo su id.
   const fuente = await wompi.crearFuentePago({
@@ -225,8 +239,30 @@ async function activar(req, res) {
   const r = await enTransaccion(async (cliente) => {
     const ctx = await contextoDelEstudiante(cliente, id, req.usuario, { bloquear: true });
     const plan = calcularPlan(ctx);
-    const eleg = elegibilidad(ctx, plan);
+    const { rows: [anterior] } = await cliente.query(
+      "SELECT id, porcentaje_comision, version_condiciones FROM debitos_automaticos WHERE contrato_id = $1 AND estado = 'activo' FOR UPDATE", [ctx.contrato_id]);
+    const eleg = elegibilidad(ctx, plan, { reemplazo: Boolean(anterior) });
     if (!eleg.ok) throw errorHttp(409, eleg.mensaje);
+
+    if (anterior) {
+      // Cambio de medio de pago: el débito nuevo hereda los cobros pendientes con su mismo porcentaje
+      await cliente.query(
+        "UPDATE debitos_automaticos SET estado = 'cancelado', cancelado_en = now(), motivo_cancelacion = 'Reemplazado por otro medio de pago.' WHERE id = $1",
+        [anterior.id]);
+      const { rows: [nuevo] } = await cliente.query(
+        `INSERT INTO debitos_automaticos (contrato_id, pago_id, estudiante_id, propietario_id, metodo, fuente_wompi_id, fuente_descripcion,
+           modo, porcentaje_comision, version_condiciones, aceptacion_wompi_en)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, now()) RETURNING id`,
+        [ctx.contrato_id, id, ctx.estudiante_id, ctx.propietario_id, metodo, String(fuente.id), descripcion.slice(0, 60),
+          cfg.modo, anterior.porcentaje_comision, anterior.version_condiciones]);
+      const { rowCount: movidos } = await cliente.query(
+        "UPDATE cobros_mensuales SET debito_id = $2 WHERE debito_id = $1 AND estado IN ('programado', 'fallido')", [anterior.id, nuevo.id]);
+      await auditar({ actor: req.usuario, accion: 'debito_medio_cambiado', entidad: 'pago', entidadId: id,
+        resumen: `Medio del débito automático cambiado a ${descripcion}; ${movidos} cobro(s) pendiente(s) pasan al medio nuevo.`,
+        datos: { metodo, modo: cfg.modo }, ip: req.ip }, cliente);
+      return { reemplazo: true, programados: movidos, ctx };
+    }
+
     const { rows: [debito] } = await cliente.query(
       `INSERT INTO debitos_automaticos (contrato_id, pago_id, estudiante_id, propietario_id, metodo, fuente_wompi_id, fuente_descripcion,
          modo, porcentaje_comision, version_condiciones, aceptacion_wompi_en)
@@ -248,6 +284,9 @@ async function activar(req, res) {
     return { debitoId: debito.id, programados, ctx, primero: plan[0] };
   });
 
+  if (r.reemplazo) {
+    return res.json({ status: 'success', message: `Listo: desde ahora cobramos cada mes con ${descripcion}.`, data: { programados: r.programados } });
+  }
   await crearAviso({ usuarioId: r.ctx.propietario_id, tipo: 'solicitud', titulo: 'Tu inquilino activó el débito automático',
     cuerpo: `${r.ctx.inmueble_titulo}: Roumix cobrará cada mes y te desembolsará el ${100 - PORCENTAJE} %.`, enlace: `pago.html?id=${id}` });
   res.json({
@@ -257,25 +296,27 @@ async function activar(req, res) {
   });
 }
 
-/** DELETE /api/pagos/:id/debito */
+/** Cancela el débito activo de un contrato y sus cobros futuros. Devuelve cuántos cobros canceló. */
+async function cancelarDebito(cliente, contratoId, motivo) {
+  const { rows: [d] } = await cliente.query(
+    "UPDATE debitos_automaticos SET estado = 'cancelado', cancelado_en = now(), motivo_cancelacion = $2 WHERE contrato_id = $1 AND estado = 'activo' RETURNING id",
+    [contratoId, motivo.slice(0, 300)]);
+  if (!d) throw errorHttp(409, 'Este arriendo no tiene el débito automático activo.');
+  // Los cobros que no han empezado se cancelan; uno en proceso con el banco se deja terminar
+  const { rowCount } = await cliente.query(
+    "UPDATE cobros_mensuales SET estado = 'cancelado', proximo_intento = NULL WHERE debito_id = $1 AND estado IN ('programado', 'fallido')", [d.id]);
+  return rowCount;
+}
+
+/**
+ * DELETE /api/pagos/:id/debito
+ * El contrato obliga a pagar los meses siguientes por débito automático: el estudiante no lo
+ * puede desactivar, solo cambiar el medio de pago. Si el contrato termina antes, lo cancela Roumix.
+ */
 async function desactivar(req, res) {
   const id = idEntero(req.params.id);
-  const r = await enTransaccion(async (cliente) => {
-    const ctx = await contextoDelEstudiante(cliente, id, req.usuario, { bloquear: true });
-    const { rows: [d] } = await cliente.query(
-      "UPDATE debitos_automaticos SET estado = 'cancelado', cancelado_en = now(), motivo_cancelacion = 'Desactivado por el estudiante.' WHERE contrato_id = $1 AND estado = 'activo' RETURNING id",
-      [ctx.contrato_id]);
-    if (!d) throw errorHttp(409, 'No tienes el débito automático activo.');
-    // Los cobros que no han empezado se cancelan; uno en proceso con el banco se deja terminar
-    const { rowCount } = await cliente.query(
-      "UPDATE cobros_mensuales SET estado = 'cancelado', proximo_intento = NULL WHERE debito_id = $1 AND estado IN ('programado', 'fallido')", [d.id]);
-    await auditar({ actor: req.usuario, accion: 'debito_desactivado', entidad: 'pago', entidadId: id,
-      resumen: `Débito automático desactivado; ${rowCount} cobro(s) futuro(s) cancelado(s).`, ip: req.ip }, cliente);
-    return { ctx, cancelados: rowCount };
-  });
-  await crearAviso({ usuarioId: r.ctx.propietario_id, tipo: 'solicitud', titulo: 'Tu inquilino desactivó el débito automático',
-    cuerpo: `${r.ctx.inmueble_titulo}: los meses siguientes se pagan como diga el contrato.`, enlace: `pago.html?id=${id}` });
-  res.json({ status: 'success', message: 'Desactivaste el débito automático. Los meses siguientes se pagan como diga tu contrato.' });
+  await contextoDelEstudiante(db, id, req.usuario);
+  throw errorHttp(409, 'El débito automático es obligatorio según tu contrato. Puedes cambiar el medio de pago; si el contrato termina antes, escríbele al equipo de Roumix desde Mensajes.');
 }
 
 // ============================================================================
@@ -465,15 +506,48 @@ async function listarAdmin(req, res) {
   if (!filtros[estado]) throw errorHttp(400, 'Filtro no válido.');
   const { rows } = await db.query(
     `SELECT cm.id, cm.numero_mes, to_char(cm.fecha_cobro, 'YYYY-MM-DD') AS fecha_cobro, to_char(cm.proximo_intento, 'YYYY-MM-DD') AS proximo_intento,
-            cm.monto, cm.comision, cm.neto_propietario, cm.estado, cm.intentos, cm.referencia, cm.ultimo_error, cm.aprobado_en,
+            cm.monto, cm.porcentaje_comision, cm.comision, cm.neto_propietario, cm.estado, cm.intentos, cm.referencia, cm.ultimo_error, cm.aprobado_en,
             cm.desembolso_estado, cm.desembolso_referencia, d.pago_id, d.fuente_descripcion, d.modo,
             s.inmueble_titulo, e.nombre AS estudiante_nombre, pr.nombre AS propietario_nombre
      FROM cobros_mensuales cm JOIN debitos_automaticos d ON d.id = cm.debito_id
      JOIN pagos p ON p.id = d.pago_id JOIN solicitudes s ON s.id = p.solicitud_id
      LEFT JOIN usuarios e ON e.id = d.estudiante_id LEFT JOIN usuarios pr ON pr.id = d.propietario_id
      WHERE ${filtros[estado]} ORDER BY cm.fecha_cobro, cm.id LIMIT 200`);
+  // Arriendos con el primer mes pagado que todavía no activan el débito obligatorio
+  const { rows: sinDebito } = await db.query(
+    `SELECT p.id AS pago_id, s.inmueble_titulo, e.nombre AS estudiante_nombre, p.aprobado_en
+     FROM pagos p JOIN contratos c ON c.id = p.contrato_id JOIN solicitudes s ON s.id = p.solicitud_id
+     LEFT JOIN usuarios e ON e.id = p.estudiante_id
+     WHERE p.estado = 'aprobado' AND c.estado = 'formalizado' AND c.duracion_meses >= 2
+       AND (c.fecha_inicio + make_interval(months => c.duracion_meses)) > CURRENT_DATE
+       AND NOT EXISTS (SELECT 1 FROM debitos_automaticos d WHERE d.contrato_id = c.id AND d.estado IN ('activo', 'finalizado'))
+     ORDER BY p.aprobado_en LIMIT 100`);
   const cfg = wompi.configDebito();
-  res.json({ status: 'success', habilitado: cfg.debito, motivo: cfg.debito ? null : cfg.motivo, data: rows });
+  res.json({ status: 'success', habilitado: cfg.debito, motivo: cfg.debito ? null : cfg.motivo, data: rows, sinDebito });
+}
+
+/**
+ * POST /api/admin/pagos/:id/debito/cancelar  { motivo }
+ * El débito es obligatorio para el estudiante: solo el equipo lo cancela (por ejemplo, si el
+ * contrato termina antes). Los cobros futuros se cancelan; uno en proceso se deja terminar.
+ */
+async function cancelarAdmin(req, res) {
+  const id = idEntero(req.params.id);
+  const motivo = String((req.body || {}).motivo || '').trim();
+  if (motivo.length < 10 || motivo.length > 300) throw errorHttp(400, 'Explica el motivo de la cancelación (entre 10 y 300 caracteres).');
+  const r = await enTransaccion(async (cliente) => {
+    const { rows: [ctx] } = await cliente.query(`${SELECT_CONTEXTO} FOR UPDATE OF p`, [id]);
+    if (!ctx) throw errorHttp(404, 'No existe ese pago.');
+    const cancelados = await cancelarDebito(cliente, ctx.contrato_id, `Cancelado por Roumix: ${motivo}`);
+    await auditar({ actor: req.usuario, accion: 'debito_cancelado', entidad: 'pago', entidadId: id,
+      resumen: `Débito automático cancelado por el equipo; ${cancelados} cobro(s) futuro(s) cancelado(s).`, datos: { motivo }, ip: req.ip }, cliente);
+    return { ctx, cancelados };
+  });
+  for (const usuarioId of [r.ctx.estudiante_id, r.ctx.propietario_id]) {
+    await crearAviso({ usuarioId, tipo: 'solicitud', titulo: 'Roumix canceló el débito automático',
+      cuerpo: `${r.ctx.inmueble_titulo}: ${motivo}`, enlace: `pago.html?id=${id}` });
+  }
+  res.json({ status: 'success', message: `Débito cancelado; ${r.cancelados} cobro(s) futuro(s) cancelado(s).` });
 }
 
 /** POST /api/admin/cobros/procesar — ejecuta ahora los cobros pendientes (lo mismo que la tarea diaria) */
@@ -485,7 +559,7 @@ async function procesarAdmin(req, res) {
   res.json({ status: 'success', message: `Cobros procesados: ${r.procesados} (aprobados ${r.aprobados}, fallidos ${r.fallidos}, en proceso ${r.en_proceso}).`, data: r });
 }
 
-/** POST /api/admin/cobros/:id/desembolso — registra la transferencia del 95 % al propietario */
+/** POST /api/admin/cobros/:id/desembolso — registra la transferencia del neto al propietario */
 async function desembolsoAdmin(req, res) {
   const id = idEntero(req.params.id);
   const c = await enTransaccion(async (cliente) => {
@@ -502,7 +576,7 @@ async function desembolsoAdmin(req, res) {
 }
 
 module.exports = {
-  preparar, activar, desactivar, resumenParaPago,
+  preparar, activar, desactivar, cancelarAdmin, resumenParaPago,
   procesarCobros, aplicarCobro, calcularPlan, listarAdmin, procesarAdmin, desembolsoAdmin,
   hoyBogota, MAX_INTENTOS_COBRO
 };

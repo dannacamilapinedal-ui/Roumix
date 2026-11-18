@@ -750,7 +750,7 @@ async function notificarCondicionesNuevas({ propietario, version, cambios, urlBa
         titulo: `Condiciones nuevas (versión ${escapar(version)})`,
         parrafos: [
           `Hola ${escapar(propietario.nombre || '')},`,
-          'Roumix ahora permite que tus inquilinos activen el <strong>débito automático mensual</strong>: Roumix cobra cada mes por ti y te desembolsa el dinero.',
+          'Roumix actualizó la comisión del <strong>débito automático mensual</strong>, con el que Roumix cobra cada mes por ti y te desembolsa el dinero.',
           `<strong>Qué cambia:</strong><br>${cambios.map((c) => '• ' + escapar(c)).join('<br>')}`,
           'Puedes leerlas completas y aceptarlas en <strong>Mi verificación</strong>.'
         ],

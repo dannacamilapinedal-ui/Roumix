@@ -208,8 +208,11 @@
             </section>
 
             <section class="contrato-seccion">
+              ${c.pdf && /^arriendo-vivienda-2026-/.test(c.pdf.plantilla || "") ? `
               <h2>5. Pago del primer mes</h2>
-              <p class="contrato-texto">El primer canon se paga a través de Roumix, y solo después de que este contrato quede formalizado por ambas partes. Roumix cobra al propietario una comisión del 10 % del primer canon, una sola vez; esa comisión no se suma a lo que paga el estudiante. Los siguientes cánones se pagan según lo acordado entre las partes.</p>
+              <p class="contrato-texto">El primer canon se paga a través de Roumix, y solo después de que este contrato quede formalizado por ambas partes. Roumix cobra al propietario una comisión del 10 % del primer canon, una sola vez; esa comisión no se suma a lo que paga el estudiante. Los siguientes cánones se pagan según lo acordado entre las partes.</p>` : `
+              <h2>5. Pagos</h2>
+              <p class="contrato-texto">Todos los cánones se pagan a través de Roumix. El primero, solo después de que este contrato quede formalizado por ambas partes. Los siguientes, por <strong>débito automático</strong>: el estudiante lo activa después del primer pago, con su tarjeta o su Nequi, y puede cambiar el medio de pago, pero no desactivarlo mientras el contrato esté vigente. Roumix cobra al propietario una comisión del 10 % de cada canon; esa comisión no se suma a lo que paga el estudiante.</p>`}
             </section>
 
             <section class="contrato-seccion">

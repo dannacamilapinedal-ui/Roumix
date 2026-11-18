@@ -542,7 +542,7 @@
 
       const POLITICA_DEBITO = (dia) => `Se cobra el primer día ${dia} que cae dentro de cada mes de tu contrato (nunca antes de que empiece).
         Si un cobro falla, lo reintentamos 2 veces en los 3 días siguientes y te avisamos por correo.
-        <strong>Roumix no cobra recargos</strong>: si hay recargos por mora, son solo los que diga tu contrato. Puedes desactivarlo cuando quieras.`;
+        <strong>Roumix no cobra recargos</strong>: si hay recargos por mora, son solo los que diga tu contrato. Puedes cambiar el medio de pago cuando quieras.`;
 
       function debitoHTML(p) {
         const d = p.debito;
@@ -557,8 +557,9 @@
               <p class="checkout-texto">Cobramos cada mes con <strong>${escaparHTML(d.activo.descripcion)}</strong>. Te avisamos por correo cada cobro.</p>
               <ol class="debito-cobros">${d.cobros.map((c) => filaCobro(c, false)).join("")}</ol>
               <p class="contacto-nota">${POLITICA_DEBITO(d.diaPago)}</p>
-              <p class="pub-mensaje pub-mensaje-error" id="debito-error" role="alert" hidden></p>
-              <button type="button" class="btn-card-action btn-card-danger" id="btn-desactivar-debito">Desactivar débito automático</button>
+              ${d.puedeCambiar ? `
+              <button type="button" class="btn-card-action" id="btn-abrir-debito" data-texto="Cambiar medio de pago">Cambiar medio de pago</button>
+              <div class="debito-form" id="debito-form" hidden></div>` : ""}
             </section>`;
         }
         const plan = d.plan || [];
@@ -567,18 +568,19 @@
           <section class="debito" id="debito" aria-labelledby="debito-titulo">
             <div class="debito-cabeza">
               <h3 id="debito-titulo">Débito automático mensual</h3>
-              <span class="solicitud-chip solicitud-chip-cerrada">Inactivo</span>
+              ${d.pendiente ? `<span class="solicitud-chip solicitud-chip-proceso">Falta activarlo</span>` : `<span class="solicitud-chip solicitud-chip-cerrada">Inactivo</span>`}
             </div>
+            ${d.obligatorio ? `<p class="checkout-texto"><strong>Tu contrato pide pagar los meses siguientes por débito automático a través de Roumix.</strong> Roumix cobra cada mes el canon con tu tarjeta o tu Nequi, sin costo adicional para ti.</p>` : ""}
             ${d.disponible
-              ? `<p class="checkout-texto">Olvídate de pagar cada mes: Roumix cobra automáticamente el arriendo de los meses siguientes con tu tarjeta o tu Nequi. Sin costo para ti.</p>`
-              : `<p class="checkout-texto">${escaparHTML(d.mensaje || "El débito automático no está disponible para este arriendo.")}</p>`}
+              ? (d.obligatorio ? "" : `<p class="checkout-texto">Roumix puede cobrar automáticamente el arriendo de los meses siguientes con tu tarjeta o tu Nequi. Sin costo para ti.</p>`)
+              : `<p class="checkout-texto">${escaparHTML(d.mensaje || "El débito automático no está disponible para este arriendo.")}${d.obligatorio ? " Te avisaremos cuando puedas activarlo." : ""}</p>`}
             ${cobrados.length ? `<ol class="debito-cobros">${cobrados.map((c) => filaCobro(c, false)).join("")}</ol>` : ""}
             ${plan.length ? `
-              <p class="debito-subtitulo">${d.disponible ? "Así se cobraría" : "Meses que se podrían cobrar"}</p>
+              <p class="debito-subtitulo">${d.obligatorio ? "Así se cobrará" : (d.disponible ? "Así se cobraría" : "Meses que se podrían cobrar")}</p>
               <ol class="debito-cobros">${plan.map((m) => filaCobro(m, false)).join("")}</ol>` : ""}
             ${d.disponible ? `
               <p class="contacto-nota">${POLITICA_DEBITO(d.diaPago)}</p>
-              <button type="button" class="btn-contact-wa-large" id="btn-abrir-debito">Activar débito automático</button>
+              <button type="button" class="btn-contact-wa-large" id="btn-abrir-debito" data-texto="Activar débito automático">Activar débito automático</button>
               <div class="debito-form" id="debito-form" hidden></div>` : ""}
           </section>`;
       }
@@ -677,22 +679,6 @@
       }
 
       function prepararDebito(p) {
-        const desactivar = document.getElementById("btn-desactivar-debito");
-        if (desactivar) {
-          desactivar.addEventListener("click", async () => {
-            if (!confirm("¿Desactivar el débito automático? Los meses siguientes los pagarás como diga tu contrato.")) return;
-            desactivar.disabled = true;
-            try {
-              const r = await RoumixAPI._request(`/pagos/${p.id}/debito`, { method: "DELETE" });
-              RoumixAvisos.mostrar(r.message, "info", 5000);
-              await cargar();
-            } catch (err) {
-              const aviso = document.getElementById("debito-error");
-              aviso.textContent = err.message; aviso.hidden = false;
-              desactivar.disabled = false;
-            }
-          });
-        }
         const abrir = document.getElementById("btn-abrir-debito");
         if (!abrir) return;
         const caja = document.getElementById("debito-form");
@@ -704,7 +690,7 @@
             ({ data: prep } = await RoumixAPI._request(`/pagos/${p.id}/debito/preparar`));
           } catch (err) {
             abrir.disabled = false;
-            abrir.textContent = "Activar débito automático";
+            abrir.textContent = abrir.dataset.texto;
             return RoumixAvisos.mostrar(err.message, "error", 6000);
           }
           abrir.hidden = true;
@@ -742,7 +728,7 @@
         });
         document.getElementById("btn-cancelar-debito").addEventListener("click", () => {
           caja.hidden = true; caja.innerHTML = "";
-          abrir.hidden = false; abrir.disabled = false; abrir.textContent = "Activar débito automático";
+          abrir.hidden = false; abrir.disabled = false; abrir.textContent = abrir.dataset.texto;
         });
         [tarjeta, nequi].forEach((f) => f.addEventListener("submit", (e) => e.preventDefault()));
 
@@ -807,7 +793,28 @@
             </div>
             <p class="checkout-texto">Roumix cobra cada mes al estudiante y retiene el ${d.porcentaje} %. Montos: ${p.mi_rol === "admin" ? "desembolso al propietario" : "tu desembolso"} de cada mes.</p>
             <ol class="debito-cobros">${d.cobros.map((c) => filaCobro(c, true)).join("")}</ol>
+            ${p.mi_rol === "admin" && d.activo ? `
+              <p class="contacto-nota">El estudiante no puede desactivarlo. Cancélalo solo si el contrato termina antes o por una decisión del equipo.</p>
+              <button type="button" class="btn-card-action btn-card-danger" id="btn-cancelar-debito-admin">Cancelar débito automático</button>` : ""}
           </section>`;
+      }
+
+      function prepararCancelarDebitoAdmin(p) {
+        const boton = document.getElementById("btn-cancelar-debito-admin");
+        if (!boton) return;
+        boton.addEventListener("click", async () => {
+          const motivo = (prompt("Motivo de la cancelación (lo verán el estudiante y el propietario):") || "").trim();
+          if (!motivo) return;
+          boton.disabled = true;
+          try {
+            const r = await RoumixAPI._request(`/admin/pagos/${p.id}/debito/cancelar`, { method: "POST", body: JSON.stringify({ motivo }) });
+            RoumixAvisos.mostrar(r.message, "info", 5000);
+            await cargar();
+          } catch (err) {
+            RoumixAvisos.mostrar(err.message, "error", 6000);
+            boton.disabled = false;
+          }
+        });
       }
 
       function error(texto) {
@@ -904,6 +911,7 @@
             </section>
             ${cobrosPropietarioHTML(p)}
             ${historial}`;
+          prepararCancelarDebitoAdmin(p);
         } else {
           // Estudiante: checkout por pasos con el resumen de costos al lado (o arriba en el celular)
           contenedor.classList.add("pago-checkout");
@@ -1000,6 +1008,7 @@
                     <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
                   </div>
                   <h2 id="paso-4-titulo" tabindex="-1">Recibimos tu pago</h2>
+                  ${p.debito && p.debito.pendiente ? `<p class="debito-falta" role="note"><strong>Falta un paso:</strong> activa el débito automático de los meses siguientes. Tu contrato lo pide. <a href="#debito">Activarlo ahora</a></p>` : ""}
                   ${p.estado === "en_disputa" ? `<p class="checkout-texto"><span class="solicitud-chip solicitud-chip-proceso">En revisión por tu reporte</span> Roumix retuvo el dinero del propietario mientras revisa el caso.</p>` : ""}
                   <dl class="checkout-datos">
                     <div><dt>Referencia</dt><dd><code>${escaparHTML(p.referencia || "")}</code></dd></div>

@@ -90,7 +90,15 @@ async function hastaPrimerMesPagado(est, nombre, inicio) {
   await ct.enviarContrato(req(admin, { params: { id: ctId } }), res());
   await ct.aceptarContrato(req(est, { params: { id: ctId }, body: { firma: nombre, confirmo: true, firmaImagen: firmaPrueba, codigo: await ct.crearCodigoFirma(ctId, est.id) } }), res());
   await ct.aceptarContrato(req(prop, { params: { id: ctId }, body: { firma: 'Carlos Prueba Rodríguez', confirmo: true, firmaImagen: firmaPrueba, codigo: await ct.crearCodigoFirma(ctId, prop.id) } }), res());
-  const p = await pagoDeSol(solId);
+  let p = await pagoDeSol(solId);
+  if (!p) {
+    // El propietario tenía condiciones viejas: el pago espera a que acepte las vigentes
+    const estado = (await db.query('SELECT estado FROM solicitudes WHERE id = $1', [solId])).rows[0].estado;
+    ok(estado === 'contrato_formalizado', 'Con las condiciones viejas del propietario, el pago del primer mes NO se habilita');
+    await propCtrl.aceptarCondiciones(req(prop, { body: { acepto: true } }), res());
+    p = await pagoDeSol(solId);
+    ok(p && p.estado === 'pendiente', 'Al aceptar las condiciones vigentes (débito obligatorio y 10 %), el pago se habilita');
+  }
   // Primer mes pagado con Wompi (widget)
   r = res(); await wc.iniciar(req(est, { params: { id: p.id } }), r);
   await wc.recibirEvento(req(null, { body: evento({ id: `tx-${sello}-${p.id}`, reference: r.cuerpo.data.referencia, status: 'APPROVED', amount_in_cents: 80000000, currency: 'COP', payment_method_type: 'CARD' }), get: () => undefined }), res());
@@ -113,8 +121,8 @@ async function hastaPrimerMesPagado(est, nombre, inicio) {
     // 0. Plan de cobros (función pura)
     const plan = deb.calcularPlan({ inicio: '2026-12-20', duracion_meses: 4, dia_pago: 5, canon_mensual: 800000 }, '2026-12-01');
     ok(plan.length === 3 && plan[0].numeroMes === 2 && plan[0].periodoInicio === '2027-01-20' && plan[0].fechaCobro === '2027-02-05'
-      && plan[2].periodoInicio === '2027-03-20' && plan[2].fechaCobro === '2027-04-05' && plan[0].comision === 40000 && plan[0].neto === 760000,
-      'Plan: meses 2 a 4, cobro el primer día 5 DENTRO de cada periodo (nunca antes), 5 % = 40.000 y 95 % = 760.000');
+      && plan[2].periodoInicio === '2027-03-20' && plan[2].fechaCobro === '2027-04-05' && plan[0].comision === 80000 && plan[0].neto === 720000,
+      'Plan: meses 2 a 4, cobro el primer día 5 DENTRO de cada periodo (nunca antes), 10 % = 80.000 y 90 % = 720.000');
     const mismoMes = deb.calcularPlan({ inicio: '2026-12-03', duracion_meses: 2, dia_pago: 5, canon_mensual: 800000 }, '2026-12-01');
     ok(mismoMes[0].periodoInicio === '2027-01-03' && mismoMes[0].fechaCobro === '2027-01-05', 'Si el día de pago cae poco después del inicio del periodo, se cobra ese mismo mes');
     const finDeMes = deb.calcularPlan({ inicio: '2027-01-31', duracion_meses: 2, dia_pago: 28, canon_mensual: 800000 }, '2027-01-01')[0];
@@ -128,14 +136,16 @@ async function hastaPrimerMesPagado(est, nombre, inicio) {
     const p1 = await hastaPrimerMesPagado(e1, 'Laura Prueba', inicio);
     ok(p1.estado === 'aprobado', `Primer mes pagado (pago #${p1.id}); contrato de 4 meses`);
 
-    // 1. El propietario aún tiene la versión 2026-11
+    // 1. Primer mes pagado y el débito todavía sin activar: obligatorio y pendiente
     let r = res(); await pg.verPago(req(e1, { params: { id: p1.id } }), r);
     let d = r.cuerpo.data.debito;
-    ok(d.disponible === false && d.motivo === 'propietario' && d.plan.length === 3 && d.plan[0].comision === undefined,
-      'Sin las condiciones 2026-12 del propietario: no disponible; el estudiante ve el plan sin la comisión');
-    let e = await falla(() => deb.preparar(req(e1, { params: { id: p1.id } }), res()));
-    ok(e && e.status === 409 && /condiciones nuevas/.test(e.message), 'Preparar → 409 hasta que el propietario acepte');
-    await propCtrl.aceptarCondiciones(req(prop, { body: { acepto: true } }), res());
+    ok(d.disponible === true && d.obligatorio === true && d.pendiente === true && d.plan.length === 3 && d.plan[0].comision === undefined,
+      'Tras el primer pago, el débito es obligatorio y queda "pendiente"; el estudiante ve el plan sin la comisión');
+    const hist = (await db.query('SELECT nota_estudiante FROM solicitudes_historial WHERE solicitud_id = $1 ORDER BY id DESC LIMIT 1', [p1.solicitud_id])).rows[0];
+    ok(hist && /activa el débito automático/.test(hist.nota_estudiante), 'Al confirmar el primer pago se le pide al estudiante activar el débito');
+    r = res(); await deb.listarAdmin(req(admin, { query: {} }), r);
+    ok(r.cuerpo.sinDebito.some((f) => f.pago_id === p1.id), 'El panel lista el arriendo entre los que no han activado el débito');
+    let e;
 
     // 2. Preparar y activar
     e = await falla(() => deb.preparar(req(e2, { params: { id: p1.id } }), res()));
@@ -155,12 +165,22 @@ async function hastaPrimerMesPagado(est, nombre, inicio) {
       'La fuente de pago se crea en el servidor con la llave privada, los dos tokens de aceptación y el correo del estudiante');
     const dbt = (await db.query('SELECT * FROM debitos_automaticos WHERE pago_id = $1', [p1.id])).rows[0];
     let cobros = await cobrosDe(p1.contrato_id);
-    ok(dbt.estado === 'activo' && dbt.fuente_wompi_id === '98765' && dbt.fuente_descripcion === 'VISA •••• 4242' && dbt.version_condiciones === '2026-12',
+    ok(dbt.estado === 'activo' && dbt.fuente_wompi_id === '98765' && dbt.fuente_descripcion === 'VISA •••• 4242' && dbt.version_condiciones === '2027-01',
       `Débito activo con "${dbt.fuente_descripcion}"; Roumix guarda solo el id de la fuente`);
-    ok(cobros.length === 3 && cobros.every((c) => c.estado === 'programado' && c.comision === 40000 && c.neto_propietario === 760000),
+    ok(cobros.length === 3 && cobros.every((c) => c.estado === 'programado' && c.comision === 80000 && c.neto_propietario === 720000),
       `${r.cuerpo.message} → 3 cobros programados (meses 2, 3 y 4)`);
-    e = await falla(() => deb.activar(req(e1, { params: { id: p1.id }, body: { tipo: 'CARD', token: 'tok_test_1234567', aceptacion: 'acept-123', acepto: true } }), res()));
-    ok(e && e.status === 409, 'No se puede activar dos veces');
+    r = res(); await deb.listarAdmin(req(admin, { query: {} }), r);
+    ok(!r.cuerpo.sinDebito.some((f) => f.pago_id === p1.id) && r.cuerpo.data.some((c) => Number(c.porcentaje_comision) === 10),
+      'Con el débito activo sale de la lista de pendientes; el panel recibe el porcentaje de cada cobro');
+
+    // 2b. Cambiar el medio de pago: el débito nuevo hereda los cobros pendientes
+    r = res(); await deb.activar(req(e1, { params: { id: p1.id }, body: { tipo: 'CARD', token: 'tok_test_7654321', aceptacion: 'acept-123', acepto: true } }), r);
+    const debs = (await db.query('SELECT id, estado, motivo_cancelacion, porcentaje_comision FROM debitos_automaticos WHERE contrato_id = $1 ORDER BY id', [p1.contrato_id])).rows;
+    cobros = await cobrosDe(p1.contrato_id);
+    ok(debs.length === 2 && debs[0].estado === 'cancelado' && /Reemplazado/.test(debs[0].motivo_cancelacion) && debs[1].estado === 'activo'
+      && Number(debs[1].porcentaje_comision) === Number(debs[0].porcentaje_comision)
+      && cobros.length === 3 && cobros.every((c) => c.debito_id === debs[1].id && c.estado === 'programado'),
+      `Cambio de medio: "${r.cuerpo.message}" (el anterior queda reemplazado y los 3 cobros pasan al nuevo con el mismo porcentaje)`);
 
     // 3. El día de cobro: la tarea diaria cobra con la fuente guardada
     const [c2, c3, c4] = cobros;
@@ -174,10 +194,10 @@ async function hastaPrimerMesPagado(est, nombre, inicio) {
       'Cobro con la llave privada, la fuente guardada, recurrent: true y la firma de integridad');
     cobros = await cobrosDe(p1.contrato_id);
     ok(res1.aprobados === 1 && cobros[0].estado === 'aprobado' && cobros[0].desembolso_estado === 'pendiente' && cobros[1].estado === 'programado',
-      'Mes 2 aprobado: desembolso del 95 % pendiente; el mes 3 sigue programado para su fecha');
+      'Mes 2 aprobado: desembolso del 90 % pendiente; el mes 3 sigue programado para su fecha');
     await new Promise((x) => setTimeout(x, 300));
-    ok(correos.some((c) => /Cobramos el mes 2/.test(c.subject)) && correos.some((c) => /Recibimos el mes 2/.test(c.subject) && /760\.000/.test(c.html)),
-      'Correos al estudiante (cobro) y al propietario (su desembolso de $760.000)');
+    ok(correos.some((c) => /Cobramos el mes 2/.test(c.subject)) && correos.some((c) => /Recibimos el mes 2/.test(c.subject) && /720\.000/.test(c.html)),
+      'Correos al estudiante (cobro) y al propietario (su desembolso de $720.000)');
     res1 = await deb.procesarCobros();
     ok(res1.procesados === 0, 'Si la tarea corre otra vez el mismo día, no vuelve a cobrar');
 
@@ -215,7 +235,7 @@ async function hastaPrimerMesPagado(est, nombre, inicio) {
     ok(d.activo && d.activo.descripcion === 'VISA •••• 4242' && d.cobros.length === 3 && d.cobros[0].comision === undefined,
       'El estudiante ve su débito y sus cobros, sin la comisión');
     r = res(); await pg.verPago(req(prop, { params: { id: p1.id } }), r);
-    ok(r.cuerpo.data.debito.cobros[0].neto_propietario === 760000, 'El propietario ve su desembolso de cada mes');
+    ok(r.cuerpo.data.debito.cobros[0].neto_propietario === 720000, 'El propietario ve su desembolso de cada mes');
 
     // 7. Desembolso del panel
     e = await falla(() => deb.desembolsoAdmin(req(admin, { params: { id: c3.id } }), res()));
@@ -225,17 +245,22 @@ async function hastaPrimerMesPagado(est, nombre, inicio) {
     r = res(); await deb.listarAdmin(req(admin, { query: { estado: 'problemas' } }), r);
     ok(r.cuerpo.habilitado && r.cuerpo.data.some((c) => c.id === c3.id), 'El panel lista el cobro vencido en "Problemas"');
 
-    // 8. Desactivar
-    r = res(); await deb.desactivar(req(e1, { params: { id: p1.id } }), r);
+    // 8. El estudiante no puede desactivarlo; solo el equipo lo cancela
+    e = await falla(() => deb.desactivar(req(e1, { params: { id: p1.id } }), res()));
+    ok(e && e.status === 409 && /obligatorio/.test(e.message) && (await cobrosDe(p1.contrato_id)).find((c) => c.id === c4.id).estado !== 'cancelado',
+      'El estudiante no puede desactivar el débito (obligatorio por contrato) → 409 y nada cambia');
+    e = await falla(() => deb.cancelarAdmin(req(admin, { params: { id: p1.id }, body: { motivo: 'corto' } }), res()));
+    ok(e && e.status === 400, 'Cancelar sin un motivo claro → 400');
+    r = res(); await deb.cancelarAdmin(req(admin, { params: { id: p1.id }, body: { motivo: 'El contrato terminó antes por mutuo acuerdo.' } }), r);
     cobros = await cobrosDe(p1.contrato_id);
     ok(cobros.find((c) => c.id === c4.id).estado === 'cancelado' && cobros.find((c) => c.id === c2.id).estado === 'aprobado',
-      'Al desactivar se cancelan los cobros futuros; los ya cobrados no cambian');
+      `El equipo cancela el débito: ${r.cuerpo.message} Los ya cobrados no cambian`);
     respuestaCobro = 'APPROVED';
     await db.query('UPDATE cobros_mensuales SET proximo_intento = $2, fecha_cobro = $2 WHERE id = $1', [c4.id, hoy]);
     res1 = await deb.procesarCobros();
-    ok(res1.procesados === 0, 'Con el débito desactivado, la tarea diaria no cobra nada');
-    e = await falla(() => deb.desactivar(req(e1, { params: { id: p1.id } }), res()));
-    ok(e && e.status === 409, 'Desactivar dos veces → 409');
+    ok(res1.procesados === 0, 'Con el débito cancelado, la tarea diaria no cobra nada');
+    e = await falla(() => deb.cancelarAdmin(req(admin, { params: { id: p1.id }, body: { motivo: 'El contrato terminó antes por mutuo acuerdo.' } }), res()));
+    ok(e && e.status === 409, 'Cancelar dos veces → 409');
 
     // 9. Sin llave privada no hay débito
     delete process.env.WOMPI_PRIVATE_KEY;
