@@ -299,7 +299,7 @@ async function habilitarAdmin(req, res) {
 }
 
 async function avisarPagoHabilitado(r, urlBase) {
-  await crearAviso({ usuarioId: r.estudianteId, tipo: 'solicitud', titulo: 'Ya puedes pagar el primer mes', cuerpo: 'Pago demostrativo a través de Roumix.', enlace: `pago.html?id=${r.pagoId}` });
+  await crearAviso({ usuarioId: r.estudianteId, tipo: 'solicitud', titulo: 'Ya puedes pagar el primer mes', cuerpo: 'Págalo de forma segura a través de Roumix.', enlace: `pago.html?id=${r.pagoId}` });
   await notificaciones.notificarPago({ pago: { id: r.pagoId, estudiante_id: r.estudianteId }, evento: 'habilitado', urlBase });
 }
 

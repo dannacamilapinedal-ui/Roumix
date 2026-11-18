@@ -78,10 +78,10 @@ async function habilitarPago(cliente, solicitudId) {
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
     [s.id, s.contrato_id, s.estudiante_id, s.propietario_id, s.canon_mensual, PORCENTAJE_COMISION, comision, neto]
   );
-  await registrarEvento(cliente, { pagoId: pago.id, tipo: 'habilitado', monto: s.canon_mensual, detalle: 'Pago del primer canon habilitado (simulado).' });
+  await registrarEvento(cliente, { pagoId: pago.id, tipo: 'habilitado', monto: s.canon_mensual, detalle: 'Pago del primer canon habilitado.' });
   await moverSolicitud(cliente, {
     solicitudId: s.id, de: 'contrato_formalizado', a: 'pago_pendiente',
-    notaEstudiante: 'Ya puedes pagar el primer mes a través de Roumix (pago demostrativo).',
+    notaEstudiante: 'Ya puedes pagar el primer mes a través de Roumix.',
     notaPropietario: 'Se habilitó el pago del primer mes para el estudiante.',
     notaInterna: `Pago #${pago.id} habilitado: canon ${s.canon_mensual}, comisión ${comision}, neto ${neto}.`
   });
