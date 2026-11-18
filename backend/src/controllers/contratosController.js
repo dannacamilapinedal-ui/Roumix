@@ -329,9 +329,11 @@ async function aceptarContrato(req, res) {
       // Se habilita el pago del primer canon (si el propietario aceptó las condiciones de la comisión)
       pagoHabilitado = await pagos.habilitarPago(cliente, c.solicitud_id);
     } else {
+      // El historial solo admite estudiante, admin o sistema como autor: la firma del propietario
+      // queda como evento del sistema (autor_id sigue siendo quien firmó)
       await cliente.query(
         `INSERT INTO solicitudes_historial (solicitud_id, autor_id, autor_rol, nota_interna) VALUES ($1, $2, $3, $4)`,
-        [c.solicitud_id, req.usuario.id, req.usuario.rol, nota]
+        [c.solicitud_id, req.usuario.id, esEstudiante ? 'estudiante' : 'sistema', nota]
       );
     }
     await cliente.query('COMMIT');

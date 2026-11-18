@@ -88,8 +88,10 @@ async function hastaPrimerMesPagado(est, nombre, inicio) {
   r = res(); await ct.crearBorrador(req(admin, { params: { id: solId }, body: { canonMensual: 800000, fechaInicio: inicio, duracionMeses: 4, diaPago: 5 } }), r);
   const ctId = r.cuerpo.data.id;
   await ct.enviarContrato(req(admin, { params: { id: ctId } }), res());
+  // Firma PRIMERO el propietario (caso que fallaba en producción: su nota en el historial)
+  let rf = res(); await ct.aceptarContrato(req(prop, { params: { id: ctId }, body: { firma: 'Carlos Prueba Rodríguez', confirmo: true, firmaImagen: firmaPrueba, codigo: await ct.crearCodigoFirma(ctId, prop.id) } }), rf);
+  ok(rf.cuerpo && rf.cuerpo.data.estado === 'pendiente_aceptacion', 'El propietario puede firmar primero; queda faltando la firma del estudiante');
   await ct.aceptarContrato(req(est, { params: { id: ctId }, body: { firma: nombre, confirmo: true, firmaImagen: firmaPrueba, codigo: await ct.crearCodigoFirma(ctId, est.id) } }), res());
-  await ct.aceptarContrato(req(prop, { params: { id: ctId }, body: { firma: 'Carlos Prueba Rodríguez', confirmo: true, firmaImagen: firmaPrueba, codigo: await ct.crearCodigoFirma(ctId, prop.id) } }), res());
   let p = await pagoDeSol(solId);
   if (!p) {
     // El propietario tenía condiciones viejas: el pago espera a que acepte las vigentes
