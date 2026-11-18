@@ -92,6 +92,16 @@
           </div>
 
           <form id="form-auth" class="auth-form-card" novalidate>
+            <!-- Registro de propietarios: se llega desde la sección "Para propietarios" del inicio -->
+            <div class="auth-propietario-aviso" id="aviso-propietario" hidden>
+              <span class="auth-propietario-chip">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/></svg>
+                Registro de propietarios
+              </span>
+              <p>Después de confirmar tu correo, completa tu perfil: el equipo de Roumix lo revisa antes de que puedas publicar.</p>
+              <a href="ingresar.html?registro=estudiante" class="auth-propietario-cambio">¿Eres estudiante? Crea tu cuenta aquí</a>
+            </div>
+
             <!-- Campo Nombre (solo en registro) -->
             <div class="auth-field-group" id="field-nombre" style="display: none;">
               <label for="auth-nombre" class="auth-label">Nombre completo</label>
@@ -140,15 +150,6 @@
                 </button>
               </div>
               <button type="button" class="auth-link-olvide" id="link-olvide">¿Olvidaste tu contraseña?</button>
-            </div>
-
-            <!-- Selector de rol (solo en registro: al iniciar sesión el rol sale del perfil guardado) -->
-            <div class="auth-role-group" id="field-rol" style="display: none;">
-              <label class="auth-label">Me registro como</label>
-              <div class="role-selector-pill">
-                <button type="button" class="role-btn active" data-role="estudiante" aria-pressed="true">Estudiante</button>
-                <button type="button" class="role-btn" data-role="propietario" aria-pressed="false">Propietario</button>
-              </div>
             </div>
 
             <!-- Celular (solo en registro; obligatorio para propietarios) -->
@@ -204,14 +205,13 @@
       const btnTabLogin = document.getElementById("tab-login");
       const btnTabRegister = document.getElementById("tab-register");
       const fieldNombre = document.getElementById("field-nombre");
-      const fieldRol = document.getElementById("field-rol");
+      const avisoPropietario = document.getElementById("aviso-propietario");
       const fieldTelefono = document.getElementById("field-telefono");
       const fieldPolitica = document.getElementById("field-politica");
       const checkPolitica = document.getElementById("auth-politica");
       const labelTelefono = document.getElementById("label-telefono");
       const btnSubmit = document.getElementById("btn-submit-auth");
       const formAuth = document.getElementById("form-auth");
-      const roleBtns = document.querySelectorAll(".role-btn");
       const btnShowPwd = document.getElementById("btn-show-pwd");
       const inputPwd = document.getElementById("auth-password");
       const mensaje = document.getElementById("auth-mensaje");
@@ -222,10 +222,13 @@
       let captcha = { activo: false, obtener: () => "", reiniciar: () => {} };
 
       let modo = "login";
-      let rol = "estudiante";
 
       // Página a la que volver después de iniciar sesión (solo páginas propias de Roumix)
       const params = new URLSearchParams(window.location.search);
+      // El registro normal es solo de estudiantes. Los propietarios tienen su registro aparte,
+      // al que se llega desde la sección "Para propietarios" del inicio (?registro=propietario).
+      const esPropietario = params.get("registro") === "propietario";
+      const rol = esPropietario ? "propietario" : "estudiante";
       const redirigir = params.get("redirigir");
       const redirigirValido = redirigir && /^[a-z-]+\.html(\?[A-Za-z0-9=&%._-]*)?$/.test(redirigir) ? redirigir : null;
       // Sin una página pedida, cada rol entra a su propio inicio (estudiante → Buscar,
@@ -278,15 +281,29 @@
       linkOlvide.addEventListener("click", () => modoRecuperar(true));
       linkVolver.addEventListener("click", () => modoRecuperar(false));
 
-      function actualizarTelefono() {
-        labelTelefono.textContent = rol === "propietario" ? "Celular (obligatorio · solo lo ve el equipo de Roumix)" : "Celular (opcional · solo lo ve el equipo de Roumix)";
+      labelTelefono.textContent = esPropietario ? "Celular (obligatorio · solo lo ve el equipo de Roumix)" : "Celular (opcional · solo lo ve el equipo de Roumix)";
+
+      // En el registro de propietarios, el lado izquierdo habla de publicar (no de buscar)
+      if (esPropietario) {
+        document.body.classList.add("auth-modo-propietario");
+        document.title = "Roumix — Registro de propietarios";
+        document.querySelector(".auth-brand-title").textContent = "Publica tu inmueble y recibe estudiantes, con Roumix de intermediario.";
+        const pasosPropietario = [
+          ["Crea tu cuenta", "Con tu correo y un celular de contacto. Tus datos solo los ve el equipo de Roumix."],
+          ["Verificamos tu perfil", "Revisamos tus datos y tu relación con el inmueble antes de habilitarte para publicar."],
+          ["Publica y recibe solicitudes", "Roumix habla con los estudiantes interesados, prepara el contrato y ambas partes lo firman electrónicamente."]
+        ];
+        document.querySelectorAll(".auth-pasos li").forEach((li, i) => {
+          li.querySelector(".auth-paso-titulo").textContent = pasosPropietario[i][0];
+          li.querySelector(".auth-paso-desc").textContent = pasosPropietario[i][1];
+        });
       }
 
       btnTabLogin.addEventListener("click", () => {
         btnTabLogin.classList.add("active");
         btnTabRegister.classList.remove("active");
         fieldNombre.style.display = "none";
-        fieldRol.style.display = "none";
+        avisoPropietario.hidden = true;
         fieldTelefono.style.display = "none";
         fieldPolitica.style.display = "none";
         inputPwd.autocomplete = "current-password";
@@ -300,38 +317,20 @@
         btnTabRegister.classList.add("active");
         btnTabLogin.classList.remove("active");
         fieldNombre.style.display = "flex";
-        fieldRol.style.display = "";
+        avisoPropietario.hidden = !esPropietario;
         fieldTelefono.style.display = "flex";
         fieldPolitica.style.display = "";
         inputPwd.autocomplete = "new-password";
         linkOlvide.style.display = "none";
-        btnSubmit.textContent = "Crear cuenta";
+        btnSubmit.textContent = esPropietario ? "Crear cuenta de propietario" : "Crear cuenta";
         modo = "register";
         mostrarMensaje("");
       });
 
-      // Desde la landing: ingresar.html?registro=propietario abre el registro con ese rol
-      const registroPedido = params.get("registro");
-      if (registroPedido) {
-        setTimeout(() => {
-          btnTabRegister.click();
-          const botonRol = document.querySelector(`.role-btn[data-role="${registroPedido === "propietario" ? "propietario" : "estudiante"}"]`);
-          if (botonRol) botonRol.click();
-        }, 0);
+      // Desde la landing: ?registro=estudiante o ?registro=propietario abre directamente el registro
+      if (params.get("registro")) {
+        setTimeout(() => btnTabRegister.click(), 0);
       }
-
-      roleBtns.forEach(btn => {
-        btn.addEventListener("click", () => {
-          roleBtns.forEach(b => {
-            b.classList.remove("active");
-            b.setAttribute("aria-pressed", "false");
-          });
-          btn.classList.add("active");
-          btn.setAttribute("aria-pressed", "true");
-          rol = btn.dataset.role;
-          actualizarTelefono();
-        });
-      });
 
       btnShowPwd.addEventListener("click", () => {
         if (inputPwd.type === "password") {

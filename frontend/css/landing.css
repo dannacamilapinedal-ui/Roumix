@@ -2040,3 +2040,40 @@ html[data-tema="oscuro"] .lx-final-caja {
   background: radial-gradient(circle at 20% 0%, #24392d 0%, #171512 60%), #171512;
   border: 1px solid var(--borde-suave);
 }
+
+/* ==========================================================================
+   PARA PROPIETARIOS (registro aparte)
+   ========================================================================== */
+.lx-propietarios { padding: 96px 0; }
+.lx-prop-caja {
+  position: relative; overflow: hidden; isolation: isolate;
+  display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 48px; align-items: center;
+  padding: 56px; border-radius: 32px; color: #fff;
+  background: radial-gradient(circle at 85% 0%, #2c5a3f 0%, #142219 60%), #142219;
+}
+.lx-prop-texto .lx-eyebrow { color: #f3b46b; }
+.lx-prop-texto h2 { font-size: clamp(1.8rem, 1.3rem + 1.6vw, 2.5rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.12; margin-bottom: 14px; }
+.lx-prop-texto > p { color: rgba(255, 255, 255, 0.78); font-size: 1.02rem; line-height: 1.6; margin-bottom: 22px; }
+.lx-prop-texto > .lx-prop-pide-titulo { margin-bottom: 10px; font-size: 0.74rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255, 255, 255, 0.6); }
+.lx-prop-pide { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 28px; padding: 0; }
+.lx-prop-pide li { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 14px; background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.12); font-size: 0.86rem; line-height: 1.3; color: rgba(255, 255, 255, 0.9); }
+.lx-prop-pide .lx-icono { flex-shrink: 0; width: 18px; height: 18px; color: #f3b46b; }
+.lx-prop-acciones { display: flex; flex-wrap: wrap; gap: 12px; }
+.lx-prop-pasos { list-style: none; display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 0; counter-reset: none; }
+.lx-prop-pasos li { display: flex; gap: 14px; align-items: flex-start; padding: 18px 20px; border-radius: 20px; background: var(--superficie); color: var(--tinta-fuerte); box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.45); }
+.lx-prop-num { display: grid; place-items: center; flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%; background: var(--acento-naranja); color: #fff; font-weight: 800; font-size: 0.95rem; }
+.lx-prop-pasos strong { display: block; font-size: 1rem; margin-bottom: 3px; }
+.lx-prop-pasos p { margin: 0; font-size: 0.88rem; line-height: 1.5; color: var(--tinta-media); }
+html[data-tema="oscuro"] .lx-prop-caja { background: radial-gradient(circle at 85% 0%, #24392d 0%, #171512 60%), #171512; border: 1px solid var(--borde-suave); }
+html[data-tema="oscuro"] .lx-prop-pasos li { background: var(--superficie-alta); box-shadow: none; border: 1px solid var(--borde-arena); }
+@media (max-width: 900px) {
+  .lx-prop-caja { grid-template-columns: 1fr; gap: 32px; padding: 40px 28px; }
+}
+@media (max-width: 560px) {
+  .lx-propietarios { padding: 64px 0; }
+  .lx-prop-caja { padding: 32px 18px; border-radius: 24px; }
+  .lx-prop-pide { grid-template-columns: 1fr; }
+  .lx-prop-acciones .lx-btn { flex: 1 1 100%; justify-content: center; }
+  .lx-prop-pasos li { padding: 16px; }
+}
+.lx-prop-caja > .lx-final-formas { position: absolute; inset: 0; z-index: -1; pointer-events: none; }

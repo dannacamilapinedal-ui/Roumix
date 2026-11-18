@@ -252,34 +252,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // ---------- 8. Estudiante / propietario ----------
-  const tabEst = document.getElementById("lx-tab-estudiante");
-  const tabProp = document.getElementById("lx-tab-propietario");
-  const moverPildoraPerfil = activarPildoraDeslizante(document.getElementById("lx-perfiles"));
-  function elegirPerfil(propietario) {
-    tabEst.classList.toggle("active", !propietario);
-    tabProp.classList.toggle("active", propietario);
-    tabEst.setAttribute("aria-selected", String(!propietario));
-    tabProp.setAttribute("aria-selected", String(propietario));
-    const mostrar = document.getElementById(propietario ? "lx-panel-propietario" : "lx-panel-estudiante");
-    const ocultar = document.getElementById(propietario ? "lx-panel-estudiante" : "lx-panel-propietario");
-    ocultar.hidden = true;
-    ocultar.classList.remove("active");
-    mostrar.hidden = false;
-    void mostrar.offsetWidth;
-    mostrar.classList.add("active");
-    moverPildoraPerfil();
-  }
-  tabEst.addEventListener("click", () => elegirPerfil(false));
-  tabProp.addEventListener("click", () => elegirPerfil(true));
-  [tabEst, tabProp].forEach((tab) => tab.addEventListener("keydown", (e) => {
-    if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
-      const propietario = tab === tabEst;
-      elegirPerfil(propietario);
-      (propietario ? tabProp : tabEst).focus();
-    }
-  }));
-
   // ---------- 9. Preguntas: solo una abierta a la vez ----------
   const preguntas = document.querySelectorAll(".lx-faq details");
   preguntas.forEach((p) => p.addEventListener("toggle", () => {

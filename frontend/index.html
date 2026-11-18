@@ -109,7 +109,7 @@
           </form>
 
           <div class="lx-hero-acciones lx-entra" style="--i:4">
-            <a href="ingresar.html?registro=propietario" class="lx-enlace-claro">¿Tienes un inmueble? <strong>Publícalo en Roumix</strong></a>
+            <a href="#propietarios" class="lx-enlace-claro">¿Tienes un inmueble? <strong>Publícalo en Roumix</strong></a>
             <span class="lx-hero-nota" data-solo-visitante>Crear tu cuenta toma menos de un minuto.</span>
           </div>
         </div>
@@ -313,24 +313,16 @@
       </div>
     </section>
 
-    <!-- ===================== 5. ESTUDIANTES / PROPIETARIOS ===================== -->
+    <!-- ===================== 5. ESTUDIANTES ===================== -->
     <section class="lx-seccion" id="para-quien">
       <div class="lx-contenedor">
         <header class="lx-encabezado lx-revelar">
-          <span class="lx-eyebrow">Para todos</span>
-          <h2>Pensado para estudiantes y propietarios</h2>
+          <span class="lx-eyebrow">Para estudiantes</span>
+          <h2>Todo lo que necesitas para encontrar dónde vivir</h2>
+          <p>Crear tu cuenta es gratis y toma menos de un minuto.</p>
         </header>
 
-        <div class="lx-selector-perfil lx-revelar" role="tablist" aria-label="Tipo de usuario" id="lx-perfiles">
-          <button type="button" class="lx-perfil-btn active" role="tab" aria-selected="true" aria-controls="lx-panel-estudiante" id="lx-tab-estudiante">
-            <svg class="lx-icono" aria-hidden="true"><use href="#i-birrete"/></svg> Soy estudiante
-          </button>
-          <button type="button" class="lx-perfil-btn" role="tab" aria-selected="false" aria-controls="lx-panel-propietario" id="lx-tab-propietario">
-            <svg class="lx-icono" aria-hidden="true"><use href="#i-casa"/></svg> Soy propietario
-          </button>
-        </div>
-
-        <div class="lx-panel active" role="tabpanel" id="lx-panel-estudiante" aria-labelledby="lx-tab-estudiante">
+        <div class="lx-panel active lx-revelar">
           <ul class="lx-beneficios">
             <li><span class="lx-icono-caja"><svg class="lx-icono"><use href="#i-pin"/></svg></span><div><strong>Cerca de tu sede</strong><p>Distancia y tiempo a pie hasta tu universidad en cada publicación.</p></div></li>
             <li><span class="lx-icono-caja"><svg class="lx-icono"><use href="#i-balanza"/></svg></span><div><strong>Compara sin enredos</strong><p>Hasta tres opciones lado a lado: precio, depósito, contrato y servicios.</p></div></li>
@@ -339,19 +331,6 @@
           </ul>
           <a href="ingresar.html?registro=estudiante" class="lx-btn lx-btn-verde">
             <span>Crear cuenta de estudiante</span>
-            <svg class="lx-icono" aria-hidden="true"><use href="#i-flecha"/></svg>
-          </a>
-        </div>
-
-        <div class="lx-panel" role="tabpanel" id="lx-panel-propietario" aria-labelledby="lx-tab-propietario" hidden>
-          <ul class="lx-beneficios">
-            <li><span class="lx-icono-caja"><svg class="lx-icono"><use href="#i-reloj"/></svg></span><div><strong>Publica en minutos</strong><p>Cuatro pasos: datos, ubicación, precio y fotos. Nosotros las optimizamos.</p></div></li>
-            <li><span class="lx-icono-caja"><svg class="lx-icono"><use href="#i-diana"/></svg></span><div><strong>Llega a quien buscas</strong><p>Tu inmueble aparece a estudiantes que buscan cerca de su universidad.</p></div></li>
-            <li><span class="lx-icono-caja"><svg class="lx-icono"><use href="#i-celular"/></svg></span><div><strong>Solicitudes gestionadas</strong><p>Roumix recibe a los interesados y te contacta con el inmueble ya identificado.</p></div></li>
-            <li><span class="lx-icono-caja"><svg class="lx-icono"><use href="#i-ajustes"/></svg></span><div><strong>Tú tienes el control</strong><p>Edita, pausa o marca como arrendado desde "Mis publicaciones".</p></div></li>
-          </ul>
-          <a href="ingresar.html?registro=propietario" class="lx-btn lx-btn-verde">
-            <span>Crear cuenta de propietario</span>
             <svg class="lx-icono" aria-hidden="true"><use href="#i-flecha"/></svg>
           </a>
         </div>
@@ -416,6 +395,40 @@
       </div>
     </section>
 
+    <!-- ===================== PROPIETARIOS (registro aparte) ===================== -->
+    <section class="lx-propietarios" id="propietarios" aria-labelledby="lx-prop-titulo">
+      <div class="lx-contenedor">
+        <div class="lx-prop-caja lx-revelar">
+          <div class="lx-final-formas" aria-hidden="true"><i></i><i></i><i></i></div>
+          <div class="lx-prop-texto">
+            <span class="lx-eyebrow">Para propietarios</span>
+            <h2 id="lx-prop-titulo">¿Tienes un inmueble cerca de una universidad?</h2>
+            <p>Publica en Roumix y recibe solicitudes de estudiantes sin atender tú a cada interesado. Las cuentas de propietario tienen su propio registro y el equipo verifica tu perfil antes de que puedas publicar.</p>
+            <p class="lx-prop-pide-titulo">Lo que te vamos a pedir</p>
+            <ul class="lx-prop-pide">
+              <li><svg class="lx-icono" aria-hidden="true"><use href="#i-celular"/></svg> Un celular de contacto</li>
+              <li><svg class="lx-icono" aria-hidden="true"><use href="#i-usuario"/></svg> Tu nombre como aparece en tu documento</li>
+              <li><svg class="lx-icono" aria-hidden="true"><use href="#i-casa"/></svg> Tu relación con el inmueble</li>
+              <li><svg class="lx-icono" aria-hidden="true"><use href="#i-escudo"/></svg> Tu documento de identidad, para el contrato</li>
+            </ul>
+            <div class="lx-prop-acciones">
+              <a href="ingresar.html?registro=propietario" class="lx-btn lx-btn-naranja">
+                <svg class="lx-icono" aria-hidden="true"><use href="#i-casa"/></svg>
+                <span>Registrarme como propietario</span>
+              </a>
+              <a href="ingresar.html" class="lx-btn lx-btn-contorno">Ya tengo cuenta</a>
+            </div>
+          </div>
+          <ol class="lx-prop-pasos" aria-label="Cómo funciona para propietarios">
+            <li><span class="lx-prop-num">1</span><div><strong>Crea tu cuenta de propietario</strong><p>Con tu correo y un celular. Tus datos solo los ve el equipo de Roumix.</p></div></li>
+            <li><span class="lx-prop-num">2</span><div><strong>Verificamos tu perfil</strong><p>Revisamos tus datos y tu relación con el inmueble antes de habilitarte para publicar.</p></div></li>
+            <li><span class="lx-prop-num">3</span><div><strong>Publica en cuatro pasos</strong><p>Datos, ubicación, precio y fotos. Edita, pausa o marca como arrendado cuando quieras.</p></div></li>
+            <li><span class="lx-prop-num">4</span><div><strong>Recibe solicitudes acompañadas</strong><p>Roumix habla con los interesados, prepara el contrato y ambas partes lo firman electrónicamente.</p></div></li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
     <!-- ===================== 7. PREGUNTAS ===================== -->
     <section class="lx-seccion" id="preguntas">
       <div class="lx-contenedor lx-contenedor-angosto">
@@ -443,7 +456,7 @@
           </details>
           <details class="lx-revelar">
             <summary>¿Cómo publico mi inmueble?</summary>
-            <p>Crea una cuenta como propietario, completa los cuatro pasos (datos, ubicación, precio y fotos) y tu publicación quedará visible para los estudiantes.</p>
+            <p>Regístrate desde la sección <a href="#propietarios">Para propietarios</a>. Cuando el equipo apruebe tu perfil, completas los cuatro pasos (datos, ubicación, precio y fotos) y tu publicación queda visible para los estudiantes.</p>
           </details>
         </div>
       </div>
@@ -511,7 +524,7 @@
         <ul>
           <li><a href="ingresar.html" class="footer-link">Iniciar sesión</a></li>
           <li><a href="ingresar.html?registro=estudiante" class="footer-link">Crear cuenta de estudiante</a></li>
-          <li><a href="ingresar.html?registro=propietario" class="footer-link">Publicar un inmueble</a></li>
+          <li><a href="#propietarios" class="footer-link">Publicar un inmueble</a></li>
           <li><a href="pages/privacidad.html" class="footer-link">Política de datos</a></li>
         </ul>
       </div>
