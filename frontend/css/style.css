@@ -8931,3 +8931,18 @@ html[data-tema="oscuro"] button.admin-metrica:hover { box-shadow: none; }
   .admin-grafica-barra { animation: none; }
   button.admin-metrica, button.admin-metrica::after { transition: none; }
 }
+
+/* Avisos: barra del tiempo que queda, pausa al pasar el mouse y × para cerrar */
+.rx-aviso { position: relative; overflow: hidden; }
+.rx-aviso-texto { flex: 1; }
+.rx-aviso-cerrar { font-size: 1.1rem; line-height: 1; opacity: 0.55; transition: opacity 0.15s ease; }
+.rx-aviso:hover .rx-aviso-cerrar { opacity: 1; }
+.rx-aviso-tiempo {
+  position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; transform-origin: left;
+  background: rgba(255, 255, 255, 0.45); animation: rxAvisoTiempo var(--rx-aviso-duracion, 3200ms) linear forwards;
+}
+.rx-aviso-exito .rx-aviso-tiempo { background: #25d366; }
+.rx-aviso-error .rx-aviso-tiempo { background: #ffd8d3; }
+.rx-aviso-pausado .rx-aviso-tiempo { animation-play-state: paused; }
+@keyframes rxAvisoTiempo { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@media (prefers-reduced-motion: reduce) { .rx-aviso-tiempo { display: none; } }

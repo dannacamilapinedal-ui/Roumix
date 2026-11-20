@@ -930,16 +930,38 @@ const RoumixAvisos = {
     const iconos = { exito: "✓", error: "!", info: "i" };
     const aviso = document.createElement("div");
     aviso.className = `rx-aviso rx-aviso-${tipo}`;
-    aviso.innerHTML = `<span class="rx-aviso-icono" aria-hidden="true">${iconos[tipo] || "i"}</span><span class="rx-aviso-texto"></span>`;
+    // Los errores se anuncian de inmediato a quien usa lector de pantalla
+    if (tipo === "error") aviso.setAttribute("role", "alert");
+    aviso.style.setProperty("--rx-aviso-duracion", `${duracion}ms`);
+    aviso.innerHTML = `<span class="rx-aviso-icono" aria-hidden="true">${iconos[tipo] || "i"}</span><span class="rx-aviso-texto"></span><span class="rx-aviso-cerrar" aria-hidden="true">×</span><span class="rx-aviso-tiempo" aria-hidden="true"></span>`;
     aviso.querySelector(".rx-aviso-texto").textContent = texto;
+    aviso.title = "Toca para cerrar";
     this._obtenerZona().appendChild(aviso);
 
+    let cerrado = false;
     const cerrar = () => {
+      if (cerrado) return;
+      cerrado = true;
+      clearTimeout(temporizador);
       aviso.classList.add("rx-aviso-saliendo");
       setTimeout(() => aviso.remove(), 260);
     };
-    const temporizador = setTimeout(cerrar, duracion);
-    aviso.addEventListener("click", () => { clearTimeout(temporizador); cerrar(); });
+    // Al pasar el mouse el tiempo se pausa (y la barra también) para alcanzar a leerlo
+    let restante = duracion;
+    let inicio = Date.now();
+    let temporizador = setTimeout(cerrar, restante);
+    aviso.addEventListener("mouseenter", () => {
+      clearTimeout(temporizador);
+      restante -= Date.now() - inicio;
+      aviso.classList.add("rx-aviso-pausado");
+    });
+    aviso.addEventListener("mouseleave", () => {
+      if (cerrado) return;
+      inicio = Date.now();
+      temporizador = setTimeout(cerrar, Math.max(restante, 800));
+      aviso.classList.remove("rx-aviso-pausado");
+    });
+    aviso.addEventListener("click", cerrar);
   }
 };
 
