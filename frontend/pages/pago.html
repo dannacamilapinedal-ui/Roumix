@@ -544,6 +544,40 @@
         Si un cobro falla, lo reintentamos 2 veces en los 3 días siguientes y te avisamos por correo.
         <strong>Roumix no cobra recargos</strong>: si hay recargos por mora, son solo los que diga tu contrato. Puedes cambiar el medio de pago cuando quieras.`;
 
+      // Línea de tiempo del arriendo tras el pago: qué ya está hecho y qué falta
+      function lineaArriendoHTML(p, inicio) {
+        const d = p.debito || {};
+        const hoy = fechaDia(new Date());
+        const clave = (f) => f.a * 10000 + f.m * 100 + f.d;
+        const empezo = Boolean(inicio) && clave(inicio) <= clave(hoy);
+        const pasos = [
+          { estado: "hecho", titulo: "Solicitud aceptada", texto: "Roumix coordinó todo con el propietario." },
+          { estado: "hecho", titulo: "Contrato firmado", texto: "Firmado por ti y por el propietario.", enlace: `contrato.html?id=${p.contrato_id}`, enlaceTexto: "Ver contrato" },
+          { estado: "hecho", titulo: "Primer mes pagado", texto: p.aprobado_en ? momento(p.aprobado_en) : "Pago confirmado." }
+        ];
+        if (d.activo) {
+          pasos.push({ estado: "hecho", titulo: "Débito automático activo", texto: "Los meses siguientes se cobran solos." });
+        } else if (d.obligatorio || d.pendiente) {
+          pasos.push({ estado: "actual", titulo: "Activa el débito automático", texto: "Tu contrato lo pide para los meses siguientes.", enlace: "#debito", enlaceTexto: "Activarlo" });
+        }
+        pasos.push({
+          estado: empezo ? "hecho" : (pasos.some((x) => x.estado === "actual") ? "pendiente" : "actual"),
+          titulo: empezo ? "Ya vives en tu nuevo hogar" : "Llegas a tu nuevo hogar",
+          texto: inicio ? textoFecha(inicio) : "El día acordado en el contrato."
+        });
+        return `
+          <ol class="linea-arriendo" aria-label="Tu arriendo, paso a paso">
+            ${pasos.map((x, i) => `
+              <li class="linea-arriendo-paso linea-${x.estado}" style="--i:${i}">
+                <span class="linea-arriendo-punto" aria-hidden="true">${x.estado === "hecho" ? "✓" : i + 1}</span>
+                <div>
+                  <strong>${escaparHTML(x.titulo)}</strong><span class="sr-only"> (${x.estado === "hecho" ? "hecho" : x.estado === "actual" ? "siguiente paso" : "pendiente"})</span>
+                  <span>${escaparHTML(x.texto)}${x.enlace ? ` · <a href="${x.enlace}">${x.enlaceTexto}</a>` : ""}</span>
+                </div>
+              </li>`).join("")}
+          </ol>`;
+      }
+
       function debitoHTML(p) {
         const d = p.debito;
         if (!d) return "";
@@ -1004,10 +1038,11 @@
 
                 <section class="checkout-paso-panel checkout-exito" data-paso="4" aria-labelledby="paso-4-titulo"${pasoInicial === 4 ? "" : " hidden"}>
                   ${pagado ? `
-                  <div class="checkout-exito-icono" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
+                  <div class="checkout-exito-icono checkout-exito-animado" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path pathLength="1" d="m5 12.5 4.5 4.5L19 7.5"/></svg>
                   </div>
                   <h2 id="paso-4-titulo" tabindex="-1">Recibimos tu pago</h2>
+                  ${lineaArriendoHTML(p, inicio)}
                   ${p.debito && p.debito.pendiente ? `<p class="debito-falta" role="note"><strong>Falta un paso:</strong> activa el débito automático de los meses siguientes. Tu contrato lo pide. <a href="#debito">Activarlo ahora</a></p>` : ""}
                   ${p.estado === "en_disputa" ? `<p class="checkout-texto"><span class="solicitud-chip solicitud-chip-proceso">En revisión por tu reporte</span> Roumix retuvo el dinero del propietario mientras revisa el caso.</p>` : ""}
                   <dl class="checkout-datos">
