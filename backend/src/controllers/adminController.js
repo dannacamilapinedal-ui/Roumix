@@ -40,6 +40,38 @@ function patron(valor) {
 }
 
 /**
+ * Comisiones de Roumix por mes (hora de Colombia): los 3 meses anteriores, el actual y los 3 siguientes.
+ * - cobrada: comisión del primer mes (tabla comisiones) + comisión de los cobros mensuales aprobados;
+ * - programada: comisión de los cobros mensuales que el débito automático hará en ese mes.
+ */
+async function comisionesPorMes() {
+  const { rows } = await db.query(`
+    WITH meses AS (
+      SELECT to_char(m, 'YYYY-MM') AS mes
+      FROM generate_series(
+        date_trunc('month', (now() AT TIME ZONE 'America/Bogota')) - interval '3 months',
+        date_trunc('month', (now() AT TIME ZONE 'America/Bogota')) + interval '3 months',
+        interval '1 month') AS m
+    ),
+    cobradas AS (
+      SELECT to_char(created_at AT TIME ZONE 'America/Bogota', 'YYYY-MM') AS mes, monto AS valor
+        FROM comisiones WHERE estado = 'registrada'
+      UNION ALL
+      SELECT to_char(aprobado_en AT TIME ZONE 'America/Bogota', 'YYYY-MM'), comision
+        FROM cobros_mensuales WHERE estado = 'aprobado' AND aprobado_en IS NOT NULL
+    ),
+    programadas AS (
+      SELECT to_char(fecha_cobro, 'YYYY-MM') AS mes, comision AS valor
+        FROM cobros_mensuales WHERE estado IN ('programado', 'en_proceso', 'fallido')
+    )
+    SELECT meses.mes,
+      COALESCE((SELECT sum(valor) FROM cobradas c WHERE c.mes = meses.mes), 0)::int AS cobrada,
+      COALESCE((SELECT sum(valor) FROM programadas p WHERE p.mes = meses.mes), 0)::int AS programada
+    FROM meses ORDER BY meses.mes`);
+  return rows;
+}
+
+/**
  * GET /api/admin/resumen
  */
 async function resumen(req, res) {
@@ -70,9 +102,11 @@ async function resumen(req, res) {
         count(*) FILTER (WHERE p.aprobado_en IS NOT NULL)::int AS registrados,
         count(*) FILTER (WHERE p.estado = 'en_disputa')::int AS en_disputa,
         count(*) FILTER (WHERE p.estado = 'aprobado' AND d.estado = 'pendiente')::int AS por_desembolsar,
-        COALESCE((SELECT sum(monto) FROM comisiones WHERE estado = 'registrada'), 0)::int AS comisiones
+        COALESCE((SELECT sum(monto) FROM comisiones WHERE estado = 'registrada'), 0)::int
+          + COALESCE((SELECT sum(comision) FROM cobros_mensuales WHERE estado = 'aprobado'), 0)::int AS comisiones
       FROM pagos p LEFT JOIN desembolsos d ON d.pago_id = p.id`)
   ]);
+  const porMes = await comisionesPorMes();
 
   const suma = (filas, filtro) => filas.filter(filtro).reduce((t, f) => t + f.total, 0);
   res.json({
@@ -105,7 +139,8 @@ async function resumen(req, res) {
       solicitudes: solicitudes.rows[0],
       conversaciones: conversaciones.rows[0],
       contratos: contratos.rows[0],
-      pagos: pagosRes.rows[0]
+      pagos: pagosRes.rows[0],
+      comisionesPorMes: porMes
     }
   });
 }

@@ -239,11 +239,54 @@ document.addEventListener("DOMContentLoaded", async () => {
         <section class="admin-grupo" aria-label="${titulo}">
           <h2 class="admin-grupo-titulo">${titulo}${i === 0 && pendientes.length === 0 ? ' <span class="admin-al-dia">✓ Todo al día</span>' : ""}</h2>
           <div class="admin-metricas">${(i === 0 && pendientes.length ? pendientes : metricas).map(tarjeta).join("")}</div>
-        </section>`).join("");
+        </section>`).join("") + graficaComisiones(data.comisionesPorMes || []);
       contenedor.querySelectorAll("[data-ir]").forEach(b => b.addEventListener("click", () => abrirPanel(b.dataset.ir)));
     } catch (error) {
       mostrarError(contenedor, error);
     }
+  }
+
+  // Barras de comisiones por mes: lo cobrado (sólido) y lo que el débito automático cobrará (rayado)
+  function graficaComisiones(meses) {
+    if (!meses.length) return "";
+    const nombreMes = (m) => {
+      const [a, mm] = m.split("-").map(Number);
+      return new Date(Date.UTC(a, mm - 1, 15)).toLocaleDateString("es-CO", { month: "short", timeZone: "UTC" }).replace(".", "");
+    };
+    const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "America/Bogota" }).slice(0, 7);
+    const maximo = Math.max(1, ...meses.map((m) => m.cobrada + m.programada));
+    const compacto = (n) => n >= 1000000 ? `$${(n / 1000000).toLocaleString("es-CO", { maximumFractionDigits: 1 })} M` : `$${Math.round(n / 1000)} mil`;
+    const cobradoTotal = meses.reduce((t, m) => t + m.cobrada, 0);
+    const programadoTotal = meses.reduce((t, m) => t + m.programada, 0);
+    const columnas = meses.map((m) => {
+      const total = m.cobrada + m.programada;
+      const tip = [m.cobrada ? `Cobrado: ${formatearPrecioCOP(m.cobrada)}` : "", m.programada ? `Programado: ${formatearPrecioCOP(m.programada)}` : ""].filter(Boolean).join(" · ") || "Sin comisiones";
+      return `
+        <div class="admin-grafica-col${m.mes === hoy ? " admin-grafica-hoy" : ""}" tabindex="0" aria-label="${nombreMes(m.mes)} ${m.mes.slice(0, 4)}: ${tip}">
+          <span class="admin-grafica-valor">${total ? compacto(total) : ""}</span>
+          <div class="admin-grafica-pila">
+            ${m.programada ? `<span class="admin-grafica-barra admin-grafica-programada" style="--h:${(m.programada / maximo) * 100}%"></span>` : ""}
+            ${m.cobrada ? `<span class="admin-grafica-barra admin-grafica-cobrada" style="--h:${(m.cobrada / maximo) * 100}%"></span>` : ""}
+          </div>
+          <span class="admin-grafica-mes">${nombreMes(m.mes)}${m.mes === hoy ? " · hoy" : ""}</span>
+          <span class="admin-grafica-tip" role="tooltip">${escaparHTML(nombreMes(m.mes))} ${m.mes.slice(0, 4)}<br>${escaparHTML(tip)}</span>
+        </div>`;
+    }).join("");
+    return `
+      <section class="admin-grupo admin-grafica" aria-labelledby="titulo-grafica-comisiones">
+        <h2 class="admin-grupo-titulo" id="titulo-grafica-comisiones">Comisiones por mes</h2>
+        <p class="admin-grafica-nota">Cobrado en los últimos meses: <strong>${formatearPrecioCOP(cobradoTotal)}</strong> · Programado por débito automático: <strong>${formatearPrecioCOP(programadoTotal)}</strong></p>
+        <div class="admin-grafica-leyenda" aria-hidden="true">
+          <span><i class="admin-grafica-muestra admin-grafica-cobrada"></i>Cobrado</span>
+          <span><i class="admin-grafica-muestra admin-grafica-programada"></i>Programado</span>
+        </div>
+        <div class="admin-grafica-area">${columnas}</div>
+        <table class="sr-only">
+          <caption>Comisiones de Roumix por mes</caption>
+          <thead><tr><th scope="col">Mes</th><th scope="col">Cobrado</th><th scope="col">Programado</th></tr></thead>
+          <tbody>${meses.map((m) => `<tr><th scope="row">${nombreMes(m.mes)} ${m.mes.slice(0, 4)}</th><td>${formatearPrecioCOP(m.cobrada)}</td><td>${formatearPrecioCOP(m.programada)}</td></tr>`).join("")}</tbody>
+        </table>
+      </section>`;
   }
 
   function actualizarContadorPropietarios(data) {

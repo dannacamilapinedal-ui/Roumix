@@ -8871,3 +8871,63 @@ html[data-tema="oscuro"] .linea-arriendo-punto { background: transparent; }
   .checkout-exito-animado path { animation: none; stroke-dashoffset: 0; }
   .linea-arriendo-paso { animation: none; opacity: 1; }
 }
+
+/* Panel: tarjetas del resumen que llevan a su sección */
+button.admin-metrica { position: relative; transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease; }
+button.admin-metrica::after {
+  content: "→"; position: absolute; top: 14px; right: 16px; font-weight: 800; color: var(--tinta-media);
+  opacity: 0; transform: translateX(-4px); transition: opacity 0.18s ease, transform 0.18s ease;
+}
+button.admin-metrica:hover, button.admin-metrica:focus-visible { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(20, 34, 25, 0.08); }
+button.admin-metrica:hover::after, button.admin-metrica:focus-visible::after { opacity: 1; transform: none; }
+button.admin-metrica:active { transform: translateY(0); }
+
+/* Panel: gráfica de comisiones por mes */
+.admin-grafica { margin-top: 8px; }
+.admin-grafica-nota { margin: -4px 0 10px; font-size: 0.88rem; color: var(--tinta-media); }
+.admin-grafica-leyenda { display: flex; gap: 16px; font-size: 0.82rem; color: var(--tinta-media); margin-bottom: 8px; }
+.admin-grafica-leyenda span { display: inline-flex; align-items: center; gap: 6px; }
+.admin-grafica-muestra { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.admin-grafica-area {
+  display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; align-items: end;
+  background: var(--superficie); border: 1px solid var(--borde-arena); border-radius: var(--radio-lg); padding: 18px 16px 12px;
+}
+.admin-grafica-pila { border-bottom: 1px solid var(--borde-arena); }
+.admin-grafica-col { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; outline: none; border-radius: 8px; }
+.admin-grafica-pila { height: 150px; width: 100%; max-width: 44px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; }
+.admin-grafica-barra { display: block; height: var(--h); min-height: 3px; border-radius: 2px; transform-origin: bottom; animation: rxCrecer 0.6s cubic-bezier(.2,.8,.2,1); }
+.admin-grafica-pila > .admin-grafica-barra:first-child { border-radius: 4px 4px 2px 2px; }
+.admin-grafica-cobrada { background: var(--verde-800); }
+.admin-grafica-programada {
+  background: repeating-linear-gradient(135deg, rgba(46, 107, 79, 0.35) 0 4px, rgba(46, 107, 79, 0.15) 4px 8px);
+  box-shadow: inset 0 0 0 1.5px rgba(46, 107, 79, 0.6);
+}
+.admin-grafica-valor { font-size: 0.78rem; font-weight: 700; color: var(--tinta-fuerte); min-height: 1em; }
+.admin-grafica-mes { font-size: 0.8rem; color: var(--tinta-media); white-space: nowrap; }
+.admin-grafica-mes::first-letter, .admin-grafica-tip::first-letter { text-transform: uppercase; }
+.admin-grafica-hoy .admin-grafica-mes { color: var(--tinta-fuerte); font-weight: 800; }
+.admin-grafica-tip {
+  position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translate(-50%, 4px); z-index: 2;
+  background: var(--tinta-fuerte); color: #fff; font-size: 0.78rem; line-height: 1.4; padding: 6px 10px; border-radius: 8px;
+  white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.admin-grafica-col:hover .admin-grafica-tip, .admin-grafica-col:focus-visible .admin-grafica-tip { opacity: 1; transform: translate(-50%, 0); }
+.admin-grafica-col:focus-visible { box-shadow: 0 0 0 2px var(--acento-naranja); }
+.admin-grafica-col:hover .admin-grafica-barra { filter: brightness(1.12); }
+@keyframes rxCrecer { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+html[data-tema="oscuro"] .admin-grafica-cobrada { background: #6fbf8e; }
+html[data-tema="oscuro"] .admin-grafica-programada {
+  background: repeating-linear-gradient(135deg, rgba(111, 191, 142, 0.35) 0 4px, rgba(111, 191, 142, 0.14) 4px 8px);
+  box-shadow: inset 0 0 0 1.5px rgba(111, 191, 142, 0.6);
+}
+html[data-tema="oscuro"] .admin-grafica-tip { background: #f3efe6; color: #142219; }
+html[data-tema="oscuro"] button.admin-metrica:hover { box-shadow: none; }
+@media (max-width: 560px) {
+  .admin-grafica-area { gap: 4px; padding: 14px 8px 10px; }
+  .admin-grafica-valor { font-size: 0.68rem; }
+  .admin-grafica-mes { font-size: 0.72rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-grafica-barra { animation: none; }
+  button.admin-metrica, button.admin-metrica::after { transition: none; }
+}
