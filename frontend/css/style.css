@@ -8824,3 +8824,10 @@ html[data-tema="oscuro"] .debito-falta { background: rgba(222, 150, 70, 0.14); b
 .admin-aviso-debito ul { margin: 6px 0 0; padding-left: 18px; }
 .admin-aviso-debito a { color: inherit; font-weight: 700; }
 html[data-tema="oscuro"] .admin-aviso-debito { background: rgba(222, 150, 70, 0.14); border-color: rgba(222, 150, 70, 0.4); color: #f0bf85; }
+
+/* Detalle: inmueble que ya no está disponible (arrendado, pausado o inexistente) */
+.detalle-no-disponible { max-width: 620px; margin: 56px auto 80px; padding: 0 16px; }
+.detalle-no-disponible h1 { font-size: clamp(1.4rem, 3vw, 1.9rem); margin: 0 0 10px; color: var(--tinta-fuerte); }
+.detalle-no-disponible p { margin: 0 auto 24px; max-width: 440px; color: var(--tinta-media); line-height: 1.55; }
+.detalle-no-disponible-acciones { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.detalle-no-disponible-acciones a { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }

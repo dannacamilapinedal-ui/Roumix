@@ -889,7 +889,7 @@
           contenedor.classList.remove("pago-checkout");
           const desglose = `
             <div class="pago-fila"><span>Primer mes que paga el estudiante</span><strong>${pesos(p.monto)}</strong></div>
-            <div class="pago-fila pago-resta"><span>Comisión Roumix (${Number(p.porcentaje_comision)} %, una sola vez)</span><strong>− ${pesos(p.comision)}</strong></div>
+            <div class="pago-fila pago-resta"><span>Comisión Roumix (${Number(p.porcentaje_comision)} %${/^2026-/.test(p.version_condiciones || "") ? ", una sola vez" : " del primer mes"})</span><strong>− ${pesos(p.comision)}</strong></div>
             <div class="pago-fila pago-total"><span>${p.mi_rol === "admin" ? "Desembolso al propietario" : "Tu desembolso"}</span><strong>${pesos(p.neto_propietario)}</strong></div>
             <p class="pago-nota">Desembolso: <strong>${escaparHTML(DESEMBOLSO[p.desembolso_estado] || "Se registra cuando el estudiante pague")}</strong>${p.desembolso_referencia ? ` · ${escaparHTML(p.desembolso_referencia)}` : ""}${p.version_condiciones ? ` · Condiciones aceptadas: versión ${escaparHTML(p.version_condiciones)}` : ""}</p>`;
           contenedor.innerHTML = `

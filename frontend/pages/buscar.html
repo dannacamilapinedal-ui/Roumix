@@ -332,6 +332,26 @@
         render();
       }
 
+      // Sin resultados: se consulta si hay inmuebles con filtros más amplios y se ofrece verlos con un clic
+      const TODOS = { universidad: "todas", precioMax: 9999999 };
+      async function sugerirAlternativas() {
+        const consulta = consultaActual;
+        let amplios = [];
+        try {
+          amplios = await RoumixAPI.getInmuebles({ ...FILTROS_INICIALES, ...TODOS });
+        } catch (e) { /* si falla, se muestra el aviso general */ }
+        if (consulta !== consultaActual || inmuebles.length) return;
+        if (amplios.length) {
+          const n = amplios.length;
+          mostrarAviso("buscar", "No hay inmuebles con estos filtros",
+            `Pero hay ${n} ${n === 1 ? "inmueble disponible" : "inmuebles disponibles"} en Villavicencio con otra universidad u otro presupuesto.`,
+            { texto: `Ver ${n === 1 ? "el inmueble" : `los ${n} inmuebles`}`, accion: () => resetFiltros(TODOS) });
+        } else {
+          mostrarAviso("buscar", "Por ahora no hay inmuebles disponibles",
+            "Todos los inmuebles publicados ya están arrendados. Pronto habrá nuevas publicaciones: vuelve más tarde.", null);
+        }
+      }
+
       function botonComparar(item) {
         const seleccionado = RoumixComparador.contiene(item.id);
         return `
@@ -375,9 +395,9 @@
 
         if (inmuebles.length === 0) {
           mostrarAviso("buscar", "No se encontraron inmuebles con estos filtros",
-            "Intenta ajustando el presupuesto o seleccionando otra universidad.",
-            { texto: "Restablecer filtros", accion: resetFiltros });
+            "Estamos revisando si hay opciones con otros filtros…", null);
           actualizarPines([]);
+          sugerirAlternativas();
           return;
         }
 
@@ -507,12 +527,13 @@
         boton.outerHTML = botonComparar({ id });
       });
 
-      function resetFiltros() {
-        filtros = { ...FILTROS_INICIALES };
+      // cambios: filtros que reemplazan a los iniciales (p. ej. "ver todos" desde el aviso sin resultados)
+      function resetFiltros(cambios = {}) {
+        filtros = { ...FILTROS_INICIALES, ...(cambios && !(cambios instanceof Event) ? cambios : {}) };
         soloGuardados = false;
         inputTexto.value = "";
-        selectUni.value = FILTROS_INICIALES.universidad;
-        selectPrecio.value = String(FILTROS_INICIALES.precioMax);
+        selectUni.value = filtros.universidad;
+        selectPrecio.value = String(filtros.precioMax);
         selectOrden.value = FILTROS_INICIALES.orden;
         document.querySelectorAll(".pill-btn").forEach(p => {
           const activo = p.dataset.tipo === "todos";

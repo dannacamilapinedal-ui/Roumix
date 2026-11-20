@@ -239,12 +239,24 @@
       }
 
       if (!item) {
-        document.getElementById("det-titulo").textContent = "Inmueble no disponible";
-        document.getElementById("det-ubicacion").textContent = mensajeError;
-        document.getElementById("det-descripcion").innerHTML = 'Vuelve a la <a href="buscar.html">búsqueda</a> para ver los inmuebles disponibles.';
-        document.getElementById("det-precio").innerHTML = "<small>No disponible</small>";
-        document.getElementById("galeria").hidden = true;
-        document.getElementById("btn-wa-directo").disabled = true;
+        // En vez de la ficha vacía, un aviso claro con el camino de vuelta a la búsqueda
+        document.title = "Inmueble no disponible — Roumix";
+        const main = document.querySelector("main");
+        main.innerHTML = `
+          <section class="detalle-no-disponible">
+            <div role="status" class="rx-vacio">
+              ${ilustracionVacia("buscar")}
+              <h1>Este inmueble ya no está disponible</h1>
+              <p></p>
+              <div class="detalle-no-disponible-acciones">
+                <a href="buscar.html" class="btn-search-action">Ver inmuebles disponibles</a>
+                <a href="solicitudes.html" class="btn-card-action">Mis solicitudes</a>
+              </div>
+            </div>
+          </section>`;
+        main.querySelector(".rx-vacio p").textContent = mensajeError === "Este inmueble no existe, fue pausado o ya fue arrendado."
+          ? "Puede que ya lo hayan arrendado o que el propietario lo haya pausado. Hay más opciones esperándote en la búsqueda."
+          : mensajeError;
         return;
       }
 
