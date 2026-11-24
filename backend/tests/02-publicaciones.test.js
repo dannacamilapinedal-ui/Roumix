@@ -131,6 +131,12 @@ const base = { titulo: 'Habitación de prueba módulo 2', tipo: 'habitacion', pr
     await db.query('DELETE FROM conversaciones WHERE solicitud_id = $1', [solContrato]);
     await db.query('DELETE FROM solicitudes WHERE id = $1', [solContrato]);
 
+    // 3d. Si ya está arrendada, retirarla tiene otros motivos ("la arrendé por fuera" ya no aplica)
+    await db.query("UPDATE inmuebles SET estado = 'arrendado' WHERE id = $1", [id]);
+    e = await falla(() => inm.eliminarInmueble(req(prop, { params: { id }, body: motivoRet }), res()));
+    ok(e && e.status === 400 && /termino_arriendo/.test(e.message), 'Retirar una arrendada con "la arrendé por fuera" → 400 (otros motivos)');
+    await db.query("UPDATE inmuebles SET estado = 'disponible' WHERE id = $1", [id]);
+
     // 4. Retirar (antes era borrar): también exige motivo y explicación
     e = await falla(() => inm.eliminarInmueble(req(prop, { params: { id } }), res()));
     ok(e && e.status === 400, 'Retirar sin motivo → 400');

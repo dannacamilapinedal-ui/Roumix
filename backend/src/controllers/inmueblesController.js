@@ -18,6 +18,15 @@ const MOTIVOS_RETIRO = {
   inconforme: 'No estoy conforme con Roumix',
   otro: 'Otro motivo'
 };
+// Si ya está arrendada no tiene sentido "la arrendé por fuera": el retiro es porque el arriendo terminó u otra razón
+const MOTIVOS_RETIRO_ARRENDADA = {
+  termino_arriendo: 'El arriendo terminó y no la volveré a ofrecer',
+  ya_no_arrienda: 'Ya no la voy a arrendar más (la usaré, la vendí o está en obra)',
+  duplicada: 'Está repetida o tiene errores',
+  inconforme: 'No estoy conforme con Roumix',
+  otro: 'Otro motivo'
+};
+const catalogoRetiro = (estado) => (estado === 'arrendado' ? MOTIVOS_RETIRO_ARRENDADA : MOTIVOS_RETIRO);
 // Motivos que el equipo debe revisar: posible arriendo por fuera de la plataforma o un propietario inconforme
 const MOTIVOS_A_REVISAR = ['otro_medio', 'conocido', 'inconforme'];
 // Con el contrato ya en marcha, el inmueble no se puede dar de baja sin hablar con el equipo
@@ -476,10 +485,10 @@ async function solicitarBaja(req, res) {
   const body = req.body || {};
   const ACCIONES = { arrendado: ['marcarla como arrendada', MOTIVOS_ARRENDADO], retirar: ['retirarla', MOTIVOS_RETIRO] };
   if (!Object.hasOwn(ACCIONES, body.accion)) throw errorValidacion('accion debe ser arrendado o retirar.');
-  const [verbo, catalogo] = ACCIONES[body.accion];
-  const justificacion = justificacionBaja(body, catalogo);
-
   const { rows: [inm] } = await db.query('SELECT id, titulo, estado FROM inmuebles WHERE id = $1 AND propietario_id = $2', [id, req.usuario.id]);
+  const [verbo, catalogoBase] = ACCIONES[body.accion];
+  const catalogo = body.accion === 'retirar' && inm ? catalogoRetiro(inm.estado) : catalogoBase;
+  const justificacion = justificacionBaja(body, catalogo);
   if (!inm) return noEncontrado(res, id);
   const { rows: [sol] } = await db.query(
     'SELECT id, estado FROM solicitudes WHERE inmueble_id = $1 AND estado = ANY($2::varchar[]) ORDER BY id LIMIT 1',
@@ -615,8 +624,8 @@ async function cambiarEstado(req, res) {
  */
 async function eliminarInmueble(req, res) {
   const id = idDeRuta(req);
-  const justificacion = justificacionBaja(req.body || {}, MOTIVOS_RETIRO);
   const propio = await db.query('SELECT estado FROM inmuebles WHERE id = $1 AND propietario_id = $2', [id, req.usuario.id]);
+  const justificacion = justificacionBaja(req.body || {}, catalogoRetiro(propio.rows[0] && propio.rows[0].estado));
   if (propio.rows.length && propio.rows[0].estado !== 'retirado') await verificarSinContratoEnCurso(id);
   const result = await db.query(
     `UPDATE inmuebles SET estado = 'retirado', retirado_en = now()

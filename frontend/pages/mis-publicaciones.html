@@ -365,6 +365,7 @@
           titulo: "¿Cómo se arrendó?",
           intro: "Si el estudiante pagó a través de Roumix, la publicación se marca sola como arrendada. Usa esta opción solo si se arrendó por otro medio.",
           boton: "Marcar como arrendada",
+          ejemplo: "Ej: Un estudiante me contactó por otra página y ya se mudó.",
           opciones: {
             otro_medio: "La arrendé por fuera de Roumix (otra página, aviso o red social)",
             conocido: "Se la arrendé a un familiar o conocido",
@@ -375,9 +376,24 @@
           titulo: "¿Por qué la retiras?",
           intro: "Al retirarla deja de mostrarse para siempre y ya no podrás editarla ni volver a publicarla. Se guarda como registro en tu cuenta.",
           boton: "Retirar publicación",
+          ejemplo: "Ej: Voy a remodelar el apartamento y no lo arrendaré este año.",
           opciones: {
             otro_medio: "La arrendé por fuera de Roumix",
             ya_no_arrienda: "Ya no la voy a arrendar (la usaré, la vendí o está en obra)",
+            duplicada: "Está repetida o tiene errores",
+            inconforme: "No estoy conforme con Roumix",
+            otro: "Otro motivo"
+          }
+        },
+        // Retirar una publicación que ya está arrendada: otras razones (ya no aplica "la arrendé por fuera")
+        retirarArrendada: {
+          titulo: "¿Por qué retiras esta publicación arrendada?",
+          intro: "Ya está arrendada. Al retirarla deja de aparecer para siempre y ya no podrás volver a publicarla cuando quede libre. Se guarda como registro en tu cuenta.",
+          boton: "Retirar publicación",
+          ejemplo: "Ej: El estudiante terminó el semestre y la voy a usar para mi familia.",
+          opciones: {
+            termino_arriendo: "El arriendo terminó y no la volveré a ofrecer",
+            ya_no_arrienda: "Ya no la voy a arrendar más (la usaré, la vendí o está en obra)",
             duplicada: "Está repetida o tiene errores",
             inconforme: "No estoy conforme con Roumix",
             otro: "Otro motivo"
@@ -398,13 +414,14 @@
       let bajaActual = null;
 
       function abrirDialogoBaja(item, accion) {
-        const conf = MOTIVOS_BAJA[accion];
+        const conf = MOTIVOS_BAJA[accion === "retirar" && item.estado === "arrendado" ? "retirarArrendada" : accion];
         bajaActual = { item, accion, aRoumix: false };
         document.getElementById("baja-titulo").textContent = conf.titulo;
         document.getElementById("baja-intro").textContent = `«${item.titulo}». ${conf.intro}`;
         document.getElementById("baja-opciones").innerHTML = Object.entries(conf.opciones).map(([valor, texto]) => `
           <label class="baja-opcion"><input type="radio" name="motivo-baja" value="${valor}"><span>${escaparHTML(texto)}</span></label>`).join("");
         detalleBaja.value = "";
+        detalleBaja.placeholder = conf.ejemplo;
         document.getElementById("baja-cuenta").textContent = "0";
         errorBaja.hidden = true;
         avisoBaja.hidden = true;
