@@ -107,6 +107,10 @@ async function resumen(req, res) {
       FROM pagos p LEFT JOIN desembolsos d ON d.pago_id = p.id`)
   ]);
   const porMes = await comisionesPorMes();
+  // Publicaciones dadas de baja por el propietario por fuera de Roumix en los últimos 30 días
+  const { rows: [bajas] } = await db.query(
+    `SELECT count(*)::int AS fuera FROM moderacion_historial
+     WHERE motivo IN ('otro_medio', 'conocido') AND created_at > now() - interval '30 days'`);
 
   const suma = (filas, filtro) => filas.filter(filtro).reduce((t, f) => t + f.total, 0);
   res.json({
@@ -140,6 +144,7 @@ async function resumen(req, res) {
       conversaciones: conversaciones.rows[0],
       contratos: contratos.rows[0],
       pagos: pagosRes.rows[0],
+      bajasFueraRoumix: bajas.fuera,
       comisionesPorMes: porMes
     }
   });
@@ -196,8 +201,14 @@ async function listarInmuebles(req, res) {
   const result = await db.query(
     `SELECT i.id, i.titulo, i.barrio, i.precio, i.estado, i.moderacion, i.imagen_principal, i.revisado_en,
             i.created_at, u.nombre AS propietario_nombre, u.email AS propietario_email,
-            (SELECT count(*)::int FROM reportes r WHERE r.inmueble_id = i.id AND r.estado = 'pendiente') AS reportes_pendientes
+            (SELECT count(*)::int FROM reportes r WHERE r.inmueble_id = i.id AND r.estado = 'pendiente') AS reportes_pendientes,
+            baja.motivo AS baja_motivo, baja.justificacion AS baja_justificacion, baja.accion AS baja_accion
      FROM inmuebles i
+     LEFT JOIN LATERAL (
+       SELECT h.motivo, h.justificacion, h.accion FROM moderacion_historial h
+       WHERE h.inmueble_id = i.id AND h.accion IN ('retirada_por_propietario', 'arrendada_por_propietario') AND h.motivo IS NOT NULL
+       ORDER BY h.created_at DESC LIMIT 1
+     ) baja ON i.estado IN ('arrendado', 'retirado')
      LEFT JOIN usuarios u ON u.id = i.propietario_id
      ${condiciones.length ? 'WHERE ' + condiciones.join(' AND ') : ''}
      ORDER BY reportes_pendientes DESC, i.created_at DESC

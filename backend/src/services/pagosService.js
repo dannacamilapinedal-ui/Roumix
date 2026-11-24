@@ -93,11 +93,20 @@ async function habilitarPago(cliente, solicitudId) {
  * deja de verse en las búsquedas y no recibe solicitudes nuevas.
  */
 async function marcarArrendado(cliente, solicitudId) {
-  await cliente.query(
+  const { rows } = await cliente.query(
     `UPDATE inmuebles i SET estado = 'arrendado'
-     FROM solicitudes s WHERE s.id = $1 AND i.id = s.inmueble_id AND i.estado IN ('disponible', 'pausado')`,
+     FROM solicitudes s WHERE s.id = $1 AND i.id = s.inmueble_id AND i.estado IN ('disponible', 'pausado')
+     RETURNING i.id, i.titulo, i.propietario_id`,
     [solicitudId]
   );
+  // Queda en el historial que esta vez se arrendó con Roumix (las bajas a mano llevan el motivo del propietario)
+  if (rows.length) {
+    await cliente.query(
+      `INSERT INTO moderacion_historial (inmueble_id, inmueble_titulo, usuario_afectado_id, admin_id, accion, motivo, justificacion)
+       VALUES ($1, $2, $3, NULL, 'arrendada_con_roumix', 'pagado_roumix', $4)`,
+      [rows[0].id, rows[0].titulo, rows[0].propietario_id, `Arrendada con Roumix: primer mes pagado en la solicitud #${solicitudId}.`]
+    );
+  }
 }
 
 /**

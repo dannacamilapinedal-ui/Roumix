@@ -18,6 +18,8 @@ function errorHandler(err, req, res, next) {
     message: status === 500 ? 'Error interno del servidor.' : err.message
   };
   if (status === 500 && process.env.NODE_ENV !== 'production') respuesta.detalle = err.message;
+  // Código legible por la página para ofrecer el siguiente paso (p. ej. "contrato_en_curso")
+  if (status !== 500 && err.codigo) respuesta.codigo = err.codigo;
 
   res.status(status).json(respuesta);
 }

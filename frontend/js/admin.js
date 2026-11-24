@@ -29,7 +29,7 @@ const ETIQUETAS = {
   estado: { disponible: "Disponible", pausado: "Pausado por el propietario", arrendado: "Arrendado", retirado: "Retirado por el propietario" },
   accion: {
     pausa_preventiva: "Pausa preventiva por reporte", aprobar: "Aprobada", pausar: "Pausada por Roumix para revisión",
-    retirada_por_propietario: "Retirada por el propietario", solicitar_cambios: "Cambios solicitados",
+    retirada_por_propietario: "Retirada por el propietario", arrendada_por_propietario: "Marcada arrendada por el propietario", baja_solicitada: "Pidió darla de baja con un contrato en curso", arrendada_con_roumix: "Arrendada con Roumix (primer mes pagado)", solicitar_cambios: "Cambios solicitados",
     rechazar: "Rechazada", retirar: "Retirada", correcciones_enviadas: "Correcciones enviadas por el propietario",
     cuenta_suspendida: "Cuenta suspendida", cuenta_reactivada: "Cuenta reactivada",
     rol_admin_asignado: "Rol de administrador asignado", rol_admin_retirado: "Rol de administrador retirado",
@@ -211,7 +211,8 @@ document.addEventListener("DOMContentLoaded", async () => {
           ["Publicaciones en revisión", data.inmuebles.enRevision, atencion(data.inmuebles.enRevision), "inmuebles"],
           ["Contratos en borrador", data.contratos.borradores, atencion(data.contratos.borradores), "contratos"],
           ["Desembolsos por hacer", data.pagos.por_desembolsar, atencion(data.pagos.por_desembolsar), "pagos"],
-          ["Pagos en disputa", data.pagos.en_disputa, atencion(data.pagos.en_disputa), "pagos"]
+          ["Pagos en disputa", data.pagos.en_disputa, atencion(data.pagos.en_disputa), "pagos"],
+          ["Bajas por fuera de Roumix (30 días)", data.bajasFueraRoumix || 0, atencion(data.bajasFueraRoumix), "inmuebles"]
         ]],
         ["La plataforma", [
           ["Estudiantes", data.usuarios.estudiantes, "neutro", "usuarios"],
@@ -1554,11 +1555,12 @@ document.addEventListener("DOMContentLoaded", async () => {
           titulo: escaparHTML(i.titulo),
           sub: `${escaparHTML(i.barrio)} · ${formatearPrecioCOP(i.precio)}/mes`,
           estado: chip(ETIQUETAS.moderacion[i.moderacion], i.moderacion) + (i.revisado_en ? "<small>✓ revisada</small>" : ""),
-          destacada: i.moderacion === "en_revision" || i.reportes_pendientes > 0,
+          destacada: i.moderacion === "en_revision" || i.reportes_pendientes > 0 || ["otro_medio", "conocido"].includes(i.baja_motivo),
           datos: [
             ["Propietario", `${escaparHTML(i.propietario_nombre || "Demostración (sin propietario)")}<small>${escaparHTML(i.propietario_email || "")}</small>`],
             ["Estado comercial", escaparHTML(ETIQUETAS.estado[i.estado])],
-            ["Reportes", i.reportes_pendientes ? chip(`${i.reportes_pendientes} pendiente(s)`, "pendiente") : "Ninguno pendiente"]
+            ["Reportes", i.reportes_pendientes ? chip(`${i.reportes_pendientes} pendiente(s)`, "pendiente") : "Ninguno pendiente"],
+            ...(i.baja_justificacion ? [["Motivo del propietario", `${["otro_medio", "conocido"].includes(i.baja_motivo) ? chip("Por fuera de Roumix", "pendiente") : ""}<small>${escaparHTML(i.baja_justificacion)}</small>`]] : [])
           ],
           acciones: `<button type="button" class="btn-card-action" data-inmueble="${i.id}">Revisar</button>`
         })).join(""))}`;

@@ -78,13 +78,68 @@ const base = { titulo: 'Habitación de prueba módulo 2', tipo: 'habitacion', pr
     const rep2 = (await db.query('SELECT estado FROM reportes WHERE inmueble_id = $1', [id])).rows[0];
     ok(rep2.estado === 'no_procede', 'Al aprobar después, el reporte se resuelve como "no procede"');
 
-    // 4. Retirar (antes era borrar)
-    r = res(); await inm.eliminarInmueble(req(prop, { params: { id } }), r);
+    // 3a. Las publicaciones no pueden traer teléfonos, correos, redes ni enlaces
+    for (const [texto, nombre] of [
+      ['Llámame al 310 123 4567 para verla', 'un celular'],
+      ['Escríbeme a dueño.prueba@gmail.com', 'un correo'],
+      ['Más info por WhatsApp', 'WhatsApp'],
+      ['Fotos en www.misarriendos.com', 'un enlace']
+    ]) {
+      e = await falla(() => inm.actualizarInmueble(req(prop, { params: { id }, body: { ...base, descripcion: texto } }), res()));
+      ok(e && e.status === 400 && e.codigo === 'datos_de_contacto', `Descripción con ${nombre} → 400 (no se guarda)`);
+    }
+    e = await falla(() => inm.actualizarInmueble(req(prop, { params: { id }, body: { ...base, titulo: 'Habitación 3101234567' } }), res()));
+    ok(e && e.status === 400 && /título/.test(e.message), 'Teléfono en el título → 400 e indica el campo');
+    r = res(); await inm.actualizarInmueble(req(prop, { params: { id }, body: { ...base, capacidad: 3, descripcion: 'Canon de $650.000, a 600 m de la U, estrato 3, contrato de 6 meses.' } }), r);
+    ok(r.codigo === 200, 'Precios, distancias y estrato no se confunden con teléfonos');
+
+    // 3b. Marcar arrendada a mano exige motivo y explicación; si es por fuera de Roumix, avisa al equipo
+    const motivoArr = { estado: 'arrendado', motivo: 'otro_medio', detalle: 'Un estudiante me escribió por Facebook y se la arrendé.' };
+    e = await falla(() => inm.cambiarEstado(req(prop, { params: { id }, body: { estado: 'arrendado' } }), res()));
+    ok(e && e.status === 400 && /motivo/i.test(e.message), 'Marcar arrendada sin motivo → 400');
+    e = await falla(() => inm.cambiarEstado(req(prop, { params: { id }, body: { ...motivoArr, motivo: 'porque si' } }), res()));
+    ok(e && e.status === 400, 'Motivo que no existe → 400');
+    e = await falla(() => inm.cambiarEstado(req(prop, { params: { id }, body: { ...motivoArr, detalle: 'corto' } }), res()));
+    ok(e && e.status === 400 && /15/.test(e.message), 'Explicación de menos de 15 caracteres → 400');
+    r = res(); await inm.cambiarEstado(req(prop, { params: { id }, body: motivoArr }), r);
+    const histArr = (await db.query("SELECT motivo, justificacion FROM moderacion_historial WHERE inmueble_id = $1 AND accion = 'arrendada_por_propietario'", [id])).rows[0];
+    ok(r.codigo === 200 && r.cuerpo.data.estado === 'arrendado' && histArr && histArr.motivo === 'otro_medio' && /Facebook/.test(histArr.justificacion),
+      'Con motivo y explicación → arrendada; el motivo queda en el historial');
+    const avisosEquipo = (await db.query("SELECT count(*)::int n FROM notificaciones n JOIN usuarios u ON u.id = n.usuario_id WHERE u.rol = 'admin' AND n.tipo = 'publicacion' AND n.titulo LIKE $1", [`%${base.titulo}%`])).rows[0].n;
+    ok(avisosEquipo >= 1, 'Arrendada por fuera de Roumix → aviso al equipo en el panel');
+    r = res(); await inm.cambiarEstado(req(prop, { params: { id }, body: { estado: 'disponible' } }), r);
+    ok(r.codigo === 200 && r.cuerpo.data.estado === 'disponible', 'Volver a publicarla no pide motivo');
+
+    // 3c. Con un contrato en curso no se da de baja: la explicación le llega al equipo en Mensajes
+    const solContrato = (await db.query(
+      `INSERT INTO solicitudes (estudiante_id, propietario_id, inmueble_id, inmueble_titulo, canon_mensual, fecha_ingreso, duracion_meses, personas, estado)
+       VALUES ($1, $2, $3, $4, 650000, CURRENT_DATE + 10, 6, 1, 'contrato_pendiente') RETURNING id`,
+      [admin.id, idPrueba, id, base.titulo])).rows[0].id;
+    const motivoRet = { motivo: 'otro_medio', detalle: 'El estudiante y yo nos arreglamos por otro lado.' };
+    e = await falla(() => inm.cambiarEstado(req(prop, { params: { id }, body: { estado: 'arrendado', ...motivoRet } }), res()));
+    ok(e && e.status === 409 && e.codigo === 'contrato_en_curso', 'Marcar arrendada con un contrato en curso → 409 "contrato_en_curso"');
+    e = await falla(() => inm.eliminarInmueble(req(prop, { params: { id }, body: motivoRet }), res()));
+    ok(e && e.status === 409 && e.codigo === 'contrato_en_curso', 'Retirar con un contrato en curso → 409; la publicación sigue igual');
+    r = res(); await inm.solicitarBaja(req(prop, { params: { id }, body: { accion: 'retirar', ...motivoRet } }), r);
+    const hilo = (await db.query('SELECT c.id, c.estado, m.cuerpo FROM conversaciones c JOIN mensajes m ON m.conversacion_id = c.id WHERE c.usuario_id = $1 AND c.solicitud_id = $2', [idPrueba, solContrato])).rows[0];
+    const sigue = (await db.query('SELECT estado FROM inmuebles WHERE id = $1', [id])).rows[0].estado;
+    ok(r.codigo === 201 && hilo && hilo.estado === 'pendiente' && /otro lado/.test(hilo.cuerpo) && sigue === 'disponible',
+      'Enviar a Roumix → conversación pendiente con el equipo; el inmueble no cambia');
+    ok((await db.query("SELECT 1 FROM moderacion_historial WHERE inmueble_id = $1 AND accion = 'baja_solicitada'", [id])).rowCount === 1, 'Queda en el historial: "baja_solicitada"');
+    e = await falla(() => inm.solicitarBaja(req(prop, { params: { id }, body: { accion: 'retirar', ...motivoRet } }), res()));
+    ok(e && e.status === 429, 'La misma solicitud dos veces el mismo día → 429');
+    await db.query('DELETE FROM conversaciones WHERE solicitud_id = $1', [solContrato]);
+    await db.query('DELETE FROM solicitudes WHERE id = $1', [solContrato]);
+
+    // 4. Retirar (antes era borrar): también exige motivo y explicación
+    e = await falla(() => inm.eliminarInmueble(req(prop, { params: { id } }), res()));
+    ok(e && e.status === 400, 'Retirar sin motivo → 400');
+    r = res(); await inm.eliminarInmueble(req(prop, { params: { id }, body: { motivo: 'ya_no_arrienda', detalle: 'La voy a usar para mi hija que entra a la U.' } }), r);
     const ret = (await db.query('SELECT estado, retirado_en, galeria FROM inmuebles WHERE id = $1', [id])).rows[0];
     ok(r.codigo === 200 && ret && ret.estado === 'retirado' && ret.retirado_en, 'Retirar → la fila se conserva con estado "retirado" y fecha');
     ok(ret.galeria.length === 1 && borradas.length === 0, 'Las fotos se conservan (no se borran de Storage)');
-    const hist = (await db.query("SELECT 1 FROM moderacion_historial WHERE inmueble_id = $1 AND accion = 'retirada_por_propietario'", [id])).rowCount;
-    ok(hist === 1, 'Queda en el historial: "retirada_por_propietario"');
+    const hist = (await db.query("SELECT motivo FROM moderacion_historial WHERE inmueble_id = $1 AND accion = 'retirada_por_propietario'", [id])).rows;
+    ok(hist.length === 1 && hist[0].motivo === 'ya_no_arrienda', 'Queda en el historial: "retirada_por_propietario" con su motivo');
     r = res(); await inm.getInmueblePorId(req(null, { params: { id } }), r);
     ok(r.codigo === 404, 'Retirada: no aparece en el detalle público');
     r = res(); await inm.getInmuebles(req(null), r);
@@ -93,7 +148,7 @@ const base = { titulo: 'Habitación de prueba módulo 2', tipo: 'habitacion', pr
     ok(r.cuerpo.data.some((i) => i.id === id && i.estado === 'retirado'), 'Sigue en "Mis publicaciones" como registro');
 
     // 5. Una retirada ya no se toca
-    r = res(); await inm.eliminarInmueble(req(prop, { params: { id } }), r);
+    r = res(); await inm.eliminarInmueble(req(prop, { params: { id }, body: { motivo: 'duplicada', detalle: 'Prueba de retiro repetido del inmueble.' } }), r);
     ok(r.codigo === 409, 'Retirar dos veces → 409');
     e = await falla(() => inm.actualizarInmueble(req(prop, { params: { id }, body: { ...base, capacidad: 4 } }), res()));
     ok(e && e.status === 409, 'Editar una retirada → 409');
@@ -101,7 +156,7 @@ const base = { titulo: 'Habitación de prueba módulo 2', tipo: 'habitacion', pr
     ok(e && e.status === 409, 'Reactivar una retirada → 409');
 
     // 6. Otro propietario no puede retirar inmuebles ajenos
-    r = res(); await inm.eliminarInmueble(req(admin, { params: { id } }), r);
+    r = res(); await inm.eliminarInmueble(req(admin, { params: { id }, body: { motivo: 'duplicada', detalle: 'Prueba de retiro repetido del inmueble.' } }), r);
     ok(r.codigo === 404, 'Retirar un inmueble ajeno → 404 (no revela nada)');
 
     // 7. Las publicaciones reales siguen visibles
@@ -115,6 +170,7 @@ const base = { titulo: 'Habitación de prueba módulo 2', tipo: 'habitacion', pr
       await db.query('DELETE FROM inmuebles WHERE id = $1', [id]);
     }
     await db.query('DELETE FROM moderacion_historial WHERE usuario_afectado_id = $1', [idPrueba]).catch(() => {});
+    await db.query("DELETE FROM notificaciones WHERE tipo = 'publicacion' AND titulo LIKE $1", [`%${base.titulo}%`]).catch(() => {});
     await db.query('DELETE FROM auth.users WHERE id = $1', [idPrueba]);
     const quedan = (await db.query('SELECT count(*)::int n FROM usuarios WHERE id = $1', [idPrueba])).rows[0].n;
     console.log(quedan === 0 ? '🧹 Datos de prueba borrados' : '⚠️ Quedó el usuario de prueba');

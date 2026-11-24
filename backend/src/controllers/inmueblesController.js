@@ -1,5 +1,27 @@
 const db = require('../config/db');
 const fotos = require('../services/fotosService');
+const { crearAviso } = require('../services/avisosService');
+const { exigirSinContacto } = require('../services/contactoService');
+const notificaciones = require('../services/notificacionesService');
+
+// Dar de baja una publicación (marcarla arrendada a mano o retirarla) exige un motivo y una
+// explicación: así el equipo sabe si se arrendó por fuera de Roumix y puede hacer seguimiento.
+const MOTIVOS_ARRENDADO = {
+  otro_medio: 'La arrendé por fuera de Roumix (otra página, aviso o red social)',
+  conocido: 'Se la arrendé a un familiar o conocido',
+  otro: 'Otro motivo'
+};
+const MOTIVOS_RETIRO = {
+  otro_medio: 'La arrendé por fuera de Roumix',
+  ya_no_arrienda: 'Ya no la voy a arrendar (la usaré, la vendí o está en obra)',
+  duplicada: 'Está repetida o tiene errores',
+  inconforme: 'No estoy conforme con Roumix',
+  otro: 'Otro motivo'
+};
+// Motivos que el equipo debe revisar: posible arriendo por fuera de la plataforma o un propietario inconforme
+const MOTIVOS_A_REVISAR = ['otro_medio', 'conocido', 'inconforme'];
+// Con el contrato ya en marcha, el inmueble no se puede dar de baja sin hablar con el equipo
+const ESTADOS_CON_CONTRATO = ['contrato_pendiente', 'contrato_formalizado', 'pago_pendiente'];
 
 const TIPOS = ['habitacion', 'apartaestudio', 'apartamento'];
 const TIPO_LABELS = { habitacion: 'Habitación', apartaestudio: 'Apartaestudio', apartamento: 'Apartamento' };
@@ -108,7 +130,7 @@ function validarInmueble(body) {
     Number(body.longitud) < ZONA.lngMin || Number(body.longitud) > ZONA.lngMax;
   if (fueraDeZona) throw errorValidacion('La ubicación debe estar en Villavicencio o sus alrededores.');
 
-  return {
+  const datos = {
     titulo: textoObligatorio(body.titulo, 'titulo', 200),
     tipo,
     tipoLabel: TIPO_LABELS[tipo],
@@ -131,6 +153,13 @@ function validarInmueble(body) {
     latitud: numeroOpcional(body.latitud, 'latitud', ZONA.latMin, ZONA.latMax),
     longitud: numeroOpcional(body.longitud, 'longitud', ZONA.lngMin, ZONA.lngMax)
   };
+  // Lo que ve el estudiante no puede traer teléfonos, correos, redes ni enlaces
+  exigirSinContacto({
+    'el título': datos.titulo, 'la descripción': datos.descripcion, 'el barrio': datos.barrio,
+    'el transporte': datos.transporte, 'el área': datos.area, 'el contrato mínimo': datos.contratoMinimo,
+    '«disponible desde»': datos.disponibleDesde, 'las comodidades': datos.amenidades
+  });
+  return datos;
 }
 
 const ORDENES = {
@@ -409,16 +438,159 @@ async function actualizarInmueble(req, res) {
 }
 
 /**
- * PATCH /api/inmuebles/:id/estado  { estado: disponible | pausado | arrendado }
+ * Motivo y explicación obligatorios para dar de baja una publicación.
+ * Devuelve { motivo, detalle, texto } (texto = "etiqueta: explicación", para el historial).
+ */
+function justificacionBaja(body, catalogo) {
+  const motivo = typeof body.motivo === 'string' ? body.motivo : '';
+  if (!Object.hasOwn(catalogo, motivo)) {
+    throw errorValidacion(`Elige el motivo: ${Object.keys(catalogo).join(', ')}.`);
+  }
+  const detalle = typeof body.detalle === 'string' ? body.detalle.trim().replace(/\s+/g, ' ') : '';
+  if (detalle.length < 15) throw errorValidacion('Cuéntanos con tus palabras qué pasó (mínimo 15 caracteres).');
+  if (detalle.length > 500) throw errorValidacion('La explicación admite máximo 500 caracteres.');
+  return { motivo, detalle, texto: `${catalogo[motivo]}: ${detalle}` };
+}
+
+/** Si hay un contrato en marcha con un estudiante, la publicación no se puede dar de baja. */
+async function verificarSinContratoEnCurso(inmuebleId) {
+  const { rows } = await db.query(
+    'SELECT id FROM solicitudes WHERE inmueble_id = $1 AND estado = ANY($2::varchar[]) ORDER BY id LIMIT 1',
+    [inmuebleId, ESTADOS_CON_CONTRATO]
+  );
+  if (rows.length) {
+    const err = new Error(`Esta publicación tiene un contrato en curso con un estudiante (solicitud #${rows[0].id}). No se puede dar de baja directamente: envíale tu explicación al equipo de Roumix y te ayudaremos a cerrar el proceso.`);
+    err.status = 409;
+    err.codigo = 'contrato_en_curso';
+    throw err;
+  }
+}
+
+/**
+ * POST /api/inmuebles/:id/solicitar-baja  { accion: arrendado | retirar, motivo, detalle }
+ * Con un contrato en curso el propietario no puede dar de baja la publicación: su explicación
+ * le llega al equipo como una conversación en Mensajes (para responderle) y queda en el historial.
+ */
+async function solicitarBaja(req, res) {
+  const id = idDeRuta(req);
+  const body = req.body || {};
+  const ACCIONES = { arrendado: ['marcarla como arrendada', MOTIVOS_ARRENDADO], retirar: ['retirarla', MOTIVOS_RETIRO] };
+  if (!Object.hasOwn(ACCIONES, body.accion)) throw errorValidacion('accion debe ser arrendado o retirar.');
+  const [verbo, catalogo] = ACCIONES[body.accion];
+  const justificacion = justificacionBaja(body, catalogo);
+
+  const { rows: [inm] } = await db.query('SELECT id, titulo, estado FROM inmuebles WHERE id = $1 AND propietario_id = $2', [id, req.usuario.id]);
+  if (!inm) return noEncontrado(res, id);
+  const { rows: [sol] } = await db.query(
+    'SELECT id, estado FROM solicitudes WHERE inmueble_id = $1 AND estado = ANY($2::varchar[]) ORDER BY id LIMIT 1',
+    [id, ESTADOS_CON_CONTRATO]
+  );
+  if (!sol) throw Object.assign(new Error('Esta publicación no tiene un contrato en curso: puedes darla de baja directamente.'), { status: 409 });
+  const { rows: [reciente] } = await db.query(
+    "SELECT 1 FROM moderacion_historial WHERE inmueble_id = $1 AND accion = 'baja_solicitada' AND created_at > now() - interval '1 day'",
+    [id]
+  );
+  if (reciente) throw Object.assign(new Error('Ya le enviaste esta solicitud al equipo hoy. Te responderán en Mensajes.'), { status: 429 });
+
+  const asunto = `Quiero dar de baja «${inm.titulo}»`.slice(0, 150);
+  const mensaje = `Tengo un contrato en curso (solicitud #${sol.id}) y quiero ${verbo}.\nMotivo: ${justificacion.texto}`;
+  const cliente = await db.pool.connect();
+  let conversacionId;
+  try {
+    await cliente.query('BEGIN');
+    // Si ya hay un hilo de esa solicitud con el equipo, el mensaje va allí
+    const { rows: [hilo] } = await cliente.query('SELECT id FROM conversaciones WHERE usuario_id = $1 AND solicitud_id = $2', [req.usuario.id, sol.id]);
+    if (hilo) {
+      conversacionId = hilo.id;
+      await cliente.query("UPDATE conversaciones SET estado = 'pendiente', ultimo_mensaje_en = now(), leida_usuario_en = now() WHERE id = $1", [conversacionId]);
+    } else {
+      const { rows: [nuevo] } = await cliente.query(
+        `INSERT INTO conversaciones (usuario_id, usuario_rol, inmueble_id, solicitud_id, asunto, leida_usuario_en)
+         VALUES ($1, $2, $3, $4, $5, now()) RETURNING id`,
+        [req.usuario.id, req.usuario.rol, id, sol.id, asunto]
+      );
+      conversacionId = nuevo.id;
+    }
+    await cliente.query(
+      'INSERT INTO mensajes (conversacion_id, autor_id, autor_rol, cuerpo) VALUES ($1, $2, $3, $4)',
+      [conversacionId, req.usuario.id, req.usuario.rol, mensaje]
+    );
+    await cliente.query(
+      `INSERT INTO moderacion_historial (inmueble_id, inmueble_titulo, usuario_afectado_id, admin_id, accion, motivo, justificacion)
+       VALUES ($1, $2, $3, NULL, 'baja_solicitada', $4, $5)`,
+      [id, inm.titulo, req.usuario.id, justificacion.motivo, `Pidió ${verbo} con el contrato en curso (solicitud #${sol.id}). ${justificacion.texto}`]
+    );
+    await cliente.query('COMMIT');
+  } catch (error) {
+    await cliente.query('ROLLBACK');
+    throw error;
+  } finally {
+    cliente.release();
+  }
+
+  const { rows: admins } = await db.query("SELECT id FROM usuarios WHERE rol = 'admin' AND estado = 'activo'");
+  for (const admin of admins) {
+    await crearAviso({
+      usuarioId: admin.id, tipo: 'publicacion',
+      titulo: `${req.usuario.nombre} quiere ${verbo} «${inm.titulo}» con un contrato en curso`,
+      cuerpo: justificacion.texto, enlace: 'admin.html#mensajes'
+    });
+  }
+  await notificaciones.notificarMensajeAdministracion({
+    conversacion: { id: conversacionId, asunto }, usuario: req.usuario, mensaje, nueva: true, urlBase: notificaciones.urlBase(req)
+  });
+  res.status(201).json({
+    status: 'success',
+    message: 'Le enviamos tu explicación al equipo de Roumix. Te responderán en Mensajes para cerrar el proceso con el estudiante.',
+    data: { conversacionId }
+  });
+}
+
+/** Deja la baja en el historial y avisa al equipo cuando el motivo merece revisión. */
+async function registrarBaja({ inmuebleId, titulo, propietario, accion, justificacion, verbo }) {
+  await db.query(
+    `INSERT INTO moderacion_historial (inmueble_id, inmueble_titulo, usuario_afectado_id, admin_id, accion, motivo, justificacion)
+     VALUES ($1, $2, $3, NULL, $4, $5, $6)`,
+    [inmuebleId, titulo, propietario.id, accion, justificacion.motivo, justificacion.texto]
+  );
+  if (!MOTIVOS_A_REVISAR.includes(justificacion.motivo)) return;
+  const { rows: abiertas } = await db.query(
+    "SELECT count(*)::int AS n FROM solicitudes WHERE inmueble_id = $1 AND estado NOT IN ('rechazada', 'completada', 'cancelada')",
+    [inmuebleId]
+  );
+  const { rows: admins } = await db.query("SELECT id FROM usuarios WHERE rol = 'admin' AND estado = 'activo'");
+  const extra = abiertas[0].n ? ` Tiene ${abiertas[0].n} solicitud(es) abierta(s): ciérralas con el estudiante.` : '';
+  for (const admin of admins) {
+    await crearAviso({
+      usuarioId: admin.id,
+      tipo: 'publicacion',
+      titulo: `${propietario.nombre} ${verbo} «${titulo}»`,
+      cuerpo: `${justificacion.texto}${extra}`,
+      enlace: 'admin.html#inmuebles'
+    });
+  }
+}
+
+/**
+ * PATCH /api/inmuebles/:id/estado  { estado: disponible | pausado | arrendado, motivo?, detalle? }
+ * Marcarla arrendada a mano exige motivo y explicación (si se arrendó con Roumix, se marca sola al pagar).
  */
 async function cambiarEstado(req, res) {
   const id = idDeRuta(req);
-  const estado = (req.body || {}).estado;
+  const body = req.body || {};
+  const estado = body.estado;
   if (!ESTADOS.includes(estado)) throw errorValidacion(`estado debe ser uno de: ${ESTADOS.join(', ')}.`);
 
-  const actual = await db.query('SELECT moderacion, estado FROM inmuebles WHERE id = $1 AND propietario_id = $2', [id, req.usuario.id]);
+  const actual = await db.query('SELECT moderacion, estado, titulo FROM inmuebles WHERE id = $1 AND propietario_id = $2', [id, req.usuario.id]);
   if (actual.rows.length === 0) return noEncontrado(res, id);
   verificarEditable(actual.rows[0].moderacion, actual.rows[0].estado);
+
+  const marcaArrendado = estado === 'arrendado' && actual.rows[0].estado !== 'arrendado';
+  let justificacion = null;
+  if (marcaArrendado) {
+    justificacion = justificacionBaja(body, MOTIVOS_ARRENDADO);
+    await verificarSinContratoEnCurso(id);
+  }
 
   // El estado comercial se puede cambiar aunque esté en revisión: seguirá oculta
   // hasta que Roumix la apruebe, porque la moderación es independiente.
@@ -427,6 +599,12 @@ async function cambiarEstado(req, res) {
     [id, req.usuario.id, estado]
   );
   if (result.rowCount === 0) return noEncontrado(res, id);
+  if (marcaArrendado) {
+    await registrarBaja({
+      inmuebleId: id, titulo: actual.rows[0].titulo, propietario: req.usuario,
+      accion: 'arrendada_por_propietario', justificacion, verbo: 'marcó como arrendada'
+    });
+  }
   res.status(200).json({ status: 'success', data: result.rows[0] });
 }
 
@@ -437,6 +615,9 @@ async function cambiarEstado(req, res) {
  */
 async function eliminarInmueble(req, res) {
   const id = idDeRuta(req);
+  const justificacion = justificacionBaja(req.body || {}, MOTIVOS_RETIRO);
+  const propio = await db.query('SELECT estado FROM inmuebles WHERE id = $1 AND propietario_id = $2', [id, req.usuario.id]);
+  if (propio.rows.length && propio.rows[0].estado !== 'retirado') await verificarSinContratoEnCurso(id);
   const result = await db.query(
     `UPDATE inmuebles SET estado = 'retirado', retirado_en = now()
      WHERE id = $1 AND propietario_id = $2 AND estado <> 'retirado'
@@ -451,11 +632,10 @@ async function eliminarInmueble(req, res) {
     return noEncontrado(res, id);
   }
 
-  await db.query(
-    `INSERT INTO moderacion_historial (inmueble_id, inmueble_titulo, usuario_afectado_id, admin_id, accion, justificacion)
-     VALUES ($1, $2, $3, NULL, 'retirada_por_propietario', 'El propietario retiró la publicación.')`,
-    [id, result.rows[0].titulo, req.usuario.id]
-  );
+  await registrarBaja({
+    inmuebleId: id, titulo: result.rows[0].titulo, propietario: req.usuario,
+    accion: 'retirada_por_propietario', justificacion, verbo: 'retiró'
+  });
   res.status(200).json({ status: 'success', message: 'Publicación retirada. Ya no se mostrará a los estudiantes.' });
 }
 
@@ -468,5 +648,6 @@ module.exports = {
   crearInmueble,
   actualizarInmueble,
   cambiarEstado,
-  eliminarInmueble
+  eliminarInmueble,
+  solicitarBaja
 };

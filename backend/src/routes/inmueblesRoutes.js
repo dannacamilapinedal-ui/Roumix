@@ -44,4 +44,7 @@ router.patch('/:id/estado', soloPropietario, inmueblesController.cambiarEstado);
 // DELETE /api/inmuebles/:id - Eliminar un inmueble propio y sus fotos
 router.delete('/:id', soloPropietario, inmueblesController.eliminarInmueble);
 
+// POST /api/inmuebles/:id/solicitar-baja - Con un contrato en curso: la explicación le llega al equipo
+router.post('/:id/solicitar-baja', soloPropietario, inmueblesController.solicitarBaja);
+
 module.exports = router;

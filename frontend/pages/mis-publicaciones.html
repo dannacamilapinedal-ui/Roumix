@@ -80,6 +80,27 @@
     </div>
   </main>
 
+  <!-- Marcar arrendada o retirar: el propietario debe contar por qué -->
+  <dialog id="dialogo-baja" class="admin-dialogo baja-dialogo" aria-labelledby="baja-titulo">
+    <form id="form-baja" novalidate>
+      <h2 id="baja-titulo">Cuéntanos por qué</h2>
+      <p class="baja-intro" id="baja-intro"></p>
+      <fieldset class="baja-motivos">
+        <legend>Motivo</legend>
+        <div id="baja-opciones"></div>
+      </fieldset>
+      <label for="baja-detalle" class="baja-etiqueta">Explícalo con tus palabras</label>
+      <textarea id="baja-detalle" rows="3" maxlength="500" placeholder="Ej: Un estudiante me contactó por otra página y ya se mudó."></textarea>
+      <p class="baja-contador"><span id="baja-cuenta">0</span>/500 · mínimo 15 caracteres</p>
+      <p class="baja-aviso" id="baja-aviso" role="note" hidden></p>
+      <p class="pub-mensaje pub-mensaje-error" id="baja-error" role="alert" hidden></p>
+      <div class="baja-botones">
+        <button type="button" class="btn-card-action" id="baja-cancelar">Cancelar</button>
+        <button type="submit" class="btn-card-action btn-card-danger" id="baja-confirmar">Confirmar</button>
+      </div>
+    </form>
+  </dialog>
+
   <!-- Pie de página -->
   <footer class="app-footer">
     <div class="footer-container">
@@ -315,20 +336,16 @@
         const accion = boton.dataset.accion;
         const item = misInmuebles.find(i => i.id === id);
 
-        if (accion === "retirar" && !confirm(`¿Retirar "${item.titulo}"?\n\nDejará de mostrarse a los estudiantes y ya no podrás editarla ni reactivarla. Se guardará como registro en tu cuenta.`)) return;
-        if (accion === "arrendado" && !confirm(`¿Marcar "${item.titulo}" como arrendado? Dejará de aparecer en las búsquedas.`)) return;
+        // Retirar y marcar arrendada se justifican en una ventana (el envío lo hace la ventana)
+        if (accion === "retirar" || accion === "arrendado") {
+          abrirDialogoBaja(item, accion);
+          return;
+        }
 
         boton.disabled = true;
         try {
-          if (accion === "retirar") {
-            await RoumixAPI.retirarInmueble(id);
-            item.estado = "retirado";
-            item.retirado_en = new Date().toISOString();
-            RoumixAvisos.mostrar("Publicación retirada", "info");
-          } else {
-            const actualizado = await RoumixAPI.cambiarEstado(id, accion);
-            item.estado = actualizado.estado;
-          }
+          const actualizado = await RoumixAPI.cambiarEstado(id, accion);
+          item.estado = actualizado.estado;
         } catch (error) {
           RoumixAvisos.mostrar(`No se pudo completar la acción: ${error.message}`, "error", 5000);
           boton.disabled = false;
@@ -340,6 +357,124 @@
         } else {
           render();
         }
+      });
+      // ---------- Ventana de baja: motivo + explicación obligatorios ----------
+      // Los motivos coinciden con los del servidor (inmueblesController)
+      const MOTIVOS_BAJA = {
+        arrendado: {
+          titulo: "¿Cómo se arrendó?",
+          intro: "Si el estudiante pagó a través de Roumix, la publicación se marca sola como arrendada. Usa esta opción solo si se arrendó por otro medio.",
+          boton: "Marcar como arrendada",
+          opciones: {
+            otro_medio: "La arrendé por fuera de Roumix (otra página, aviso o red social)",
+            conocido: "Se la arrendé a un familiar o conocido",
+            otro: "Otro motivo"
+          }
+        },
+        retirar: {
+          titulo: "¿Por qué la retiras?",
+          intro: "Al retirarla deja de mostrarse para siempre y ya no podrás editarla ni volver a publicarla. Se guarda como registro en tu cuenta.",
+          boton: "Retirar publicación",
+          opciones: {
+            otro_medio: "La arrendé por fuera de Roumix",
+            ya_no_arrienda: "Ya no la voy a arrendar (la usaré, la vendí o está en obra)",
+            duplicada: "Está repetida o tiene errores",
+            inconforme: "No estoy conforme con Roumix",
+            otro: "Otro motivo"
+          }
+        }
+      };
+      const AVISOS_MOTIVO = {
+        otro_medio: "Recuerda que los términos de Roumix no permiten cerrar tratos ni recibir pagos por fuera de la plataforma con estudiantes que llegaron por Roumix. El equipo revisará este caso. Con Roumix tienes contrato firmado, pagos automáticos cada mes y respaldo si algo sale mal.",
+        conocido: "El equipo de Roumix revisará este caso. Si quieres el contrato firmado y los pagos automáticos, también puedes hacer el arriendo con un conocido a través de Roumix.",
+        inconforme: "Lamentamos que no estés conforme. El equipo de Roumix leerá tu comentario y puede escribirte para ayudarte."
+      };
+      const dialogoBaja = document.getElementById("dialogo-baja");
+      const formBaja = document.getElementById("form-baja");
+      const detalleBaja = document.getElementById("baja-detalle");
+      const errorBaja = document.getElementById("baja-error");
+      const avisoBaja = document.getElementById("baja-aviso");
+      const confirmarBaja = document.getElementById("baja-confirmar");
+      let bajaActual = null;
+
+      function abrirDialogoBaja(item, accion) {
+        const conf = MOTIVOS_BAJA[accion];
+        bajaActual = { item, accion, aRoumix: false };
+        document.getElementById("baja-titulo").textContent = conf.titulo;
+        document.getElementById("baja-intro").textContent = `«${item.titulo}». ${conf.intro}`;
+        document.getElementById("baja-opciones").innerHTML = Object.entries(conf.opciones).map(([valor, texto]) => `
+          <label class="baja-opcion"><input type="radio" name="motivo-baja" value="${valor}"><span>${escaparHTML(texto)}</span></label>`).join("");
+        detalleBaja.value = "";
+        document.getElementById("baja-cuenta").textContent = "0";
+        errorBaja.hidden = true;
+        avisoBaja.hidden = true;
+        confirmarBaja.textContent = conf.boton;
+        confirmarBaja.classList.add("btn-card-danger");
+        confirmarBaja.disabled = false;
+        dialogoBaja.showModal();
+      }
+
+      document.getElementById("baja-opciones").addEventListener("change", (e) => {
+        const texto = AVISOS_MOTIVO[e.target.value];
+        avisoBaja.textContent = texto || "";
+        avisoBaja.hidden = !texto;
+      });
+      detalleBaja.addEventListener("input", () => {
+        document.getElementById("baja-cuenta").textContent = String(detalleBaja.value.trim().length);
+      });
+      document.getElementById("baja-cancelar").addEventListener("click", () => dialogoBaja.close());
+
+      formBaja.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        if (!bajaActual) return;
+        const elegido = formBaja.querySelector('input[name="motivo-baja"]:checked');
+        const detalle = detalleBaja.value.trim();
+        const mostrarError = (texto) => { errorBaja.textContent = texto; errorBaja.hidden = false; };
+        if (!elegido) return mostrarError("Elige un motivo.");
+        if (detalle.length < 15) return mostrarError("Cuéntanos con tus palabras qué pasó (mínimo 15 caracteres).");
+
+        const { item, accion } = bajaActual;
+        const justificacion = { motivo: elegido.value, detalle };
+        confirmarBaja.disabled = true;
+        try {
+          if (bajaActual.aRoumix) {
+            // Contrato en curso: no se da de baja; la explicación le llega al equipo de Roumix
+            const respuesta = await RoumixAPI.solicitarBaja(item.id, accion, justificacion);
+            RoumixAvisos.mostrar(respuesta, "exito", 7000);
+            dialogoBaja.close();
+            bajaActual = null;
+            return;
+          }
+          if (accion === "retirar") {
+            await RoumixAPI.retirarInmueble(item.id, justificacion);
+            item.estado = "retirado";
+            item.retirado_en = new Date().toISOString();
+            RoumixAvisos.mostrar("Publicación retirada. Gracias por contarnos el motivo.", "info");
+          } else {
+            const actualizado = await RoumixAPI.cambiarEstado(item.id, "arrendado", justificacion);
+            item.estado = actualizado.estado;
+            RoumixAvisos.mostrar("Publicación marcada como arrendada.", "info");
+          }
+        } catch (error) {
+          // Con un contrato en curso la ventana pasa a enviarle la explicación al equipo
+          if (error.datos && error.datos.codigo === "contrato_en_curso" && !bajaActual.aRoumix) {
+            bajaActual.aRoumix = true;
+            errorBaja.hidden = true;
+            avisoBaja.textContent = `${error.message} Tu motivo y tu explicación ya están escritos: solo confirma el envío.`;
+            avisoBaja.hidden = false;
+            document.getElementById("baja-titulo").textContent = "Esta publicación tiene un contrato en curso";
+            confirmarBaja.textContent = "Enviar a Roumix";
+            confirmarBaja.classList.remove("btn-card-danger");
+            confirmarBaja.disabled = false;
+            return;
+          }
+          mostrarError(error.message);
+          confirmarBaja.disabled = false;
+          return;
+        }
+        dialogoBaja.close();
+        bajaActual = null;
+        render();
       });
 
       render();

@@ -278,10 +278,10 @@ const RoumixAPI = {
   /**
    * estado: 'disponible' | 'pausado' | 'arrendado'
    */
-  cambiarEstado: async function(id, estado) {
+  cambiarEstado: async function(id, estado, justificacion = {}) {
     const json = await this._request(`/inmuebles/${encodeURIComponent(id)}/estado`, {
       method: 'PATCH',
-      body: JSON.stringify({ estado })
+      body: JSON.stringify({ estado, motivo: justificacion.motivo, detalle: justificacion.detalle })
     });
     return json.data;
   },
@@ -315,12 +315,25 @@ const RoumixAPI = {
   },
 
   // Retirar: la publicación deja de mostrarse pero se conserva como registro
-  retirarInmueble: async function(id) {
-    return this.eliminarInmueble(id);
+  // Con un contrato en curso: la explicación del propietario le llega al equipo de Roumix
+  solicitarBaja: async function(id, accion, justificacion = {}) {
+    const json = await this._request(`/inmuebles/${encodeURIComponent(id)}/solicitar-baja`, {
+      method: 'POST',
+      body: JSON.stringify({ accion, motivo: justificacion.motivo, detalle: justificacion.detalle })
+    });
+    return json.message;
   },
 
-  eliminarInmueble: async function(id) {
-    await this._request(`/inmuebles/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  // justificacion: { motivo, detalle } (obligatoria)
+  retirarInmueble: async function(id, justificacion = {}) {
+    return this.eliminarInmueble(id, justificacion);
+  },
+
+  eliminarInmueble: async function(id, justificacion = {}) {
+    await this._request(`/inmuebles/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ motivo: justificacion.motivo, detalle: justificacion.detalle })
+    });
   },
 
   _guardarEnCache: function(item) {

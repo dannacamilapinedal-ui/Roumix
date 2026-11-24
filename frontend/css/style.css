@@ -8946,3 +8946,23 @@ html[data-tema="oscuro"] button.admin-metrica:hover { box-shadow: none; }
 .rx-aviso-pausado .rx-aviso-tiempo { animation-play-state: paused; }
 @keyframes rxAvisoTiempo { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 @media (prefers-reduced-motion: reduce) { .rx-aviso-tiempo { display: none; } }
+
+/* Mis publicaciones: ventana para justificar Marcar arrendada / Retirar */
+.baja-dialogo { max-width: 560px; }
+.baja-dialogo h2 { margin: 0 0 8px; }
+.baja-intro { margin: 0 0 16px; color: var(--tinta-media); font-size: 0.95rem; line-height: 1.5; }
+.baja-motivos { border: none; margin: 0 0 14px; padding: 0; }
+.baja-motivos legend { font-weight: 800; font-size: 0.92rem; margin-bottom: 8px; color: var(--tinta-fuerte); }
+#baja-opciones { display: flex; flex-direction: column; gap: 8px; }
+.baja-opcion { display: flex; align-items: flex-start; gap: 10px; padding: 10px 14px; border: 1.5px solid var(--borde-arena); border-radius: 12px; cursor: pointer; font-size: 0.93rem; line-height: 1.4; transition: border-color 0.15s ease, background-color 0.15s ease; }
+.baja-opcion:hover { border-color: var(--verde-500); }
+.baja-opcion:has(input:checked) { border-color: var(--acento-naranja); background: #fdf3e6; }
+.baja-opcion input { margin-top: 3px; accent-color: var(--acento-naranja); }
+.baja-etiqueta { display: block; font-weight: 800; font-size: 0.92rem; margin-bottom: 6px; color: var(--tinta-fuerte); }
+.baja-dialogo textarea { width: 100%; box-sizing: border-box; }
+.baja-contador { margin: 4px 0 12px; font-size: 0.8rem; color: var(--tinta-tenue); text-align: right; }
+.baja-aviso { margin: 0 0 12px; padding: 12px 14px; border-radius: 12px; background: #fdf0dc; border: 1px solid #f0c98f; color: #6b3d0a; font-size: 0.88rem; line-height: 1.5; }
+.baja-botones { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
+html[data-tema="oscuro"] .baja-opcion:has(input:checked) { background: rgba(222, 150, 70, 0.12); }
+html[data-tema="oscuro"] .baja-aviso { background: rgba(222, 150, 70, 0.14); border-color: rgba(222, 150, 70, 0.4); color: #f0bf85; }
+.pub-ayuda-contacto { margin: 6px 0 0; font-size: 0.82rem; line-height: 1.45; color: var(--tinta-media); }
